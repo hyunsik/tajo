@@ -39,6 +39,8 @@ public enum EvalType {
   DIVIDE(BinaryEval.class, "/"),
 
   // Function
+  WINDOW_FUNCTION(AggregationFunctionCallEval.class),
+  WINDOW_OVER(WindowOverEval.class),
   AGG_FUNCTION(AggregationFunctionCallEval.class),
   FUNCTION(GeneralFunctionEval.class),
 

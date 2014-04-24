@@ -348,7 +348,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
     if (checkIfExist(windowNameOrSpec.window_name())) {
       windowFunction.setWindowName(windowNameOrSpec.window_name().getText());
     } else {
-      windowFunction.setWindowSpec(visitWindow_specification(windowNameOrSpec.window_specification()));
+      windowFunction.setWindowSpec(buildWindowSpec(windowNameOrSpec.window_specification()));
     }
 
     return windowFunction;
@@ -361,13 +361,13 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
     for (int i = 0; i < definitions.length; i++) {
       Window_definitionContext windowDefinitionContext = ctx.window_definition_list().window_definition(i);
       String windowName = windowDefinitionContext.window_name().identifier().getText();
-      WindowSpecExpr windowSpec = visitWindow_specification(windowDefinitionContext.window_specification());
+      WindowSpecExpr windowSpec = buildWindowSpec(windowDefinitionContext.window_specification());
       definitions[i] = new Window.WindowDefinition(windowName, windowSpec);
     }
     return new Window(definitions);
   }
 
-  @Override public WindowSpecExpr visitWindow_specification(@NotNull SQLParser.Window_specificationContext ctx) {
+  public WindowSpecExpr buildWindowSpec(SQLParser.Window_specificationContext ctx) {
     WindowSpecExpr windowSpec = new WindowSpecExpr();
     if (checkIfExist(ctx.window_specification_details())) {
       Window_specification_detailsContext windowSpecDetail = ctx.window_specification_details();

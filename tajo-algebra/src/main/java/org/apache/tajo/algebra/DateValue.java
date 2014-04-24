@@ -20,7 +20,7 @@ package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
 
-public class DateValue {
+public class DateValue implements Cloneable {
   private String years;
   private String months;
   private String days;
@@ -59,5 +59,14 @@ public class DateValue {
       return years.equals(another.years) && months.equals(another.months) && days.equals(another.days);
     }
     return false;
+  }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    DateValue date = (DateValue) super.clone();
+    date.years = years;
+    date.months = months;
+    date.days = days;
+    return date;
   }
 }

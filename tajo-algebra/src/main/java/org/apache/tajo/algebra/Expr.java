@@ -23,7 +23,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.lang.reflect.Type;
 
-public abstract class Expr implements JsonSerializable {
+public abstract class Expr implements JsonSerializable, Cloneable {
   @SerializedName("type")
   protected OpType opType;
 
@@ -79,6 +79,13 @@ public abstract class Expr implements JsonSerializable {
 
     return false;
 	}
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    Expr newExpr = (Expr) super.clone();
+    newExpr.opType = opType;
+    return newExpr;
+  }
 
   @Override
   public String toString() {

@@ -16,36 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.algebra;
+package org.apache.tajo.engine.query;
 
-import com.google.common.base.Objects;
+import org.apache.tajo.IntegrationTest;
+import org.apache.tajo.QueryTestCaseBase;
+import org.apache.tajo.TajoConstants;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-public class SignedExpr extends UnaryOperator {
-  private boolean negative;
+import java.sql.ResultSet;
 
-  public SignedExpr(boolean negative, Expr operand) {
-    super(OpType.Sign);
-    this.negative = negative;
-    setChild(operand);
+@Category(IntegrationTest.class)
+public class TestWindowQuery extends QueryTestCaseBase {
+
+  public TestWindowQuery() {
+    super(TajoConstants.DEFAULT_DATABASE_NAME);
   }
 
-  public boolean isNegative() {
-    return negative;
-  }
-
-  public int hashCode() {
-    return Objects.hashCode(negative, getChild());
-  }
-
-  @Override
-  boolean equalsTo(Expr expr) {
-    return negative == ((SignedExpr)expr).negative;
-  }
-
-  @Override
-  public Object clone() throws CloneNotSupportedException {
-    SignedExpr signedExpr = (SignedExpr) super.clone();
-    signedExpr.negative = negative;
-    return signedExpr;
+  @Test
+  public final void testNonFromSelect1() throws Exception {
+    // select upper('abc');
+    ResultSet res = executeQuery();
+    assertResultSet(res);
+    cleanupQuery(res);
   }
 }

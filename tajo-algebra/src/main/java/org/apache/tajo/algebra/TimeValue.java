@@ -21,7 +21,7 @@ package org.apache.tajo.algebra;
 import com.google.common.base.Objects;
 import org.apache.commons.lang.StringUtils;
 
-public class TimeValue {
+public class TimeValue implements Cloneable {
   private String hours;
   private String minutes;
   private String seconds;
@@ -75,5 +75,15 @@ public class TimeValue {
 
   public int hashCode() {
     return Objects.hashCode(hours, minutes, seconds);
+  }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    TimeValue timeValue = (TimeValue) super.clone();
+    timeValue.hours = hours;
+    timeValue.minutes = minutes;
+    timeValue.seconds = seconds;
+    timeValue.secondsFraction = secondsFraction;
+    return timeValue;
   }
 }

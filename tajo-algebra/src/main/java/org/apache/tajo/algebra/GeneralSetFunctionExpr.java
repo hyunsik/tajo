@@ -63,4 +63,11 @@ public class GeneralSetFunctionExpr extends FunctionExpr {
   public boolean equalsTo(Expr expr) {
     return distinct == ((GeneralSetFunctionExpr)expr).distinct;
   }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    GeneralSetFunctionExpr newSetFunc = (GeneralSetFunctionExpr) super.clone();
+    newSetFunc.distinct = distinct;
+    return newSetFunc;
+  }
 }

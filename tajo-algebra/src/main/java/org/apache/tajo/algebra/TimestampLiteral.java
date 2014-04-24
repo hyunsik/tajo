@@ -20,7 +20,7 @@ package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
 
-public class TimestampLiteral extends Expr {
+public class TimestampLiteral extends Expr implements Cloneable {
   private DateValue date;
   private TimeValue time;
 
@@ -53,5 +53,13 @@ public class TimestampLiteral extends Expr {
       return date.equals(another.date) && time.equals(another.time);
     }
     return false;
+  }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    TimestampLiteral timestampLiteral = (TimestampLiteral) super.clone();
+    timestampLiteral.date = date;
+    timestampLiteral.time = time;
+    return timestampLiteral;
   }
 }

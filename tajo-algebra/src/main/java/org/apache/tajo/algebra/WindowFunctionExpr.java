@@ -46,6 +46,10 @@ public class WindowFunctionExpr extends Expr {
     return this.windowName;
   }
 
+  public GeneralSetFunctionExpr getFunction() {
+    return function;
+  }
+
   public boolean hasWidowSpec() {
     return windowSpec != null;
   }

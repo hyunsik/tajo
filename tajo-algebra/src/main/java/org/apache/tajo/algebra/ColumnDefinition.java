@@ -18,11 +18,11 @@
 package org.apache.tajo.algebra;
 
 public  class ColumnDefinition extends DataTypeExpr {
-  String col_name;
+  String columnName;
 
   public ColumnDefinition(String columnName, String dataType) {
     super(dataType);
-    this.col_name = columnName;
+    this.columnName = columnName;
   }
 
   public ColumnDefinition(String columnName, DataTypeExpr dataType) {
@@ -33,17 +33,17 @@ public  class ColumnDefinition extends DataTypeExpr {
         setScale(dataType.scale);
       }
     }
-    this.col_name = columnName;
+    this.columnName = columnName;
   }
 
   public String getColumnName() {
-    return this.col_name;
+    return this.columnName;
   }
 
   @Override
   public int hashCode() {
     int hash = super.hashCode();
-    return hash * 89 * col_name.hashCode();
+    return hash * 89 * columnName.hashCode();
 
   }
 
@@ -51,9 +51,16 @@ public  class ColumnDefinition extends DataTypeExpr {
   public boolean equalsTo(Expr expr) {
     if (expr instanceof ColumnDefinition) {
       ColumnDefinition another = (ColumnDefinition) expr;
-      return col_name.equals(another.col_name) && super.equalsTo(another);
+      return columnName.equals(another.columnName) && super.equalsTo(another);
     }
 
     return false;
+  }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    ColumnDefinition column = (ColumnDefinition) super.clone();
+    column.columnName = columnName;
+    return column;
   }
 }

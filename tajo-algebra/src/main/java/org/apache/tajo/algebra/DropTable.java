@@ -21,9 +21,9 @@ package org.apache.tajo.algebra;
 import com.google.common.base.Objects;
 
 public class DropTable extends Expr {
-  private final String tableName;
-  private final boolean ifExists;
-  private final boolean purge;
+  private String tableName;
+  private boolean ifExists;
+  private boolean purge;
 
   public DropTable(String tableName, boolean ifExists, boolean purge) {
     super(OpType.DropTable);
@@ -58,5 +58,13 @@ public class DropTable extends Expr {
           purge == another.purge;
     }
     return false;
+  }
+
+  public Object clone() throws CloneNotSupportedException {
+    DropTable drop = (DropTable) super.clone();
+    drop.tableName = tableName;
+    drop.ifExists = ifExists;
+    drop.purge = purge;
+    return drop;
   }
 }

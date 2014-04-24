@@ -21,15 +21,11 @@ package org.apache.tajo.algebra;
 import com.google.common.base.Objects;
 import org.apache.tajo.util.TUtil;
 
-public class WindowSpecExpr extends Expr {
+public class WindowSpecExpr implements Cloneable {
   private String windowName;
   private Expr [] partitionKeys; // OVER (PARTITION BY ?,...,?)
   private Sort.SortSpec [] sortSpecs; // OVER (... ORDER BY ?,...,?)
   private WindowFrame windowFrame;
-
-  public WindowSpecExpr() {
-    super(OpType.WindowSpec);
-  }
 
   public boolean hasWindowName() {
     return windowName != null;
@@ -79,17 +75,47 @@ public class WindowSpecExpr extends Expr {
     return windowFrame;
   }
 
+  public Object clone() throws CloneNotSupportedException {
+    WindowSpecExpr windowSpec = (WindowSpecExpr) super.clone();
+    windowSpec.windowName = windowName;
+    if (hasPartitionBy()) {
+      windowSpec.partitionKeys = new Expr[windowSpec.partitionKeys.length];
+      for (int i = 0; i < partitionKeys.length; i++) {
+        windowSpec.partitionKeys[i] = (Expr) partitionKeys[i].clone();
+      }
+    }
+    if (hasOrderBy()) {
+      windowSpec.sortSpecs = new Sort.SortSpec[sortSpecs.length];
+      for (int i = 0; i < sortSpecs.length; i++) {
+        windowSpec.sortSpecs[i] = (Sort.SortSpec) sortSpecs[i].clone();
+      }
+    }
+    if (hasWindowFrame()) {
+      windowSpec.windowFrame = (WindowFrame) windowFrame.clone();
+    }
+    return windowSpec;
+  }
+
   @Override
   public int hashCode() {
     return Objects.hashCode(windowName, partitionKeys, sortSpecs);
   }
 
   @Override
-  boolean equalsTo(Expr expr) {
-    WindowSpecExpr another = (WindowSpecExpr) expr;
-    return TUtil.checkEquals(windowName, another.windowName) &&
-        TUtil.checkEquals(partitionKeys, another.partitionKeys) &&
-        TUtil.checkEquals(sortSpecs, another.sortSpecs);
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    }
+
+    if (obj instanceof WindowSpecExpr) {
+      WindowSpecExpr another = (WindowSpecExpr) obj;
+      return TUtil.checkEquals(windowName, another.windowName) &&
+          TUtil.checkEquals(partitionKeys, another.partitionKeys) &&
+          TUtil.checkEquals(sortSpecs, another.sortSpecs);
+    } else {
+      return false;
+    }
+
   }
 
   public static enum WindowFrameUnit {
@@ -109,7 +135,7 @@ public class WindowSpecExpr extends Expr {
     FOLLOWING
   }
 
-  public static class WindowFrame {
+  public static class WindowFrame implements Cloneable {
     WindowFrameUnit unit;
     private WindowStartBound startBound;
     private WindowEndBound endBound;
@@ -135,9 +161,18 @@ public class WindowSpecExpr extends Expr {
     public WindowEndBound getEndBound() {
       return endBound;
     }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+      WindowFrame frame = (WindowFrame) super.clone();
+      frame.unit = unit;
+      frame.startBound = (WindowStartBound) startBound.clone();
+      frame.endBound = (WindowEndBound) endBound.clone();
+      return frame;
+    }
   }
 
-  public static class WindowStartBound {
+  public static class WindowStartBound implements Cloneable {
     private WindowFrameStartBoundType boundType;
     private Expr number;
 
@@ -149,6 +184,10 @@ public class WindowSpecExpr extends Expr {
       return boundType;
     }
 
+    public boolean hasNumber() {
+      return this.number != null;
+    }
+
     public void setNumber(Expr number) {
       this.number = number;
     }
@@ -156,9 +195,17 @@ public class WindowSpecExpr extends Expr {
     public Expr getNumber() {
       return number;
     }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+      WindowStartBound start = (WindowStartBound) super.clone();
+      start.boundType = boundType;
+      start.number = (Expr) number.clone();
+      return start;
+    }
   }
 
-  public static class WindowEndBound {
+  public static class WindowEndBound implements Cloneable {
     private WindowFrameEndBoundType boundType;
     private Expr number;
 
@@ -170,12 +217,24 @@ public class WindowSpecExpr extends Expr {
       return boundType;
     }
 
-    public Expr setNumber(Expr number) {
-      return number;
+    public boolean hasNumber() {
+      return this.number != null;
+    }
+
+    public void setNumber(Expr number) {
+      this.number = number;
     }
 
     public Expr getNumber() {
       return number;
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+      WindowEndBound end = (WindowEndBound) super.clone();
+      end.boundType = boundType;
+      end.number = (Expr) number.clone();
+      return end;
     }
   }
 }

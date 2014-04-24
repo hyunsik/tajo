@@ -63,4 +63,12 @@ public class LiteralValue extends Expr {
     sb.append("(").append(valueType).append(")");
     return sb.toString();
   }
+
+  @Override
+  public LiteralValue clone() throws CloneNotSupportedException {
+    LiteralValue literal = (LiteralValue) super.clone();
+    literal.valueType = valueType;
+    literal.value = value;
+    return literal;
+  }
 }

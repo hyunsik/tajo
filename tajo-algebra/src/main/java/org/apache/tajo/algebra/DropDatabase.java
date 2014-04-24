@@ -19,11 +19,10 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
-import com.google.gson.annotations.Expose;
 
 public class DropDatabase extends Expr {
-  @Expose private String databaseName;
-  @Expose private boolean ifExists;
+  private String databaseName;
+  private boolean ifExists;
 
   public DropDatabase(final String databaseName, final boolean ifExists) {
     super(OpType.DropDatabase);
@@ -48,5 +47,13 @@ public class DropDatabase extends Expr {
   boolean equalsTo(Expr expr) {
     DropDatabase another = (DropDatabase) expr;
     return databaseName.equals(another.databaseName) && ifExists == another.ifExists;
+  }
+
+  @Override
+  public Object clone() throws CloneNotSupportedException {
+    DropDatabase drop = (DropDatabase) super.clone();
+    drop.databaseName = databaseName;
+    drop.ifExists = ifExists;
+    return drop;
   }
 }

@@ -94,7 +94,6 @@ public enum OpType {
   Target(NamedExpr.class),
   Function(FunctionExpr.class),
   WindowFunction(WindowFunctionExpr.class),
-  WindowSpec(WindowSpecExpr.class),
   Asterisk(QualifiedAsteriskExpr.class),
 
   // Set Functions

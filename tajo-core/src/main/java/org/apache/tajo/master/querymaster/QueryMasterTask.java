@@ -37,13 +37,18 @@ import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.parser.HiveQLAnalyzer;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
-import org.apache.tajo.engine.planner.*;
+import org.apache.tajo.engine.planner.LogicalOptimizer;
+import org.apache.tajo.engine.planner.LogicalPlan;
+import org.apache.tajo.engine.planner.LogicalPlanner;
+import org.apache.tajo.engine.planner.PlannerUtil;
 import org.apache.tajo.engine.planner.global.MasterPlan;
 import org.apache.tajo.engine.planner.logical.LogicalNode;
 import org.apache.tajo.engine.planner.logical.NodeType;
 import org.apache.tajo.engine.planner.logical.ScanNode;
 import org.apache.tajo.engine.query.QueryContext;
+import org.apache.tajo.exception.UnimplementedException;
 import org.apache.tajo.ipc.TajoMasterProtocol;
+import org.apache.tajo.ipc.TajoWorkerProtocol;
 import org.apache.tajo.master.GlobalEngine;
 import org.apache.tajo.master.TajoAsyncDispatcher;
 import org.apache.tajo.master.TajoContainerProxy;
@@ -58,11 +63,9 @@ import org.apache.tajo.util.metrics.TajoMetrics;
 import org.apache.tajo.util.metrics.reporter.MetricsConsoleReporter;
 import org.apache.tajo.worker.AbstractResourceAllocator;
 import org.apache.tajo.worker.TajoResourceAllocator;
-import org.apache.tajo.worker.YarnResourceAllocator;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -112,6 +115,9 @@ public class QueryMasterTask extends CompositeService {
 
   private Throwable initError;
 
+  private final List<TajoWorkerProtocol.TaskFatalErrorReport> diagnostics =
+      new ArrayList<TajoWorkerProtocol.TaskFatalErrorReport>();
+
   public QueryMasterTask(QueryMaster.QueryMasterContext queryMasterContext,
                          QueryId queryId, Session session, QueryContext queryContext, String sql,
                          String logicalPlanJson) {
@@ -137,7 +143,7 @@ public class QueryMasterTask extends CompositeService {
       if(resourceManagerClassName.indexOf(TajoWorkerResourceManager.class.getName()) >= 0) {
         resourceAllocator = new TajoResourceAllocator(queryTaskContext);
       } else {
-        resourceAllocator = new YarnResourceAllocator(queryTaskContext);
+        throw new UnimplementedException(resourceManagerClassName + " is not supported yet");
       }
       addService(resourceAllocator);
 
@@ -213,6 +219,22 @@ public class QueryMasterTask extends CompositeService {
   public void handleTaskRequestEvent(TaskRequestEvent event) {
     ExecutionBlockId id = event.getExecutionBlockId();
     query.getSubQuery(id).handleTaskRequestEvent(event);
+  }
+
+  public void handleTaskFailed(TajoWorkerProtocol.TaskFatalErrorReport report) {
+    synchronized(diagnostics) {
+      if (diagnostics.size() < 10) {
+        diagnostics.add(report);
+      }
+    }
+
+    getEventHandler().handle(new TaskFatalErrorEvent(report));
+  }
+
+  public Collection<TajoWorkerProtocol.TaskFatalErrorReport> getDiagnostics() {
+    synchronized(diagnostics) {
+      return Collections.unmodifiableCollection(diagnostics);
+    }
   }
 
   private class SubQueryEventDispatcher implements EventHandler<SubQueryEvent> {

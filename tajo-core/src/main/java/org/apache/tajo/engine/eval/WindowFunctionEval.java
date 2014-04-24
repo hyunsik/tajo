@@ -29,13 +29,19 @@ import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 
 public class WindowFunctionEval extends FunctionEval implements Cloneable {
+  @Expose protected String windowName;
   @Expose protected WindowAggFunction instance;
   @Expose protected boolean firstPhase;
   private Tuple params;
 
-  public WindowFunctionEval(FunctionDesc desc, WindowAggFunction instance, EvalNode[] givenArgs) {
+  public WindowFunctionEval(String windowName, FunctionDesc desc, WindowAggFunction instance, EvalNode[] givenArgs) {
     super(EvalType.WINDOW_FUNCTION, desc, givenArgs);
+    this.windowName = windowName;
     this.instance = instance;
+  }
+
+  public String getWindowName() {
+    return windowName;
   }
 
   public FunctionContext newContext() {

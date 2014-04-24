@@ -761,12 +761,20 @@ public class LogicalPlan {
     }
 
     public String addWindowSpecs(WindowSpecExpr windowSpecExpr) {
-      windowSpecs.add(windowSpecExpr);
       if (windowSpecExpr.hasWindowName()) {
+        windowSpecs.add(windowSpecExpr);
         return windowSpecExpr.getWindowName();
       } else {
         String generatedName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
-        windowSpecExpr.cl
+        WindowSpecExpr noNameWindow = null;
+        try {
+          noNameWindow = (WindowSpecExpr) windowSpecExpr.clone();
+        } catch (CloneNotSupportedException e) {
+          throw new RuntimeException(e);
+        }
+        noNameWindow.setWindowName(generatedName);
+        windowSpecs.add(noNameWindow);
+        return generatedName;
       }
     }
 

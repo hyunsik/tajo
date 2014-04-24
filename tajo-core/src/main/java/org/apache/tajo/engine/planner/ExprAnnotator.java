@@ -30,6 +30,7 @@ import org.apache.tajo.datum.*;
 import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.engine.function.AggFunction;
 import org.apache.tajo.engine.function.GeneralFunction;
+import org.apache.tajo.engine.function.WindowAggFunction;
 import org.apache.tajo.engine.planner.logical.NodeType;
 import org.apache.tajo.exception.InternalException;
 import org.joda.time.DateTime;
@@ -477,6 +478,31 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
 
   public EvalNode visitWindowFunction(Context ctx, Stack<Expr> stack, WindowFunctionExpr windowFunc)
       throws PlanningException {
+    String windowName = ctx.currentBlock.addWindowSpecs(windowFunc.getWindowSpec());
+
+    String funcName = windowFunc.getFunction().getSignature();
+    Expr[] params = windowFunc.getFunction().getParams();
+    EvalNode[] givenArgs = new EvalNode[params.length];
+    TajoDataTypes.DataType[] paramTypes = new TajoDataTypes.DataType[params.length];
+
+    givenArgs[0] = visit(ctx, stack, params[0]);
+    if (windowFunc.getFunction().getSignature().equalsIgnoreCase("count")) {
+      paramTypes[0] = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.ANY);
+    } else {
+      paramTypes[0] = givenArgs[0].getValueType();
+    }
+
+    if (!catalog.containFunction(windowFunc.getFunction().getSignature(), paramTypes)) {
+      throw new NoSuchFunctionException(funcName, paramTypes);
+    }
+
+    FunctionDesc funcDesc = catalog.getFunction(funcName, paramTypes);
+
+    try {
+      return new WindowFunctionEval(windowName, funcDesc, (WindowAggFunction) funcDesc.newInstance(), givenArgs);
+    } catch (InternalException e) {
+      throw new PlanningException(e);
+    }
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////

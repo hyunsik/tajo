@@ -1259,7 +1259,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
       return new ListPartition(buildColumnReferenceList(ctx.list_partitions().column_reference_list()), specifiers);
 
     } else if (checkIfExist(ctx.column_partitions())) { // For Column Partition (Hive Style)
-      return new CreateTable.ColumnPartition(getDefinitions(ctx.column_partitions().table_elements()), true);
+      return new CreateTable.ColumnPartition(getDefinitions(ctx.column_partitions().table_elements()));
     } else {
       throw new SQLSyntaxError("Invalid Partition Type: " + ctx.toStringTree());
     }

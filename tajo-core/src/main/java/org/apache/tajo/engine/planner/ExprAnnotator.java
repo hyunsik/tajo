@@ -499,7 +499,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     FunctionDesc funcDesc = catalog.getFunction(funcName, paramTypes);
 
     try {
-      return new WindowFunctionEval(windowName, funcDesc, (WindowAggFunction) funcDesc.newInstance(), givenArgs);
+      return new WindowFunctionEval(windowName, funcDesc, (AggFunction) funcDesc.newInstance(), givenArgs);
     } catch (InternalException e) {
       throw new PlanningException(e);
     }

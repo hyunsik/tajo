@@ -23,47 +23,22 @@ import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
+import org.apache.tajo.engine.function.AggFunction;
 import org.apache.tajo.engine.function.FunctionContext;
 import org.apache.tajo.engine.function.WindowAggFunction;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 
-public class WindowFunctionEval extends FunctionEval implements Cloneable {
+public class WindowFunctionEval extends AggregationFunctionCallEval implements Cloneable {
   @Expose protected String windowName;
-  @Expose protected WindowAggFunction instance;
-  @Expose protected boolean firstPhase;
-  private Tuple params;
 
-  public WindowFunctionEval(String windowName, FunctionDesc desc, WindowAggFunction instance, EvalNode[] givenArgs) {
-    super(EvalType.WINDOW_FUNCTION, desc, givenArgs);
+  public WindowFunctionEval(String windowName, FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs) {
+    super(EvalType.WINDOW_FUNCTION, desc, instance, givenArgs);
     this.windowName = windowName;
-    this.instance = instance;
   }
 
   public String getWindowName() {
     return windowName;
-  }
-
-  public FunctionContext newContext() {
-    return instance.newContext();
-  }
-
-  public void merge(FunctionContext context, Schema schema, Tuple tuple) {
-    if (params == null) {
-      this.params = new VTuple(argEvals.length);
-    }
-
-    if (argEvals != null) {
-      for (int i = 0; i < argEvals.length; i++) {
-        params.put(i, argEvals[i].eval(schema, tuple));
-      }
-    }
-
-    if (firstPhase) {
-      instance.eval(context, params);
-    } else {
-      instance.merge(context, params);
-    }
   }
 
   @Override
@@ -88,11 +63,10 @@ public class WindowFunctionEval extends FunctionEval implements Cloneable {
     }
   }
 
+  @Override
   public Object clone() throws CloneNotSupportedException {
-    return super.clone();
-  }
-
-  public void setFirstPhase() {
-    this.firstPhase = true;
+    WindowFunctionEval windowFunctionEval = (WindowFunctionEval) super.clone();
+    windowFunctionEval.windowName = windowName;
+    return windowFunctionEval;
   }
 }

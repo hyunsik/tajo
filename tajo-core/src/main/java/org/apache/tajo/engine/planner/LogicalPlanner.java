@@ -203,6 +203,10 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     stack.push(projection);
     LogicalNode child = visit(context, stack, projection.getChild());
 
+    if (block.hasWindowSpecs()) {
+      LOG.info("window function");
+    }
+
     // check if it is implicit aggregation. If so, it inserts group-by node to its child.
     if (block.isAggregationRequired()) {
       child = insertGroupbyNode(context, child, stack);
@@ -414,6 +418,17 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
         }
       }
     }
+  }
+
+  private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, String [] partitionKeys,
+                                          Stack<Expr> stack) {
+    LogicalPlan plan = context.plan;
+    QueryBlock block = context.queryBlock;
+    WindowAggNode windowNode = context.plan.createNode(WindowAggNode.class);
+    windowNode.setChild(child);windowNode.setChild(child);
+
+
+    return windowNode;
   }
 
   /**

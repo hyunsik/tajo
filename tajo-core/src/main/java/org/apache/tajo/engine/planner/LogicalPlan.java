@@ -767,6 +767,7 @@ public class LogicalPlan {
       } else {
         String generatedName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
         WindowSpecExpr noNameWindow = null;
+
         try {
           noNameWindow = (WindowSpecExpr) windowSpecExpr.clone();
         } catch (CloneNotSupportedException e) {

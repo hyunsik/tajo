@@ -93,10 +93,10 @@ public enum OpType {
   Column(ColumnReferenceExpr.class),
   Target(NamedExpr.class),
   Function(FunctionExpr.class),
-  WindowFunction(WindowFunctionExpr.class),
   Asterisk(QualifiedAsteriskExpr.class),
 
   // Set Functions
+  WindowFunction(WindowFunctionExpr.class),
   CountRowsFunction(CountRowsFunctionExpr.class),
   GeneralSetFunction(GeneralSetFunctionExpr.class),
 

@@ -579,7 +579,7 @@ public class LogicalPlan {
     private final Map<String, RelationNode> canonicalNameToRelationMap = TUtil.newHashMap();
     private final Map<String, List<String>> aliasMap = TUtil.newHashMap();
     private final Map<OpType, List<Expr>> operatorToExprMap = TUtil.newHashMap();
-    private final LinkedHashSet<WindowSpecExpr> windowSpecs = Sets.newLinkedHashSet();
+    private final Map<String, WindowSpecExpr> windowSpecs = TUtil.newHashMap();
     /**
      * It's a map between nodetype and node. node types can be duplicated. So, latest node type is only kept.
      */
@@ -762,24 +762,45 @@ public class LogicalPlan {
 
     public String addWindowSpecs(WindowSpecExpr windowSpecExpr) {
       if (windowSpecExpr.hasWindowName()) {
-        windowSpecs.add(windowSpecExpr);
+        if (!windowSpecs.containsKey(windowSpecExpr.getWindowName())) {
+          windowSpecs.put(windowSpecExpr.getWindowName(), windowSpecExpr);
+        }
         return windowSpecExpr.getWindowName();
       } else {
-        String generatedName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
-        WindowSpecExpr noNameWindow = null;
+        WindowSpecExpr newWindowSpec = null;
 
         try {
-          noNameWindow = (WindowSpecExpr) windowSpecExpr.clone();
+          newWindowSpec = (WindowSpecExpr) windowSpecExpr.clone();
         } catch (CloneNotSupportedException e) {
           throw new RuntimeException(e);
         }
-        noNameWindow.setWindowName(generatedName);
-        windowSpecs.add(noNameWindow);
-        return generatedName;
+        newWindowSpec.setWindowName(null); // remove name
+
+        String windowName = null;
+        for (WindowSpecExpr existing : windowSpecs.values()) {
+          WindowSpecExpr noNameExistingWindow = null;
+          try {
+            noNameExistingWindow = (WindowSpecExpr) windowSpecExpr.clone();
+          } catch (CloneNotSupportedException e) {
+            throw new RuntimeException(e);
+          }
+          if (newWindowSpec.equals(noNameExistingWindow)) {
+            windowName = existing.getWindowName();
+            break;
+          }
+        }
+
+        if (windowName == null) {
+          windowName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
+        }
+
+        newWindowSpec.setWindowName(windowName);
+        windowSpecs.put(newWindowSpec.getWindowName(), newWindowSpec);
+        return windowName;
       }
     }
 
-    public Set<WindowSpecExpr> getWindowSpecs() {
+    public Map<String, WindowSpecExpr> getWindowSpecs() {
       return windowSpecs;
     }
 

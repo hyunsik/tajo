@@ -204,7 +204,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     LogicalNode child = visit(context, stack, projection.getChild());
 
     if (block.hasWindowSpecs()) {
-      LOG.info("window function");
+      child = insertWindowAggNode(context, child, stack);
     }
 
     // check if it is implicit aggregation. If so, it inserts group-by node to its child.
@@ -312,6 +312,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       // Add sub-expressions (i.e., aggregation part and scalar part) from dissected parts.
       block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].aggExprs);
       block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].scalarExprs);
+      block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].windowAggExprs);
     }
 
     return referenceNames;
@@ -420,15 +421,17 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     }
   }
 
-  private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, String [] partitionKeys,
-                                          Stack<Expr> stack) {
+  private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, Stack<Expr> stack)
+      throws PlanningException {
     LogicalPlan plan = context.plan;
     QueryBlock block = context.queryBlock;
-    WindowAggNode windowNode = context.plan.createNode(WindowAggNode.class);
-    windowNode.setChild(child);windowNode.setChild(child);
+    WindowAggNode windowAggNode = context.plan.createNode(WindowAggNode.class);
+    windowAggNode.setChild(child);
+    windowAggNode.setInSchema(child.getOutSchema());
 
 
-    return windowNode;
+
+    return child;
   }
 
   /**

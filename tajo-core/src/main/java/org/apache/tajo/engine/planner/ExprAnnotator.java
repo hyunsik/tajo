@@ -478,7 +478,39 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
 
   public EvalNode visitWindowFunction(Context ctx, Stack<Expr> stack, WindowFunctionExpr windowFunc)
       throws PlanningException {
-    String windowName = ctx.currentBlock.addWindowSpecs(windowFunc.getWindowSpec());
+    String windowName;
+    WindowSpecExpr windowSpec;
+
+    if (windowFunc.hasWindowName()) {
+      windowName = windowFunc.getWindowName();
+      windowSpec = ctx.currentBlock.getWindowSpecs().get(windowName);
+    } else {
+      windowName = ctx.currentBlock.addWindowSpecs(windowFunc.getWindowSpec());
+      windowSpec = windowFunc.getWindowSpec();
+    }
+
+    windowFunc.setWindowName(windowName);
+    Expr key;
+
+    String [] partitionKeyReferenceNames = null;
+    if (windowSpec.hasPartitionBy()) {
+      partitionKeyReferenceNames = new String [windowSpec.getPartitionKeys().length];
+      for (int i = 0; i < windowSpec.getPartitionKeys().length; i++) {
+        key = windowSpec.getPartitionKeys()[i];
+        visit(ctx, stack, key);
+        partitionKeyReferenceNames[i] = ctx.currentBlock.namedExprsMgr.addExpr(key);
+      }
+    }
+
+    String [] orderKeyReferenceNames = null;
+    if (windowSpec.hasOrderBy()) {
+      orderKeyReferenceNames = new String[windowSpec.getSortSpecs().length];
+      for (int i = 0; i < windowSpec.getSortSpecs().length; i++) {
+        key = windowSpec.getSortSpecs()[i].getKey();
+        visit(ctx, stack, key);
+        orderKeyReferenceNames[i] = ctx.currentBlock.namedExprsMgr.addExpr(key);
+      }
+    }
 
     String funcName = windowFunc.getFunction().getSignature();
     Expr[] params = windowFunc.getFunction().getParams();

@@ -18,11 +18,15 @@
 
 package org.apache.tajo.engine.planner;
 
+import com.google.common.collect.Sets;
 import org.apache.tajo.algebra.*;
 import org.apache.tajo.catalog.CatalogUtil;
+import org.apache.tajo.engine.planner.logical.WindowAggNode;
+import org.apache.tajo.engine.planner.logical.WindowSpec;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 
 /**
@@ -85,6 +89,9 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
                    // function.
     List<NamedExpr> aggExprs = new ArrayList<NamedExpr>(); // aggregation functions
     List<NamedExpr> scalarExprs = new ArrayList<NamedExpr>(); // scalar expressions which can be referred
+
+    List<NamedExpr> windowAggExprs = new ArrayList<NamedExpr>(); // scalar expressions which can be referred
+    Set<WindowSpecReferences> windowSpecs = Sets.newLinkedHashSet();
 
     private ExprNormalizedResult(LogicalPlanner.PlanContext context) {
       this.plan = context.plan;
@@ -227,6 +234,48 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
     return expr;
   }
 
+  public Expr visitWindowFunction(ExprNormalizedResult ctx, Stack<Expr> stack, WindowFunctionExpr expr)
+      throws PlanningException {
+    stack.push(expr);
+
+    WindowSpecExpr windowSpec = expr.getWindowSpec();
+    String windowName = ctx.block.addWindowSpecs(windowSpec);
+    Expr key;
+
+    String [] partitionKeyReferenceNames = null;
+    if (windowSpec.hasPartitionBy()) {
+      partitionKeyReferenceNames = new String [windowSpec.getPartitionKeys().length];
+      for (int i = 0; i < windowSpec.getPartitionKeys().length; i++) {
+        key = windowSpec.getPartitionKeys()[i];
+        visit(ctx, stack, key);
+        partitionKeyReferenceNames[i] = ctx.block.namedExprsMgr.addExpr(key);
+      }
+    }
+
+    String [] orderKeyReferenceNames = null;
+    if (windowSpec.hasOrderBy()) {
+      orderKeyReferenceNames = new String[windowSpec.getSortSpecs().length];
+      for (int i = 0; i < windowSpec.getSortSpecs().length; i++) {
+        key = windowSpec.getSortSpecs()[i].getKey();
+        visit(ctx, stack, key);
+        orderKeyReferenceNames[i] = ctx.block.namedExprsMgr.addExpr(key);
+      }
+    }
+
+    WindowSpecReferences windowSpecReferences = new WindowSpecReferences(windowName, partitionKeyReferenceNames,
+        orderKeyReferenceNames);
+    ctx.windowSpecs.add(windowSpecReferences);
+
+    expr.setWindowName(windowName);
+    expr.setWindowSpec(null);
+
+    String functionName = ctx.block.namedExprsMgr.addExpr(expr.getFunction());
+    ctx.windowAggExprs.add(new NamedExpr(expr.getFunction(), functionName));
+
+    stack.pop();
+    return expr;
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Literal Section
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,5 +302,42 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
       }
     }
     return expr;
+  }
+
+  public String addWindowSpec(WindowSpec windowSpec) {
+    return null;
+  }
+
+  public static class WindowSpecReferences {
+    String windowName;
+
+    String [] partitionKeys;
+    String [] orderKeys;
+
+    public WindowSpecReferences(String windowName, String [] partitionKeys, String [] orderKeys) {
+      this.windowName = windowName;
+      this.partitionKeys = partitionKeys;
+      this.orderKeys = orderKeys;
+    }
+
+    public String getWindowName() {
+      return windowName;
+    }
+
+    public boolean hasPartitionKeys() {
+      return partitionKeys != null;
+    }
+
+    public String [] getPartitionKeys() {
+      return partitionKeys;
+    }
+
+    public boolean hasOrderBy() {
+      return orderKeys != null;
+    }
+
+    public String [] getOrderKeys() {
+      return orderKeys;
+    }
   }
 }

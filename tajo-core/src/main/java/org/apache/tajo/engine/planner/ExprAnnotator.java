@@ -512,19 +512,21 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       }
     }
 
-    String funcName = windowFunc.getFunction().getSignature();
-    Expr[] params = windowFunc.getFunction().getParams();
+    String funcName = windowFunc.getSignature();
+    Expr[] params = windowFunc.getParams();
     EvalNode[] givenArgs = new EvalNode[params.length];
     TajoDataTypes.DataType[] paramTypes = new TajoDataTypes.DataType[params.length];
 
-    givenArgs[0] = visit(ctx, stack, params[0]);
-    if (windowFunc.getFunction().getSignature().equalsIgnoreCase("count")) {
-      paramTypes[0] = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.ANY);
-    } else {
-      paramTypes[0] = givenArgs[0].getValueType();
+    if (params.length > 0) {
+      givenArgs[0] = visit(ctx, stack, params[0]);
+      if (windowFunc.getSignature().equalsIgnoreCase("count")) {
+        paramTypes[0] = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.ANY);
+      } else {
+        paramTypes[0] = givenArgs[0].getValueType();
+      }
     }
 
-    if (!catalog.containFunction(windowFunc.getFunction().getSignature(), paramTypes)) {
+    if (!catalog.containFunction(windowFunc.getSignature(), paramTypes)) {
       throw new NoSuchFunctionException(funcName, paramTypes);
     }
 

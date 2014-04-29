@@ -20,6 +20,7 @@ package org.apache.tajo.engine.planner.logical;
 
 import com.google.gson.annotations.Expose;
 import org.apache.tajo.catalog.Column;
+import org.apache.tajo.catalog.SortSpec;
 import org.apache.tajo.engine.eval.AggregationFunctionCallEval;
 import org.apache.tajo.engine.planner.PlanString;
 import org.apache.tajo.engine.planner.PlannerUtil;
@@ -27,8 +28,11 @@ import org.apache.tajo.engine.planner.Target;
 import org.apache.tajo.util.TUtil;
 
 public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
-	/** Grouping key sets */
+	/** partition key sets */
   @Expose private Column [] partitionKeys;
+  /** order key sets */
+  @Expose private SortSpec [] sortSpecs;
+
   /** Aggregation Functions */
   @Expose private AggregationFunctionCallEval [] aggrFunctions;
   /**
@@ -39,7 +43,7 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
   @Expose private boolean hasDistinct = false;
 
   public WindowAggNode(int pid) {
-    super(pid, NodeType.GROUP_BY);
+    super(pid, NodeType.WINDOW_AGG);
   }
 
   public final boolean isEmptyPartitionKeys() {
@@ -53,6 +57,18 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
 	public final Column [] getPartitionKeys() {
 	  return this.partitionKeys;
 	}
+
+  public final boolean hasSortSpecs() {
+    return this.sortSpecs != null;
+  }
+
+  public void setSortSpecs(SortSpec [] sortSpecs) {
+    this.sortSpecs = sortSpecs;
+  }
+
+  public final SortSpec [] getSortSpecs() {
+    return this.sortSpecs;
+  }
 
   public final boolean isDistinct() {
     return hasDistinct;

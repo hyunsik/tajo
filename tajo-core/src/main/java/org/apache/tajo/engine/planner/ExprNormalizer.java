@@ -269,8 +269,8 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
     expr.setWindowName(windowName);
     expr.setWindowSpec(null);
 
-    String functionName = ctx.block.namedExprsMgr.addExpr(expr.getFunction());
-    ctx.windowAggExprs.add(new NamedExpr(expr.getFunction(), functionName));
+    String functionName = ctx.block.namedExprsMgr.addExpr(expr);
+    ctx.windowAggExprs.add(new NamedExpr(expr, functionName));
 
     stack.pop();
     return expr;

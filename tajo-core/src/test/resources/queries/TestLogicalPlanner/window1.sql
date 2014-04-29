@@ -1,5 +1,5 @@
  SELECT
   l_orderkey,
-  sum(l_quantity ) over()
+  sum(l_partkey) over()
 FROM
   lineitem;

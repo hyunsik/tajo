@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.derby.impl.sql.compile.WindowReferenceNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
@@ -43,6 +44,7 @@ import org.apache.tajo.engine.planner.rewrite.ProjectionPushDownRule;
 import org.apache.tajo.engine.utils.SchemaUtil;
 import org.apache.tajo.master.session.Session;
 import org.apache.tajo.storage.StorageUtil;
+import org.apache.tajo.util.Pair;
 import org.apache.tajo.util.TUtil;
 
 import java.util.*;
@@ -195,7 +197,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     String [] referenceNames;
     // in prephase, insert all target list into NamedExprManagers.
     // Then it gets reference names, each of which points an expression in target list.
-    referenceNames = doProjectionPrephase(context, projection);
+    Pair<String [], ExprNormalizer.WindowSpecReferences []> referencesPair = doProjectionPrephase(context, projection);
+    referenceNames = referencesPair.getFirst();
 
     ////////////////////////////////////////////////////////
     // Visit and Build Child Plan
@@ -204,7 +207,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     LogicalNode child = visit(context, stack, projection.getChild());
 
     if (block.hasWindowSpecs()) {
-      child = insertWindowAggNode(context, child, stack);
+      child = insertWindowAggNode(context, child, stack, referencesPair.getSecond());
     }
 
     // check if it is implicit aggregation. If so, it inserts group-by node to its child.
@@ -277,12 +280,18 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     projectionNode.setInSchema(dupRemoval.getOutSchema());
   }
 
-  private String [] doProjectionPrephase(PlanContext context, Projection projection) throws PlanningException {
+  private Pair<String [], ExprNormalizer.WindowSpecReferences []> doProjectionPrephase(PlanContext context,
+                                                                                    Projection projection)
+      throws PlanningException {
+
     QueryBlock block = context.queryBlock;
 
     int finalTargetNum = projection.size();
     String [] referenceNames = new String[finalTargetNum];
     ExprNormalizedResult [] normalizedExprList = new ExprNormalizedResult[finalTargetNum];
+
+    List<ExprNormalizer.WindowSpecReferences> windowSpecReferencesList = TUtil.newList();
+
     NamedExpr namedExpr;
     for (int i = 0; i < finalTargetNum; i++) {
       namedExpr = projection.getNamedExprs()[i];
@@ -313,9 +322,12 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].aggExprs);
       block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].scalarExprs);
       block.namedExprsMgr.addNamedExprArray(normalizedExprList[i].windowAggExprs);
+
+      windowSpecReferencesList.addAll(normalizedExprList[i].windowSpecs);
     }
 
-    return referenceNames;
+    return new Pair<String[], ExprNormalizer.WindowSpecReferences []>(referenceNames,
+        windowSpecReferencesList.toArray(new ExprNormalizer.WindowSpecReferences[windowSpecReferencesList.size()]));
   }
 
   /**
@@ -421,7 +433,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     }
   }
 
-  private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, Stack<Expr> stack)
+  private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, Stack<Expr> stack,
+                                          ExprNormalizer.WindowSpecReferences [] windowSpecReferenceses)
       throws PlanningException {
     LogicalPlan plan = context.plan;
     QueryBlock block = context.queryBlock;
@@ -429,9 +442,58 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     windowAggNode.setChild(child);
     windowAggNode.setInSchema(child.getOutSchema());
 
+    WindowSpecExpr windowSpecExpr = block.getWindowSpecs().get(windowSpecReferenceses[0].getWindowName());
 
+    if (windowSpecReferenceses[0].hasPartitionKeys()) {
+      Column [] partitionKeyColumns = new Column[windowSpecReferenceses[0].getPartitionKeys().length];
+      for (String partitionKey : windowSpecReferenceses[0].getPartitionKeys()) {
+        for (int i = 0; i < partitionKeyColumns.length; i++) {
+          if (block.namedExprsMgr.isEvaluated(partitionKey)) {
+            partitionKeyColumns[i] = block.namedExprsMgr.getTarget(partitionKey).getNamedColumn();
+          } else {
+            throw new PlanningException("Each grouping column expression must be a scalar expression.");
+          }
+        }
+      }
+      windowAggNode.setPartitionKeys(partitionKeyColumns);
+    }
 
-    return child;
+    if (windowSpecReferenceses[0].hasOrderBy()) {
+      Sort.SortSpec [] sortSpecs = windowSpecExpr.getSortSpecs();
+      int sortNum = sortSpecs.length;
+      String [] referNames = windowSpecReferenceses[0].getOrderKeys();
+      SortSpec [] annotatedSortSpecs = new SortSpec[sortNum];
+
+      Column column;
+      for (int i = 0; i < sortNum; i++) {
+        if (block.namedExprsMgr.isEvaluated(windowSpecReferenceses[0].getOrderKeys()[i])) {
+          column = block.namedExprsMgr.getTarget(referNames[i]).getNamedColumn();
+        } else {
+          throw new IllegalStateException("Unexpected State: " + TUtil.arrayToString(sortSpecs));
+        }
+        annotatedSortSpecs[i] = new SortSpec(column, sortSpecs[i].isAscending(), sortSpecs[i].isNullFirst());
+      }
+
+      windowAggNode.setSortSpecs(annotatedSortSpecs);
+    }
+
+    Set<String> aggEvalNames = new LinkedHashSet<String>();
+    Set<WindowFunctionEval> aggEvals = new LinkedHashSet<WindowFunctionEval>();
+
+    for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
+      NamedExpr rawTarget = it.next();
+      try {
+        EvalNode evalNode = exprAnnotator.createEvalNode(context.plan, context.queryBlock, rawTarget.getExpr());
+        if (evalNode.getType() == EvalType.WINDOW_FUNCTION) {
+          aggEvalNames.add(rawTarget.getAlias());
+          aggEvals.add((WindowFunctionEval) evalNode);
+          block.namedExprsMgr.markAsEvaluated(rawTarget.getAlias(), evalNode);
+        }
+      } catch (VerifyException ve) {
+      }
+    }
+
+    return windowAggNode;
   }
 
   /**

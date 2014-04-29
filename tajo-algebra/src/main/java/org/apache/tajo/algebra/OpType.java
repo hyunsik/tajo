@@ -160,7 +160,7 @@ public enum OpType {
    * @return True if it is aggregation function type. Otherwise, it returns False.
    */
   public static boolean isFunction(OpType type) {
-    return type == Function || isAggregationFunction(type);
+    return type == Function || isAggregationFunction(type) || isWindowFunction(type);
   }
 
   /**
@@ -171,5 +171,15 @@ public enum OpType {
    */
   public static boolean isAggregationFunction(OpType type) {
     return type == GeneralSetFunction || type == CountRowsFunction;
+  }
+
+  /**
+   * Check if it is an window function type.
+   *
+   * @param type The type to be checked
+   * @return True if it is window function type. Otherwise, it returns False.
+   */
+  public static boolean isWindowFunction(OpType type) {
+    return type == WindowFunction;
   }
 }

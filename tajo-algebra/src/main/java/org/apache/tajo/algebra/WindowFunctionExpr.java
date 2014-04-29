@@ -21,17 +21,14 @@ package org.apache.tajo.algebra;
 import com.google.common.base.Objects;
 import org.apache.tajo.util.TUtil;
 
-public class WindowFunctionExpr extends Expr {
-  // set function
-  GeneralSetFunctionExpr function;
+public class WindowFunctionExpr extends FunctionExpr {
 
   // over clause - only one of both is used.
   private String windowName;
   private WindowSpecExpr windowSpec;
 
   public WindowFunctionExpr(GeneralSetFunctionExpr function) {
-    super(OpType.WindowFunction);
-    this.function = function;
+    super(OpType.WindowFunction, function.getSignature(), function.getParams());
   }
 
   public boolean hasWindowName() {
@@ -44,10 +41,6 @@ public class WindowFunctionExpr extends Expr {
 
   public String getWindowName() {
     return this.windowName;
-  }
-
-  public GeneralSetFunctionExpr getFunction() {
-    return function;
   }
 
   public boolean hasWidowSpec() {

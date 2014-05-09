@@ -30,7 +30,7 @@ import org.apache.tajo.util.TUtil;
 
 import static org.apache.tajo.algebra.WindowSpecExpr.*;
 
-public class WindowOverEval extends EvalNode {
+public class WindowOverEval extends EvalNode implements Cloneable {
 
   @Expose private WindowFunctionEval function;
 
@@ -54,6 +54,18 @@ public class WindowOverEval extends EvalNode {
   }
 
   @Override
+  public void preOrder(EvalNodeVisitor visitor) {
+    visitor.visit(this);
+    function.preOrder(visitor);
+  }
+
+  @Override
+  public void postOrder(EvalNodeVisitor visitor) {
+    function.preOrder(visitor);
+    visitor.visit(this);
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (obj instanceof WindowOverEval) {
       WindowOverEval another = (WindowOverEval) obj;
@@ -65,5 +77,11 @@ public class WindowOverEval extends EvalNode {
 
   public int hashCode() {
     return Objects.hashCode(function);
+  }
+
+  public Object clone() throws CloneNotSupportedException {
+    WindowOverEval newWindowOverEval = (WindowOverEval) super.clone();
+    newWindowOverEval.function = (WindowFunctionEval) function.clone();
+    return newWindowOverEval;
   }
 }

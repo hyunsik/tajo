@@ -421,6 +421,19 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
           }
         }
       }
+    } else if (projectable instanceof WindowAggNode) {
+      WindowAggNode windowAggNode = (WindowAggNode) projectable;
+      if (windowAggNode.hasAggFunctions()) {
+        for (AggregationFunctionCallEval f : windowAggNode.getAggFunctions()) {
+          Set<Column> columns = EvalTreeUtil.findUniqueColumns(f);
+          for (Column c : columns) {
+            if (!projectable.getInSchema().contains(c)) {
+              throw new PlanningException(String.format("Cannot get the field \"%s\" at node (%d)",
+                  c, projectable.getPID()));
+            }
+          }
+        }
+      }
     } else {
       for (Target target : projectable.getTargets()) {
         Set<Column> columns = EvalTreeUtil.findUniqueColumns(target.getEvalTree());
@@ -478,8 +491,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       windowAggNode.setSortSpecs(annotatedSortSpecs);
     }
 
-    Set<String> aggEvalNames = new LinkedHashSet<String>();
-    Set<WindowFunctionEval> aggEvals = new LinkedHashSet<WindowFunctionEval>();
+    List<String> aggEvalNames = new ArrayList<String>();
+    List<WindowFunctionEval> aggEvals = new ArrayList<WindowFunctionEval>();
 
     for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
       NamedExpr rawTarget = it.next();
@@ -494,6 +507,13 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       }
     }
 
+    Target [] targets = new Target[child.getOutSchema().size() + aggEvalNames.size()];
+    System.arraycopy(PlannerUtil.schemaToTargets(child.getOutSchema()), 0, targets, 0, child.getOutSchema().size());
+    for (int i = 0; i < aggEvalNames.size(); i++) {
+      targets[child.getOutSchema().size() + i] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
+    }
+    windowAggNode.setTargets(targets);
+    verifyProjectedFields(block, windowAggNode);
     return windowAggNode;
   }
 
@@ -1643,6 +1663,11 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
     // aggregation functions cannot be evaluated in scan node
     if (EvalTreeUtil.findDistinctAggFunction(evalNode).size() > 0) {
+      return false;
+    }
+
+    // aggregation functions cannot be evaluated in scan node
+    if (EvalTreeUtil.findEvalsByType(evalNode, EvalType.WINDOW_FUNCTION).size() > 0) {
       return false;
     }
 

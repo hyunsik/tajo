@@ -46,8 +46,8 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
     super(pid, NodeType.WINDOW_AGG);
   }
 
-  public final boolean isEmptyPartitionKeys() {
-    return partitionKeys == null || partitionKeys.length == 0;
+  public final boolean hasPartitionKeys() {
+    return partitionKeys != null && partitionKeys.length > 0;
   }
 
   public void setPartitionKeys(Column[] groupingColumns) {
@@ -170,11 +170,24 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
 
     StringBuilder sb = new StringBuilder();
     sb.append("(");
-    Column [] groupingColumns = this.partitionKeys;
-    for (int j = 0; j < groupingColumns.length; j++) {
-      sb.append(groupingColumns[j].getSimpleName());
-      if(j < groupingColumns.length - 1) {
-        sb.append(",");
+    if (hasPartitionKeys()) {
+      sb.append("PARTITION BY ");
+      for (int j = 0; j < partitionKeys.length; j++) {
+        sb.append(partitionKeys[j].getSimpleName());
+        if(j < partitionKeys.length - 1) {
+          sb.append(",");
+        }
+      }
+    }
+
+    if (hasSortSpecs()) {
+      sb.append("ORDER BY ");
+      for (int i = 0; i < sortSpecs.length; i++) {
+        sb.append(sortSpecs[i].getSortKey().getSimpleName()).append(" ")
+            .append(sortSpecs[i].isAscending() ? "asc" : "desc");
+        if( i < sortSpecs.length - 1) {
+          sb.append(",");
+        }
       }
     }
 

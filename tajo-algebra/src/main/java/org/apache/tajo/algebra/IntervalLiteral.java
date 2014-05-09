@@ -16,18 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.datum.exception;
+package org.apache.tajo.algebra;
 
-public class InvalidCastException extends RuntimeException {
-	private static final long serialVersionUID = -7689027447969916148L;
+public class IntervalLiteral extends Expr {
+  private String exprStr;
 
-	public InvalidCastException() {
-	}
+  public IntervalLiteral(String str) {
+    super(OpType.IntervalLiteral);
+    this.exprStr = str;
+  }
 
-	/**
-	 * @param message
-	 */
-	public InvalidCastException(String message) {
-		super(message);
-	}
+
+  public String getExprStr() {
+    return exprStr;
+  }
+
+  public int hashCode() {
+    return exprStr.hashCode();
+  }
+
+  @Override
+  boolean equalsTo(Expr expr) {
+    if (expr instanceof IntervalLiteral) {
+      IntervalLiteral another = (IntervalLiteral) expr;
+      return exprStr.equals(another.exprStr);
+    }
+    return false;
+  }
 }

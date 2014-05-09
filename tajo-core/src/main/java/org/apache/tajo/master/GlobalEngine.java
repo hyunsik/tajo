@@ -289,7 +289,7 @@ public class GlobalEngine extends AbstractService {
         return QueryIdFactory.NULL_QUERY_ID;
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error(e.getMessage(), e);
       throw new IOException(e.getMessage(), e);
     }
   }
@@ -339,9 +339,11 @@ public class GlobalEngine extends AbstractService {
     }
 
     LogicalPlan plan = planner.createPlan(session, expression);
-    LOG.info("=============================================");
-    LOG.info("Non Optimized Query: \n" + plan.toString());
-    LOG.info("=============================================");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("=============================================");
+      LOG.debug("Non Optimized Query: \n" + plan.toString());
+      LOG.debug("=============================================");
+    }
     optimizer.optimize(plan);
     LOG.info("=============================================");
     LOG.info("Optimized Query: \n" + plan.toString());

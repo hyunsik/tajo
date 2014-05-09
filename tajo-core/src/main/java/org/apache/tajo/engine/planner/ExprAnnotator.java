@@ -18,6 +18,7 @@
 
 package org.apache.tajo.engine.planner;
 
+import com.google.common.collect.Maps;
 import org.apache.tajo.algebra.*;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.catalog.CatalogUtil;
@@ -25,7 +26,6 @@ import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.exception.NoSuchFunctionException;
 import org.apache.tajo.catalog.proto.CatalogProtos;
-import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.*;
 import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.engine.function.AggFunction;
@@ -33,9 +33,15 @@ import org.apache.tajo.engine.function.GeneralFunction;
 import org.apache.tajo.engine.function.WindowAggFunction;
 import org.apache.tajo.engine.planner.logical.NodeType;
 import org.apache.tajo.exception.InternalException;
+import org.apache.tajo.util.Pair;
+import org.apache.tajo.util.TUtil;
 import org.joda.time.DateTime;
 
+import java.util.Map;
 import java.util.Stack;
+
+import static org.apache.tajo.common.TajoDataTypes.DataType;
+import static org.apache.tajo.common.TajoDataTypes.Type;
 
 /**
  * <code>ExprAnnotator</code> makes an annotated expression called <code>EvalNode</code> from an
@@ -63,6 +69,133 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       throws PlanningException {
     Context context = new Context(plan, block);
     return visit(context, new Stack<Expr>(), expr);
+  }
+
+  public static void assertEval(boolean condition, String message) throws PlanningException {
+    if (!condition) {
+      throw new PlanningException(message);
+    }
+  }
+
+  /**
+   * It checks both terms in binary expression. If one of both needs type conversion, it inserts a cast expression.
+   *
+   * @param lhs left hand side term
+   * @param rhs right hand side term
+   * @return a pair including left/right hand side terms
+   */
+  public static Pair<EvalNode, EvalNode> convertTypesIfNecessary(EvalNode lhs, EvalNode rhs) {
+    Type lhsType = lhs.getValueType().getType();
+    Type rhsType = rhs.getValueType().getType();
+
+    // If one of both is NULL, it just returns the original types without casting.
+    if (lhsType == Type.NULL_TYPE || rhsType == Type.NULL_TYPE) {
+      return new Pair<EvalNode, EvalNode>(lhs, rhs);
+    }
+
+    Type toBeCasted = TUtil.getFromNestedMap(TYPE_CONVERSION_MAP, lhsType, rhsType);
+    if (toBeCasted != null) { // if not null, one of either should be converted to another type.
+      // Overwrite lhs, rhs, or both with cast expression.
+      if (lhsType != toBeCasted) {
+        lhs = convertType(lhs, CatalogUtil.newSimpleDataType(toBeCasted));
+      }
+      if (rhsType != toBeCasted) {
+        rhs = convertType(rhs, CatalogUtil.newSimpleDataType(toBeCasted));
+      }
+    }
+
+    return new Pair<EvalNode, EvalNode>(lhs, rhs);
+  }
+
+  /**
+   * It picks out the widest range type among given <code>types</code>.
+   *
+   * Example:
+   * <ul>
+   *   <li>int, int8  -> int8 </li>
+   *   <li>int4, int8, float4  -> float4 </li>
+   *   <li>float4, float8 -> float8</li>
+   *   <li>float4, text -> exception!</li>
+   * </ul>
+   *
+   * @param types A list of DataTypes
+   * @return The widest DataType
+   * @throws PlanningException when types are not compatible, it throws the exception.
+   */
+  static DataType getWidestType(DataType...types) throws PlanningException {
+    DataType widest = types[0];
+    for (int i = 1; i < types.length; i++) {
+      Type candidate = TUtil.getFromNestedMap(TYPE_CONVERSION_MAP, widest.getType(), types[i].getType());
+      assertEval(candidate != null, "No matched operation for those types: " + TUtil.arrayToString(types));
+      widest = CatalogUtil.newSimpleDataType(candidate);
+    }
+
+    return widest;
+  }
+
+  /**
+   * Insert a type conversion expression to a given expression.
+   * If the type of expression and <code>toType</code> is already the same, it just returns the original expression.
+   *
+   * @param evalNode an expression
+   * @param toType target type
+   * @return type converted expression.
+   */
+  private static EvalNode convertType(EvalNode evalNode, DataType toType) {
+
+    // if original and toType is the same, we don't need type conversion.
+    if (evalNode.getValueType() == toType) {
+      return evalNode;
+    }
+    // the conversion to null is not allowed.
+    if (evalNode.getValueType().getType() == Type.NULL_TYPE || toType.getType() == Type.NULL_TYPE) {
+      return evalNode;
+    }
+
+    if (evalNode.getType() == EvalType.BETWEEN) {
+      BetweenPredicateEval between = (BetweenPredicateEval) evalNode;
+
+      between.setPredicand(convertType(between.getPredicand(), toType));
+      between.setBegin(convertType(between.getBegin(), toType));
+      between.setEnd(convertType(between.getEnd(), toType));
+
+      return between;
+
+    } else if (evalNode.getType() == EvalType.CASE) {
+
+      CaseWhenEval caseWhenEval = (CaseWhenEval) evalNode;
+      for (CaseWhenEval.IfThenEval ifThen : caseWhenEval.getIfThenEvals()) {
+        ifThen.setResult(convertType(ifThen.getResult(), toType));
+      }
+
+      if (caseWhenEval.hasElse()) {
+        caseWhenEval.setElseResult(convertType(caseWhenEval.getElse(), toType));
+      }
+
+      return caseWhenEval;
+
+    } else if (evalNode.getType() == EvalType.ROW_CONSTANT) {
+      RowConstantEval original = (RowConstantEval) evalNode;
+
+      Datum[] datums = original.getValues();
+      Datum[] convertedDatum = new Datum[datums.length];
+
+      for (int i = 0; i < datums.length; i++) {
+        convertedDatum[i] = DatumFactory.cast(datums[i], toType);
+      }
+
+      RowConstantEval convertedRowConstant = new RowConstantEval(convertedDatum);
+
+      return convertedRowConstant;
+
+    } else if (evalNode.getType() == EvalType.CONST) {
+      ConstEval original = (ConstEval) evalNode;
+      ConstEval newConst = new ConstEval(DatumFactory.cast(original.getValue(), toType));
+      return newConst;
+
+    } else {
+      return new CastEval(evalNode, toType);
+    }
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,7 +294,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       throw new IllegalStateException("Wrong Expr Type: " + expr.getType());
     }
 
-    return new BinaryEval(evalType, left, right);
+    return createBinaryNode(evalType, left, right);
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,10 +309,15 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode end = visit(ctx, stack, between.end());
     stack.pop();
 
+    // implicit type conversion
+    DataType widestType = getWidestType(predicand.getValueType(), begin.getValueType(), end.getValueType());
+
     BetweenPredicateEval betweenEval = new BetweenPredicateEval(
         between.isNot(),
         between.isSymmetric(),
         predicand, begin, end);
+
+    betweenEval = (BetweenPredicateEval) convertType(betweenEval, widestType);
     return betweenEval;
   }
 
@@ -189,6 +327,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
 
     EvalNode condition;
     EvalNode result;
+
     for (CaseWhenPredicate.WhenExpr when : caseWhen.getWhens()) {
       condition = visit(ctx, stack, when.getCondition());
       result = visit(ctx, stack, when.getResult());
@@ -198,6 +337,20 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     if (caseWhen.hasElseResult()) {
       caseWhenEval.setElseResult(visit(ctx, stack, caseWhen.getElseResult()));
     }
+
+    // Getting the widest type from all if-then expressions and else expression.
+    DataType widestType = caseWhenEval.getIfThenEvals().get(0).getResult().getValueType();
+    for (int i = 1; i < caseWhenEval.getIfThenEvals().size(); i++) {
+      widestType = getWidestType(caseWhenEval.getIfThenEvals().get(i).getResult().getValueType(), widestType);
+    }
+    if (caseWhen.hasElseResult()) {
+      widestType = getWidestType(widestType, caseWhenEval.getElse().getValueType());
+    }
+
+    assertEval(widestType != null, "Invalid Type Conversion for CaseWhen");
+
+    // implicit type conversion
+    caseWhenEval = (CaseWhenEval) convertType(caseWhenEval, widestType);
 
     return caseWhenEval;
   }
@@ -216,7 +369,10 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode lhs = visit(ctx, stack, expr.getLeft());
     RowConstantEval rowConstantEval = (RowConstantEval) visit(ctx, stack, expr.getInValue());
     stack.pop();
-    return new InEval(lhs, rowConstantEval, expr.isNot());
+
+    Pair<EvalNode, EvalNode> pair = convertTypesIfNecessary(lhs, rowConstantEval);
+
+    return new InEval(pair.getFirst(), (RowConstantEval) pair.getSecond(), expr.isNot());
   }
 
   @Override
@@ -293,6 +449,11 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
   // Arithmetic Operators
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  private static BinaryEval createBinaryNode(EvalType type, EvalNode lhs, EvalNode rhs) {
+    Pair<EvalNode, EvalNode> pair = convertTypesIfNecessary(lhs, rhs); // implicit type conversion if necessary
+    return new BinaryEval(type, pair.getFirst(), pair.getSecond());
+  }
+
   @Override
   public EvalNode visitPlus(Context ctx, Stack<Expr> stack, BinaryOperator expr) throws PlanningException {
     stack.push(expr);
@@ -300,7 +461,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode right = visit(ctx, stack, expr.getRight());
     stack.pop();
 
-    return new BinaryEval(EvalType.PLUS, left, right);
+    return createBinaryNode(EvalType.PLUS, left, right);
   }
 
   @Override
@@ -310,7 +471,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode right = visit(ctx, stack, expr.getRight());
     stack.pop();
 
-    return new BinaryEval(EvalType.MINUS, left, right);
+    return createBinaryNode(EvalType.MINUS, left, right);
   }
 
   @Override
@@ -320,7 +481,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode right = visit(ctx, stack, expr.getRight());
     stack.pop();
 
-    return new BinaryEval(EvalType.MULTIPLY, left, right);
+    return createBinaryNode(EvalType.MULTIPLY, left, right);
   }
 
   @Override
@@ -330,7 +491,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode right = visit(ctx, stack, expr.getRight());
     stack.pop();
 
-    return new BinaryEval(EvalType.DIVIDE, left, right);
+    return createBinaryNode(EvalType.DIVIDE, left, right);
   }
 
   @Override
@@ -340,7 +501,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     EvalNode right = visit(ctx, stack, expr.getRight());
     stack.pop();
 
-    return new BinaryEval(EvalType.MODULAR, left, right);
+    return createBinaryNode(EvalType.MODULAR, left, right);
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -383,7 +544,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     }
 
     EvalNode[] givenArgs = new EvalNode[params.length];
-    TajoDataTypes.DataType[] paramTypes = new TajoDataTypes.DataType[params.length];
+    DataType[] paramTypes = new DataType[params.length];
 
     for (int i = 0; i < params.length; i++) {
       givenArgs[i] = visit(ctx, stack, params[i]);
@@ -397,6 +558,27 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     }
 
     FunctionDesc funcDesc = catalog.getFunction(expr.getSignature(), paramTypes);
+
+    // trying the implicit type conversion between actual parameter types and the definition types.
+    if (CatalogUtil.checkIfVariableLengthParamDefinition(TUtil.newList(funcDesc.getParamTypes()))) {
+      DataType lastDataType = null;
+      for (int i = 0; i < givenArgs.length; i++) {
+        if (i < (funcDesc.getParamTypes().length - 1)) { // variable length
+          lastDataType = funcDesc.getParamTypes()[i];
+        } else {
+          lastDataType = CatalogUtil.newSimpleDataType(CatalogUtil.getPrimitiveTypeOf(lastDataType.getType()));
+        }
+        givenArgs[i] = convertType(givenArgs[i], lastDataType);
+      }
+    } else {
+      assertEval(funcDesc.getParamTypes().length == givenArgs.length,
+          "The number of parameters is mismatched to the function definition: " + funcDesc.toString());
+      // According to our function matching method, each given argument can be casted to the definition parameter.
+      for (int i = 0; i < givenArgs.length; i++) {
+        givenArgs[i] = convertType(givenArgs[i], funcDesc.getParamTypes()[i]);
+      }
+    }
+
 
     try {
     CatalogProtos.FunctionType functionType = funcDesc.getFuncType();
@@ -428,9 +610,9 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
   public EvalNode visitCountRowsFunction(Context ctx, Stack<Expr> stack, CountRowsFunctionExpr expr)
       throws PlanningException {
     FunctionDesc countRows = catalog.getFunction("count", CatalogProtos.FunctionType.AGGREGATION,
-        new TajoDataTypes.DataType[] {});
+        new DataType[] {});
     if (countRows == null) {
-      throw new NoSuchFunctionException(countRows.getSignature(), new TajoDataTypes.DataType[]{});
+      throw new NoSuchFunctionException(countRows.getSignature(), new DataType[]{});
     }
 
     try {
@@ -439,7 +621,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       return new AggregationFunctionCallEval(countRows, (AggFunction) countRows.newInstance(),
           new EvalNode[] {});
     } catch (InternalException e) {
-      throw new NoSuchFunctionException(countRows.getSignature(), new TajoDataTypes.DataType[]{});
+      throw new NoSuchFunctionException(countRows.getSignature(), new DataType[]{});
     }
   }
 
@@ -449,13 +631,13 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
 
     Expr[] params = setFunction.getParams();
     EvalNode[] givenArgs = new EvalNode[params.length];
-    TajoDataTypes.DataType[] paramTypes = new TajoDataTypes.DataType[params.length];
+    DataType[] paramTypes = new DataType[params.length];
 
     CatalogProtos.FunctionType functionType = setFunction.isDistinct() ?
         CatalogProtos.FunctionType.DISTINCT_AGGREGATION : CatalogProtos.FunctionType.AGGREGATION;
     givenArgs[0] = visit(ctx, stack, params[0]);
     if (setFunction.getSignature().equalsIgnoreCase("count")) {
-      paramTypes[0] = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.ANY);
+      paramTypes[0] = CatalogUtil.newSimpleDataType(Type.ANY);
     } else {
       paramTypes[0] = givenArgs[0].getValueType();
     }
@@ -614,6 +796,11 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
   }
 
   @Override
+  public EvalNode visitIntervalLiteral(Context ctx, Stack<Expr> stack, IntervalLiteral expr) throws PlanningException {
+    return new ConstEval(new IntervalDatum(expr.getExprStr()));
+  }
+
+  @Override
   public EvalNode visitTimeLiteral(Context ctx, Stack<Expr> stack, TimeLiteral expr) throws PlanningException {
     TimeValue timeValue = expr.getTime();
     int [] times = timeToIntArray(timeValue.getHours(),
@@ -691,5 +878,64 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     results[3] = fraction;
 
     return results;
+  }
+
+  /** It is the relationship graph of type conversions. It represents each type can be converted to which types. */
+  static final Map<Type, Map<Type, Type>> TYPE_CONVERSION_MAP = Maps.newHashMap();
+  static {
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.INT1, Type.INT1);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.INT2, Type.INT2);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.INT4, Type.INT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.INT8, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.FLOAT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT1, Type.INT2);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT2, Type.INT2);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT4, Type.INT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT8, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.FLOAT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT1, Type.INT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT2, Type.INT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT4, Type.INT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT8, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.FLOAT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT1, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT2, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT4, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT8, Type.INT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.FLOAT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT1, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT2, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT8, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.FLOAT4, Type.FLOAT4);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT1, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT2, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT4, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.FLOAT4, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TEXT, Type.TIMESTAMP, Type.TIMESTAMP);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TIMESTAMP, Type.TIMESTAMP, Type.TIMESTAMP);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TIMESTAMP, Type.TEXT, Type.TEXT);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TEXT, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INET4, Type.INET4, Type.INET4);
   }
 }

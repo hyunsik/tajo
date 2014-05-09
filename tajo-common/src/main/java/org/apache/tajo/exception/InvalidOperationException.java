@@ -16,21 +16,27 @@
  * limitations under the License.
  */
 
-/**
- * 
- */
-package org.apache.tajo.engine.eval;
+package org.apache.tajo.exception;
 
-public class InvalidCastException extends RuntimeException {
-	private static final long serialVersionUID = -5090530469575858320L;
+import static org.apache.tajo.common.TajoDataTypes.Type;
 
-	public InvalidCastException() {
+public class InvalidOperationException extends RuntimeException {
+	private static final long serialVersionUID = -7689027447969916148L;
+
+	/**
+	 * 
+	 */
+	public InvalidOperationException() {
 	}
 
 	/**
 	 * @param message
 	 */
-	public InvalidCastException(String message) {
+	public InvalidOperationException(String message) {
 		super(message);
+	}
+	
+	public InvalidOperationException(Type type) {
+	  super("Cannot compare to " + type + " type datum");
 	}
 }

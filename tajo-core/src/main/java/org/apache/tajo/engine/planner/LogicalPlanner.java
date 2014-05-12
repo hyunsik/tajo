@@ -512,6 +512,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     for (int i = 0; i < aggEvalNames.size(); i++) {
       targets[child.getOutSchema().size() + i] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
     }
+    windowAggNode.setAggFunctions(aggEvals.toArray(new AggregationFunctionCallEval[aggEvals.size()]));
     windowAggNode.setTargets(targets);
     verifyProjectedFields(block, windowAggNode);
     return windowAggNode;

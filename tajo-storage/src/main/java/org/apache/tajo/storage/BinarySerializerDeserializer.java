@@ -65,7 +65,7 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
         break;
       case TEXT: {
         bytes = datum.asTextBytes();
-        length = datum.size();
+        length = bytes.length;
         if (length == 0) {
           bytes = INVALID_UTF__SINGLE_BYTE;
           length = INVALID_UTF__SINGLE_BYTE.length;

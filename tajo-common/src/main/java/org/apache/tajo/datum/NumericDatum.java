@@ -19,49 +19,89 @@
 package org.apache.tajo.datum;
 
 import com.google.gson.annotations.Expose;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.exception.InvalidCastException;
 import org.apache.tajo.exception.InvalidOperationException;
-import org.apache.tajo.util.NumberUtil;
+import org.apache.tajo.util.Bytes;
+import org.apache.tajo.util.ProtoUtil;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
+
+import static org.apache.tajo.common.TajoDataTypes.Type;
 
 
 public class NumericDatum extends NumberDatum {
-  private static final MathContext DEFAULT_CONTEXT = MathContext.DECIMAL64;
-  private static final int DEFAULT_SCALE = 0;
-  private static final BigDecimal INT2_MAX = new BigDecimal(Short.MAX_VALUE);
+  private static final RoundingMode DEFAULT_ROUND_MODE = RoundingMode.HALF_EVEN;
+  private static final int DIVIDE_DEFAULT_SCALE = 16;
+  public static final int MAX_PRECISION = 38;
+  public static final int MAX_SCALE = 38;
 
-  @Expose private final BigDecimal value;
+  public static final NumericDatum ZERO = new NumericDatum(BigInteger.ZERO, 0);
+  public static final NumericDatum ONE = new NumericDatum(BigInteger.ONE, 0);
+  public static final NumericDatum TEN = new NumericDatum(BigInteger.TEN, 0);
 
-	public NumericDatum(long val) {
-    super(TajoDataTypes.Type.NUMERIC);
-		value = new BigDecimal(val, DEFAULT_CONTEXT);
-    value.setScale(DEFAULT_SCALE);
-	}
+  @Expose public final BigDecimal value;
 
-  public NumericDatum(String val) {
-    super(TajoDataTypes.Type.NUMERIC);
-    value = new BigDecimal(val, DEFAULT_CONTEXT);
-    value.setScale(DEFAULT_SCALE);
+  public NumericDatum(long val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val);
   }
 
+	public NumericDatum(BigInteger unscaled, int scale) {
+    super(Type.NUMERIC);
+		value = new BigDecimal(unscaled, scale);
+	}
+
   public NumericDatum(BigDecimal val) {
-    super(TajoDataTypes.Type.NUMERIC);
+    super(Type.NUMERIC);
     this.value = val;
+  }
+
+  public NumericDatum(BigDecimal val, int scale) {
+    super(Type.NUMERIC);
+    this.value = val;
+    this.value.setScale(scale);
+  }
+
+  public NumericDatum(String str, int scale) {
+    super(Type.NUMERIC);
+    this.value = new BigDecimal(str).setScale(scale, DEFAULT_ROUND_MODE);
+  }
+
+  public NumericDatum(String str) {
+    super(Type.NUMERIC);
+    this.value = new BigDecimal(str);
+  }
+
+  public NumericDatum(byte [] bytes) {
+    super(Type.NUMERIC);
+    int scale = ProtoUtil.readRawVarint32(bytes, 0);
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale);
+    byte [] unscaledBytes = new byte[bytes.length - scaleBytesLength];
+    System.arraycopy(bytes, scaleBytesLength, unscaledBytes, 0, unscaledBytes.length);
+    value = new BigDecimal(new BigInteger(unscaledBytes), scale);
+  }
+
+  public int scale() {
+    return value.scale();
+  }
+
+  public NumericDatum enforceScale(int scale) {
+    return new NumericDatum(value.setScale(scale, DEFAULT_ROUND_MODE));
   }
 
   @Override
 	public boolean asBool() {
-		throw new InvalidCastException();
+		throw new InvalidCastException(Type.NUMERIC, Type.BOOLEAN);
 	}
 
   @Override
   public char asChar() {
-    return (char) value.byteValue();
+    throw new InvalidCastException(Type.NUMERIC, Type.CHAR);
   }
 	
 	@Override
@@ -81,12 +121,18 @@ public class NumericDatum extends NumberDatum {
 
   @Override
 	public byte asByte() {
-		return value.byteValue();
+    throw new InvalidCastException(Type.NUMERIC, Type.BIT);
 	}
 
   @Override
 	public byte [] asByteArray() {
-		return value.unscaledValue().toByteArray();
+    BigInteger unscaledValue = value.unscaledValue();
+    int unscaledValueByteLength = unscaledValue.bitLength() / 8 + 1;
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale());
+    byte [] bytes = new byte[scaleBytesLength + unscaledValueByteLength];
+    ProtoUtil.writeRawVarint32(scale(), bytes, 0);
+    System.arraycopy(unscaledValue.toByteArray(), 0, bytes, scaleBytesLength, unscaledValueByteLength);
+    return bytes;
 	}
 
   @Override
@@ -111,7 +157,8 @@ public class NumericDatum extends NumberDatum {
 
   @Override
   public int size() {
-    return size;
+    int unscaledByteLength = value.unscaledValue().bitLength() / 8 + 1;
+    return unscaledByteLength + ProtoUtil.computeRawVarint32Size(unscaledByteLength);
   }
   
   @Override
@@ -199,9 +246,8 @@ public class NumericDatum extends NumberDatum {
     if (datum.isNull()) {
       return datum;
     }
-
     NumericDatum numeric = (NumericDatum) datum;
-    return new NumericDatum(value.divide(numeric.value));
+    return new NumericDatum(value.divide(numeric.value, DIVIDE_DEFAULT_SCALE, DEFAULT_ROUND_MODE));
   }
 
   @Override
@@ -216,6 +262,6 @@ public class NumericDatum extends NumberDatum {
 
   @Override
   public NumberDatum inverseSign() {
-    return new NumericDatum(value.unscaledValue().modInverse());
+    return new NumericDatum(value.negate());
   }
 }

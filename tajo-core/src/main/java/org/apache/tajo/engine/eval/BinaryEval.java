@@ -113,6 +113,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT8: return CatalogUtil.newSimpleDataType(Type.INT8);
       case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
       case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newSimpleDataType(Type.NUMERIC);
       case DATE: return CatalogUtil.newSimpleDataType(Type.DATE);
       case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
       }
@@ -126,6 +127,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT8: return CatalogUtil.newSimpleDataType(Type.INT8);
       case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
       case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newSimpleDataType(Type.NUMERIC);
       case DATE: return CatalogUtil.newSimpleDataType(Type.DATE);
       case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
       }
@@ -139,6 +141,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT8: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
       case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
       case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
       case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
       }
     }
@@ -151,7 +154,20 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT8:
       case FLOAT4:
       case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
       case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      }
+    }
+
+    case NUMERIC: {
+      switch (right.getType()) {
+      case INT1:
+      case INT2:
+      case INT4:
+      case INT8: return CatalogUtil.newSimpleDataType(Type.NUMERIC);
+      case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newSimpleDataType(Type.NUMERIC);
       }
     }
 

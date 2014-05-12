@@ -33,7 +33,7 @@ public class LiteralValue extends Expr {
     String,
     Unsigned_Integer,
     Unsigned_Float,
-    Unsigned_Large_Integer,
+    Unsigned_Large_Integer
   }
 
   public LiteralValue(String value, LiteralType valueType) {

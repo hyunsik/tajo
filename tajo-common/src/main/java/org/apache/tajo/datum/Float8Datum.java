@@ -27,7 +27,7 @@ import org.apache.tajo.util.NumberUtil;
 import java.nio.ByteBuffer;
 
 
-public class Float8Datum extends NumericDatum {
+public class Float8Datum extends NumberDatum {
   private static final int size = 8;
   @Expose private final double val;
 
@@ -294,7 +294,7 @@ public class Float8Datum extends NumericDatum {
   }
 
   @Override
-  public NumericDatum inverseSign() {
+  public NumberDatum inverseSign() {
     return new Float8Datum(-val);
   }
 }

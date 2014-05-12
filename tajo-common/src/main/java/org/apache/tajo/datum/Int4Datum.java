@@ -26,7 +26,7 @@ import org.apache.tajo.util.NumberUtil;
 import java.nio.ByteBuffer;
 
 
-public class Int4Datum extends NumericDatum {
+public class Int4Datum extends NumberDatum {
   private static final int size = 4;
   @Expose private final int val;
 
@@ -300,7 +300,7 @@ public class Int4Datum extends NumericDatum {
   }
 
   @Override
-  public NumericDatum inverseSign() {
+  public NumberDatum inverseSign() {
     return new Int4Datum(-val);
   }
 }

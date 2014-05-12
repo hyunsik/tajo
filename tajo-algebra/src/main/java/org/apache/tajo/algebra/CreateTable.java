@@ -19,22 +19,35 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.*;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import org.apache.tajo.util.TUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
 public class CreateTable extends Expr {
+  @Expose @SerializedName("IsExternal")
   private boolean external = false;
+  @Expose @SerializedName("TableName")
   private String tableName;
+  @Expose @SerializedName("Attributes")
   private ColumnDefinition [] tableElements;
+  @Expose @SerializedName("StorageType")
   private String storageType;
+  @Expose @SerializedName("Location")
   private String location;
+  @Expose @SerializedName("SubPlan")
   private Expr subquery;
+  @Expose @SerializedName("TableProperties")
   private Map<String, String> params;
+  @Expose @SerializedName("PartitionMethodDesc")
   private PartitionMethodDescExpr partition;
+  @Expose @SerializedName("IfNotExists")
   private boolean ifNotExists;
 
   public CreateTable(final String tableName, boolean ifNotExists) {
@@ -182,6 +195,7 @@ public class CreateTable extends Expr {
   }
 
   public static abstract class PartitionMethodDescExpr implements Cloneable {
+    @Expose @SerializedName("PartitionType")
     PartitionType type;
 
     public PartitionMethodDescExpr(PartitionType type) {
@@ -198,10 +212,50 @@ public class CreateTable extends Expr {
       partition.type = type;
       return partition;
     }
+
+    static class JsonSerDer implements JsonSerializer<PartitionMethodDescExpr>,
+        JsonDeserializer<PartitionMethodDescExpr> {
+
+      @Override
+      public PartitionMethodDescExpr deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+          throws JsonParseException {
+        JsonObject jsonObject = json.getAsJsonObject();
+        PartitionType type = PartitionType.valueOf(jsonObject.get("PartitionType").getAsString());
+        switch (type) {
+          case RANGE:
+            return context.deserialize(json, RangePartition.class);
+          case HASH:
+            return context.deserialize(json, HashPartition.class);
+          case LIST:
+            return context.deserialize(json, ListPartition.class);
+          case COLUMN:
+            return context.deserialize(json, ColumnPartition.class);
+        }
+        return null;
+      }
+
+      @Override
+      public JsonElement serialize(PartitionMethodDescExpr src, Type typeOfSrc, JsonSerializationContext context) {
+        switch (src.getPartitionType()) {
+          case RANGE:
+            return context.serialize(src, RangePartition.class);
+          case HASH:
+            return context.serialize(src, HashPartition.class);
+          case LIST:
+            return context.serialize(src, ListPartition.class);
+          case COLUMN:
+            return context.serialize(src, ColumnPartition.class);
+          default:
+            return null;
+        }
+      }
+    }
   }
 
   public static class RangePartition extends PartitionMethodDescExpr implements Cloneable {
+    @Expose @SerializedName("Columns")
     ColumnReferenceExpr [] columns;
+    @Expose @SerializedName("Specifiers")
     List<RangePartitionSpecifier> specifiers;
 
     public RangePartition(ColumnReferenceExpr [] columns, List<RangePartitionSpecifier> specifiers) {
@@ -250,8 +304,11 @@ public class CreateTable extends Expr {
   }
 
   public static class HashPartition extends PartitionMethodDescExpr implements Cloneable {
+    @Expose @SerializedName("Columns")
     ColumnReferenceExpr [] columns;
+    @Expose @SerializedName("Quantity")
     Expr quantity;
+    @Expose @SerializedName("Specifiers")
     List<PartitionSpecifier> specifiers;
 
     public HashPartition(ColumnReferenceExpr [] columns, Expr quantity) {
@@ -318,8 +375,10 @@ public class CreateTable extends Expr {
     }
   }
 
-  public static class ListPartition extends PartitionMethodDescExpr implements Cloneable {
+  public static class ListPartition extends PartitionMethodDescExpr {
+    @Expose @SerializedName("Columns")
     ColumnReferenceExpr [] columns;
+    @Expose @SerializedName("Specifiers")
     List<ListPartitionSpecifier> specifiers;
 
     public ListPartition(ColumnReferenceExpr [] columns, List<ListPartitionSpecifier> specifers) {
@@ -368,7 +427,10 @@ public class CreateTable extends Expr {
   }
 
   public static class ColumnPartition extends PartitionMethodDescExpr implements Cloneable {
+    @Expose @SerializedName("Columns")
     private ColumnDefinition [] columns;
+    @Expose @SerializedName("IsOmitValues")
+    private boolean isOmitValues;
 
     public ColumnPartition(ColumnDefinition [] columns) {
       super(PartitionType.COLUMN);
@@ -403,7 +465,9 @@ public class CreateTable extends Expr {
   }
 
   public static class RangePartitionSpecifier extends PartitionSpecifier implements Cloneable {
+    @Expose @SerializedName("End")
     Expr end;
+    @Expose @SerializedName("IsMaxValue")
     boolean maxValue;
 
     public RangePartitionSpecifier(String name, Expr end) {
@@ -451,6 +515,7 @@ public class CreateTable extends Expr {
   }
 
   public static class ListPartitionSpecifier extends PartitionSpecifier implements Cloneable {
+    @Expose @SerializedName("ValueList")
     ValueListExpr valueList;
 
     public ListPartitionSpecifier(String name, ValueListExpr valueList) {
@@ -486,6 +551,7 @@ public class CreateTable extends Expr {
   }
 
   public static class PartitionSpecifier implements Cloneable {
+    @Expose @SerializedName("PartitionSpecName")
     private String name;
 
     public PartitionSpecifier(String name) {

@@ -19,9 +19,13 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class DropDatabase extends Expr {
+  @Expose @SerializedName("DatabaseName")
   private String databaseName;
+  @Expose @SerializedName("IfExists")
   private boolean ifExists;
 
   public DropDatabase(final String databaseName, final boolean ifExists) {

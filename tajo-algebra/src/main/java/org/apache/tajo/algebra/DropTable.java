@@ -19,11 +19,16 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class DropTable extends Expr {
-  private String tableName;
-  private boolean ifExists;
-  private boolean purge;
+  @Expose @SerializedName("TableName")
+  private final String tableName;
+  @Expose @SerializedName("IfExists")
+  private final boolean ifExists;
+  @Expose @SerializedName("IsPurge")
+  private final boolean purge;
 
   public DropTable(String tableName, boolean ifExists, boolean purge) {
     super(OpType.DropTable);

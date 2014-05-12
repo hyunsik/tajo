@@ -19,6 +19,8 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import org.apache.tajo.util.TUtil;
 
 import java.util.ArrayList;
@@ -26,7 +28,9 @@ import java.util.Collection;
 import java.util.List;
 
 public class CaseWhenPredicate extends Expr {
+  @Expose @SerializedName("WhenExprs")
   private List<WhenExpr> whens = new ArrayList<WhenExpr>();
+  @Expose @SerializedName("ElseExpr")
   private Expr elseResult;
 
   public CaseWhenPredicate() {
@@ -81,7 +85,9 @@ public class CaseWhenPredicate extends Expr {
   }
 
   public static class WhenExpr implements Cloneable {
+    @Expose @SerializedName("Condition")
     Expr condition;
+    @Expose @SerializedName("Result")
     Expr result;
 
     public WhenExpr(Expr condition, Expr result) {

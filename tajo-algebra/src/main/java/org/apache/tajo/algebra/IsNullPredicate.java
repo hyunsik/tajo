@@ -19,9 +19,12 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 public class IsNullPredicate extends UnaryOperator {
-  private boolean not;
+  @Expose @SerializedName("IsNot")
+  private final boolean not;
 
   public IsNullPredicate(boolean not, Expr column) {
     super(OpType.IsNullPredicate);

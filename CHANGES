@@ -4,6 +4,9 @@ Release 0.9.0 - unreleased
 
   NEW FEATURES
 
+    TAJO-494: Extend TajoClient to run a query with a plan context serialized as the 
+    JSON form. (jihoon)
+
     TAJO-761: Implements INTERVAL type. (Hyoungjun Kim via hyunsik)
 
     TAJO-790: Implements ADD_MONTHS() function. (Hyoungjun Kim via hyunsik)
@@ -11,6 +14,9 @@ Release 0.9.0 - unreleased
     TAJO-791: Implements ADD_DAYS() function. (Hyoungjun Kim via hyunsik)
 
   IMPROVEMENT
+
+    TAJO-807: Implement Round(numeric, int) function.
+    (Seungun Choe via hyunsik)
 
     TAJO-797: Implicit type conversion support. (hyunsik)
 
@@ -30,6 +36,11 @@ Release 0.9.0 - unreleased
     (Hyoungjun Kim via hyunsik)
 
   BUG FIXES
+
+    TAJO-823: Missing INET4 handling in DatumFactory.cast(). (jihoon)
+
+    TAJO-803: INSERT INTO without FROM throws ClassCastException.
+    (Hyoungjun Kim via hyunsik)
 
     TAJO-813: CLI should support comment character with multi-line query.
     (Hyoungjun Kim via hyunsik)

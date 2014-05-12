@@ -80,7 +80,7 @@ public abstract class Datum implements Comparable<Datum>, GsonObject {
     throw new InvalidCastException(type, Type.FLOAT8);
   }
 
-  public double asNumeric() {
+  public NumericDatum asNumeric() {
     throw new InvalidCastException(type, Type.NUMERIC);
   }
 

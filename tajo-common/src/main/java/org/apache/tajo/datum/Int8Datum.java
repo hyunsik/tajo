@@ -68,6 +68,11 @@ public class Int8Datum extends NumberDatum {
 	}
 
   @Override
+  public NumericDatum asNumeric() {
+    return new NumericDatum(val);
+  }
+
+  @Override
 	public byte asByte() {
 		throw new InvalidCastException();
 	}

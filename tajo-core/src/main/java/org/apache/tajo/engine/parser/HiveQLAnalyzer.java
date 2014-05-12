@@ -1098,7 +1098,7 @@ public class HiveQLAnalyzer extends HiveQLParserBaseVisitor<Expr> {
           LiteralValue.LiteralType.Unsigned_Integer);
     } else if (ctx.BigintLiteral() != null) {
       literalValue = new LiteralValue(ctx.BigintLiteral().getSymbol().getText(),
-          LiteralValue.LiteralType.Unsigned_Large_Integer);
+          LiteralValue.LiteralType.Unsigned_Integer);
     } else if (ctx.DecimalLiteral() != null) {
       literalValue = new LiteralValue(ctx.DecimalLiteral().getSymbol().getText(),
           LiteralValue.LiteralType.Unsigned_Integer);
@@ -1114,7 +1114,7 @@ public class HiveQLAnalyzer extends HiveQLParserBaseVisitor<Expr> {
       try {
         BigInteger bigIntegerVallue = NumberUtils.createBigInteger(ctx.getText());
         literalValue = new LiteralValue(ctx.Number().getSymbol().getText(),
-            LiteralValue.LiteralType.Unsigned_Large_Integer);
+            LiteralValue.LiteralType.Unsigned_Integer);
       } catch (NumberFormatException nf) {
       }
 

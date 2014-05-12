@@ -31,6 +31,19 @@ public class TestNumericDatum extends TestCase {
     assertEquals("12345.46", numeric3.asChars());
   }
 
+  public void testFloat4Ctor() throws Exception {
+    NumericDatum numeric = new NumericDatum(12.3456789f);
+    assertEquals("12.3457", numeric.asChars());
+
+    NumericDatum numeric2 = new NumericDatum(123.45678f);
+    assertEquals("123.457", numeric2.asChars());
+  }
+
+  public void testFloat8Ctor() throws Exception {
+    NumericDatum numeric = new NumericDatum(123.456789123457d);
+    assertEquals("123.456789123457", numeric.asChars());
+  }
+
   public void testAsInt2() throws Exception {
     NumericDatum numeric = new NumericDatum(12345);
     assertEquals(12345, numeric.asInt2());

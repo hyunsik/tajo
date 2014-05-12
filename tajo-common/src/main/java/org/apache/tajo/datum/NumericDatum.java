@@ -40,6 +40,9 @@ public class NumericDatum extends NumberDatum {
   public static final int MAX_PRECISION = 38;
   public static final int MAX_SCALE = 38;
 
+  private static final MathContext FLOAT4_CONTEXT = new MathContext(6, DEFAULT_ROUND_MODE);
+  private static final MathContext FLOAT8_CONTEXT = new MathContext(15, DEFAULT_ROUND_MODE);
+
   public static final NumericDatum ZERO = new NumericDatum(BigInteger.ZERO, 0);
   public static final NumericDatum ONE = new NumericDatum(BigInteger.ONE, 0);
   public static final NumericDatum TEN = new NumericDatum(BigInteger.TEN, 0);
@@ -49,6 +52,16 @@ public class NumericDatum extends NumberDatum {
   public NumericDatum(long val) {
     super(Type.NUMERIC);
     value = new BigDecimal(val);
+  }
+
+  public NumericDatum(float val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val, FLOAT4_CONTEXT);
+  }
+
+  public NumericDatum(double val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val, FLOAT8_CONTEXT);
   }
 
 	public NumericDatum(BigInteger unscaled, int scale) {

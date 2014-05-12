@@ -36,6 +36,7 @@ import org.apache.tajo.util.Pair;
 import org.apache.tajo.util.TUtil;
 import org.joda.time.DateTime;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Stack;
 
@@ -685,12 +686,32 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       return new ConstEval(DatumFactory.createBool(((BooleanLiteral) expr).isTrue()));
     case String:
       return new ConstEval(DatumFactory.createText(expr.getValue()));
-    case Unsigned_Integer:
-      return new ConstEval(DatumFactory.createInt4(expr.getValue()));
-    case Unsigned_Large_Integer:
-      return new ConstEval(DatumFactory.createInt8(expr.getValue()));
-    case Unsigned_Float:
-      return new ConstEval(DatumFactory.createFloat8(expr.getValue()));
+    case Unsigned_Integer: {
+      BigDecimal decimal = new BigDecimal(expr.getValue());
+      try {
+        int intValue = decimal.intValueExact();
+        return new ConstEval(DatumFactory.createInt4(intValue));
+      } catch (ArithmeticException e) {
+      }
+
+      try {
+        long longValue = decimal.longValueExact();
+        return new ConstEval(DatumFactory.createInt8(longValue));
+      } catch (ArithmeticException e) {
+      }
+
+      return new ConstEval(new NumericDatum(decimal));
+    }
+    case Unsigned_Float: {
+      BigDecimal decimal = new BigDecimal(expr.getValue());
+
+      double doubleValue = decimal.doubleValue();
+      if (String.valueOf(doubleValue).equals(decimal.toPlainString())) {
+        return new ConstEval(DatumFactory.createFloat8(doubleValue));
+      }
+
+      return new ConstEval(new NumericDatum(decimal));
+    }
     default:
       throw new RuntimeException("Unsupported type: " + expr.getValueType());
     }
@@ -825,6 +846,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.INT8, Type.INT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.FLOAT4, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.NUMERIC, Type.NUMERIC);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT1, Type.TEXT, Type.TEXT);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT1, Type.INT2);
@@ -833,6 +855,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.INT8, Type.INT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.FLOAT4, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.NUMERIC, Type.NUMERIC);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT2, Type.TEXT, Type.TEXT);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT1, Type.INT4);
@@ -841,6 +864,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.INT8, Type.INT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.FLOAT4, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.NUMERIC, Type.NUMERIC);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT4, Type.TEXT, Type.TEXT);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT1, Type.INT8);
@@ -849,6 +873,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.INT8, Type.INT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.FLOAT4, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.NUMERIC, Type.NUMERIC);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.INT8, Type.TEXT, Type.TEXT);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT1, Type.FLOAT4);
@@ -857,6 +882,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.INT8, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.FLOAT4, Type.FLOAT4);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.NUMERIC, Type.FLOAT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT4, Type.TEXT, Type.TEXT);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT1, Type.FLOAT8);
@@ -865,7 +891,16 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.INT8, Type.FLOAT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.FLOAT4, Type.FLOAT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.NUMERIC, Type.FLOAT8);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.FLOAT8, Type.TEXT, Type.TEXT);
+
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.INT1, Type.NUMERIC);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.INT2, Type.NUMERIC);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.INT4, Type.NUMERIC);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.INT8, Type.NUMERIC);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.FLOAT4, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.FLOAT8, Type.FLOAT8);
+    TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.NUMERIC, Type.NUMERIC, Type.NUMERIC);
 
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TEXT, Type.TIMESTAMP, Type.TIMESTAMP);
     TUtil.putToNestedMap(TYPE_CONVERSION_MAP, Type.TIMESTAMP, Type.TIMESTAMP, Type.TIMESTAMP);

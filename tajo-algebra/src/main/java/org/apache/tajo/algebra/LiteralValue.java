@@ -32,8 +32,7 @@ public class LiteralValue extends Expr {
     Boolean,
     String,
     Unsigned_Integer,
-    Unsigned_Float,
-    Unsigned_Large_Integer
+    Unsigned_Float
   }
 
   public LiteralValue(String value, LiteralType valueType) {
@@ -81,8 +80,6 @@ public class LiteralValue extends Expr {
         Double.parseDouble(value);
         return LiteralType.Unsigned_Float;
       } catch (NumberFormatException e) {}
-
-      // TODO: handle unsigned_large_integer
 
       return LiteralType.String;
     }

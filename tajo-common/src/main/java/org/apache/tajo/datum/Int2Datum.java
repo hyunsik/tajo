@@ -78,6 +78,11 @@ public class Int2Datum extends NumberDatum {
 		return val;
 	}
 
+  @Override
+  public NumericDatum asNumeric() {
+    return new NumericDatum(val);
+  }
+
 	@Override
 	public String asChars() {
 		return ""+val;

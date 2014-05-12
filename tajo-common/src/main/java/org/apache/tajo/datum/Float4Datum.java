@@ -88,6 +88,11 @@ public class Float4Datum extends NumberDatum {
 	}
 
   @Override
+  public NumericDatum asNumeric() {
+    return new NumericDatum(val);
+  }
+
+  @Override
 	public String asChars() {
 		return ""+val;
 	}

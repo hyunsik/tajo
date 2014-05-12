@@ -32,6 +32,11 @@ import static org.apache.tajo.common.TajoDataTypes.Type.TEXT;
 public class TestSQLExpression extends ExprTestBase {
 
   @Test
+  public void testLargeNumbers() throws IOException {
+    testSimpleEval("select 1234567890123456789012345 < 1234567890123456789012345 + 1;", new String[]{"t"});
+  }
+
+  @Test
   public void testQuotedIdentifiers() throws IOException {
     Schema schema = new Schema();
     schema.addColumn("컬럼1", TEXT);

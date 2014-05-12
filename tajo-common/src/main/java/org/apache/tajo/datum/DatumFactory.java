@@ -45,6 +45,8 @@ public class DatumFactory {
         return Float4Datum.class;
       case FLOAT8:
         return Float8Datum.class;
+      case NUMERIC:
+        return NumericDatum.class;
       case CHAR:
         return CharDatum.class;
       case TEXT:
@@ -87,6 +89,8 @@ public class DatumFactory {
       return createFloat4(value);
     case FLOAT8:
       return createFloat8(value);
+    case NUMERIC:
+      return new NumericDatum(value);
     case CHAR:
       return createChar(value);
     case TEXT:
@@ -123,6 +127,8 @@ public class DatumFactory {
         return createFloat4(Bytes.toFloat(bytes));
       case FLOAT8:
         return createFloat8(Bytes.toDouble(bytes));
+      case NUMERIC:
+      return new NumericDatum(bytes);
       case CHAR:
         return createChar(bytes);
       case TEXT:
@@ -158,6 +164,10 @@ public class DatumFactory {
     switch (type.getType()) {
     case INT4:
       return new Int4Datum(val);
+    case INT8:
+      return new Int8Datum(val);
+    case NUMERIC:
+      return new NumericDatum(val);
     case DATE:
       return new DateDatum(val);
     default:
@@ -169,6 +179,8 @@ public class DatumFactory {
     switch (type.getType()) {
     case INT8:
       return new Int8Datum(val);
+    case NUMERIC:
+      return new NumericDatum(val);
     case TIMESTAMP:
       return createTimeStampFromMillis(val);
     case TIME:
@@ -374,6 +386,8 @@ public class DatumFactory {
       return DatumFactory.createFloat4(operandDatum.asFloat4());
     case FLOAT8:
       return DatumFactory.createFloat8(operandDatum.asFloat8());
+    case NUMERIC:
+      return operandDatum.asNumeric();
     case TEXT:
       return DatumFactory.createText(operandDatum.asTextBytes());
     case DATE:

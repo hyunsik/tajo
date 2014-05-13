@@ -23,6 +23,7 @@ import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.engine.function.GeneralFunction;
 import org.apache.tajo.engine.function.annotation.Description;
 import org.apache.tajo.engine.function.annotation.ParamTypes;
@@ -38,12 +39,11 @@ import org.apache.tajo.storage.Tuple;
   description = "Round to nearest integer.",
   example = "> SELECT round(42.4)\n"
           + "42",
-  returnType = TajoDataTypes.Type.INT8,
-  paramTypes = {@ParamTypes(paramTypes = {TajoDataTypes.Type.FLOAT4}),
-          @ParamTypes(paramTypes = {TajoDataTypes.Type.FLOAT8})}
+  returnType = TajoDataTypes.Type.NUMERIC,
+  paramTypes = {@ParamTypes(paramTypes = {TajoDataTypes.Type.NUMERIC})}
 )
-public class Round extends GeneralFunction {
-  public Round() {
+public class RoundNumeric extends GeneralFunction {
+  public RoundNumeric() {
     super(new Column[] {
       new Column("x", TajoDataTypes.Type.FLOAT8)
     });
@@ -56,16 +56,7 @@ public class Round extends GeneralFunction {
       return NullDatum.get();
     }
 
-    double value = valueDatum.asFloat8();
-
-    // Note: there are various round up/down approaches (https://en.wikipedia.org/wiki/Rounding#Tie-breaking).
-    //       Math.round uses an approach different from other programming languages, so the results of round function
-    //       can be different from other DBMSs. For example, Math.round(-5.5) returns -5. In contrast,
-    //       round function in MySQL and PostgreSQL returns -6. The below code is a workaround code for this.
-    if (value < 0) {
-      return DatumFactory.createInt8((long) Math.ceil(value - 0.5d));
-    } else {
-      return DatumFactory.createInt8((long) Math.floor(value + 0.5d));
-    }
+    return DatumFactory.createNumeric(valueDatum.asNumeric().getBigDecimal().
+        setScale(0, NumericDatum.DEFAULT_ROUND_MODE));
   }
 }

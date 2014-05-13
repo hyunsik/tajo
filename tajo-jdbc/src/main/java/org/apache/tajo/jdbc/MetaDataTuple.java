@@ -18,6 +18,7 @@ package org.apache.tajo.jdbc; /**
 
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.exception.UnsupportedException;
 import org.apache.tajo.storage.Tuple;
 
@@ -132,6 +133,11 @@ public class MetaDataTuple implements Tuple {
   @Override
   public double getFloat8(int fieldId) {
     return Float.parseFloat(values.get(fieldId).toString());
+  }
+
+  @Override
+  public NumericDatum getNumeric(int fieldId) {
+    return (NumericDatum) values.get(fieldId);
   }
 
   @Override

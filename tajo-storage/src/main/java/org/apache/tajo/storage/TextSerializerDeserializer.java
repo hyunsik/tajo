@@ -75,6 +75,7 @@ public class TextSerializerDeserializer implements SerializerDeserializer {
       case INT8:
       case FLOAT4:
       case FLOAT8:
+      case NUMERIC:
       case INET4:
       case DATE:
       case TIME:
@@ -140,6 +141,10 @@ public class TextSerializerDeserializer implements SerializerDeserializer {
       case FLOAT8:
         datum = isNull(bytes, offset, length, nullCharacters) ? NullDatum.get()
             : DatumFactory.createFloat8(Bytes.parseDouble(bytes, offset, length));
+        break;
+      case NUMERIC:
+        datum = isNull(bytes, offset, length, nullCharacters) ? NullDatum.get()
+            : DatumFactory.createNumeric(new String(bytes, offset, length));
         break;
       case TEXT: {
         byte[] chars = new byte[length];

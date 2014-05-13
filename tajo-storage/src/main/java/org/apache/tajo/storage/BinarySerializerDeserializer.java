@@ -63,6 +63,11 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
       case FLOAT8:
         length = writeDouble(out, datum.asFloat8());
         break;
+      case NUMERIC:
+        bytes = datum.asByteArray();
+        length = bytes.length;
+        out.write(bytes, 0, length);
+        break;
       case TEXT: {
         bytes = datum.asTextBytes();
         length = bytes.length;
@@ -126,6 +131,9 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
         break;
       case FLOAT8:
         datum = DatumFactory.createFloat8(toDouble(bytes, offset, length));
+        break;
+      case NUMERIC:
+        datum = DatumFactory.createNumeric(bytes, offset, length);
         break;
       case TEXT: {
         byte[] chars = new byte[length];

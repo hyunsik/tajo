@@ -22,6 +22,7 @@ import com.google.gson.annotations.Expose;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.Inet4Datum;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.exception.UnimplementedException;
 
 import java.net.InetAddress;
@@ -151,7 +152,12 @@ public class VTuple implements Tuple, Cloneable {
 		return values[fieldId].asFloat8();
 	}
 
-	public Inet4Datum getIPv4(int fieldId) {
+  @Override
+  public NumericDatum getNumeric(int fieldId) {
+    return (NumericDatum) values[fieldId];
+  }
+
+  public Inet4Datum getIPv4(int fieldId) {
 		return (Inet4Datum) values[fieldId];
 	}
 

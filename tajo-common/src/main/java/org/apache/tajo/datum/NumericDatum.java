@@ -35,8 +35,8 @@ import static org.apache.tajo.common.TajoDataTypes.Type;
 
 
 public class NumericDatum extends NumberDatum {
-  private static final RoundingMode DEFAULT_ROUND_MODE = RoundingMode.HALF_EVEN;
-  private static final int DIVIDE_DEFAULT_SCALE = 16;
+  public static final RoundingMode DEFAULT_ROUND_MODE = RoundingMode.HALF_EVEN;
+  public static final int DIVIDE_DEFAULT_SCALE = 16;
   public static final int MAX_PRECISION = 38;
   public static final int MAX_SCALE = 38;
 
@@ -99,8 +99,21 @@ public class NumericDatum extends NumberDatum {
     value = new BigDecimal(new BigInteger(unscaledBytes), scale);
   }
 
+  public NumericDatum(byte [] bytes, int offset, int length) {
+    super(Type.NUMERIC);
+    int scale = ProtoUtil.readRawVarint32(bytes, offset);
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale);
+    byte [] unscaledBytes = new byte[length - scaleBytesLength];
+    System.arraycopy(bytes, offset + scaleBytesLength, unscaledBytes, 0, unscaledBytes.length);
+    value = new BigDecimal(new BigInteger(unscaledBytes), scale);
+  }
+
   public int scale() {
     return value.scale();
+  }
+
+  public BigDecimal getBigDecimal() {
+    return value;
   }
 
   public NumericDatum enforceScale(int scale) {
@@ -157,6 +170,11 @@ public class NumericDatum extends NumberDatum {
 	public double asFloat8() {
 		return value.doubleValue();
 	}
+
+  @Override
+  public NumericDatum asNumeric() {
+    return this;
+  }
 
   @Override
 	public String asChars() {

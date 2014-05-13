@@ -28,6 +28,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 public class DatumFactory {
 
@@ -264,6 +265,23 @@ public class DatumFactory {
 
   public static Float8Datum createFloat8(String val) {
     return new Float8Datum(Double.valueOf(val));
+  }
+
+  public static NumericDatum createNumeric(String val) {
+    return new NumericDatum(val);
+  }
+
+  public static NumericDatum createNumeric(BigDecimal val) {
+    if (val.equals(NumericDatum.ONE)) {
+      return NumericDatum.ONE;
+    } else if (val.equals(NumericDatum.ZERO)) {
+      return NumericDatum.ZERO;
+    }
+    return new NumericDatum(val);
+  }
+
+  public static NumericDatum createNumeric(byte [] bytes, int offset, int len) {
+    return new NumericDatum(bytes, offset, len);
   }
 
   public static TextDatum createText(String val) {

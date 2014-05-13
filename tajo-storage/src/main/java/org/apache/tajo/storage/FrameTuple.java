@@ -24,6 +24,7 @@ package org.apache.tajo.storage;
 import com.google.common.base.Preconditions;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.exception.UnsupportedException;
 
 /**
@@ -163,6 +164,11 @@ public class FrameTuple implements Tuple, Cloneable {
   @Override
   public double getFloat8(int fieldId) {
     return get(fieldId).asFloat8();
+  }
+
+  @Override
+  public NumericDatum getNumeric(int fieldId) {
+    return get(fieldId).asNumeric();
   }
 
   @Override

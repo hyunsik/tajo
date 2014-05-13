@@ -997,7 +997,7 @@ public class CatalogServer extends AbstractService {
       int i = 0;
       for (DataType type : arguments) {
         sb.append(type.getType());
-        sb.append("[").append(type.getLength()).append("]");
+        sb.append("[").append(type.getLengthOrPrecision()).append("]");
         if(i < arguments.length - 1) {
           sb.append(",");
         }

@@ -98,6 +98,7 @@ enum Type {
 
 message DataType {
   required Type type = 1;
-  optional int32 length = 2;
-  optional string code = 3;
+  optional int32 lengthOrPrecision = 2;
+  optional int32 scale = 3;
+  optional string extra = 4;
 }

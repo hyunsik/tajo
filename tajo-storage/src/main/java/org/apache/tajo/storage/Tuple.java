@@ -19,6 +19,9 @@
 package org.apache.tajo.storage;
 
 import org.apache.tajo.datum.Datum;
+import org.apache.tajo.datum.NumericDatum;
+
+import java.math.BigDecimal;
 
 public interface Tuple extends Cloneable {
   
@@ -61,6 +64,8 @@ public interface Tuple extends Cloneable {
 	public float getFloat4(int fieldId);
 	
 	public double getFloat8(int fieldId);
+
+  public BigDecimal getNumeric(int fieldId);
 	
 	public String getText(int fieldId);
 

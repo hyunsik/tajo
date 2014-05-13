@@ -106,8 +106,8 @@ public class TestLogicalPlanner {
     catalog.createTable(score);
 
     FunctionDesc funcDesc = new FunctionDesc("sumtest", SumInt.class, FunctionType.AGGREGATION,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4));
 
 
     // TPC-H Schema for Complex Queries

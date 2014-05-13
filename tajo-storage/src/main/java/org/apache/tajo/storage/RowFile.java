@@ -211,7 +211,7 @@ public class RowFile {
 
             case CHAR :
               int realLen = buffer.getInt();
-              byte[] buf = new byte[col.getDataType().getLength()];
+              byte[] buf = new byte[col.getDataType().getLengthOrPrecision()];
               buffer.get(buf);
               byte[] charBuf = Arrays.copyOf(buf, realLen);
               tuple.put(i, DatumFactory.createChar(charBuf));
@@ -390,7 +390,7 @@ public class RowFile {
               break;
             case CHAR:
               byte[] src = t.get(i).asByteArray();
-              byte[] dst = Arrays.copyOf(src, col.getDataType().getLength());
+              byte[] dst = Arrays.copyOf(src, col.getDataType().getLengthOrPrecision());
               buffer.putInt(src.length);
               buffer.put(dst);
               break;

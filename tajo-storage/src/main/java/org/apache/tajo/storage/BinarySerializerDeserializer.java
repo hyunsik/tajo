@@ -65,7 +65,7 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
         break;
       case TEXT: {
         bytes = datum.asTextBytes();
-        length = datum.size();
+        length = bytes.length;
         if (length == 0) {
           bytes = INVALID_UTF__SINGLE_BYTE;
           length = INVALID_UTF__SINGLE_BYTE.length;
@@ -89,7 +89,7 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
       case NULL_TYPE:
         break;
       default:
-        throw new IOException("Does not support type");
+        throw new IOException("Does not support type: " + col.getDataType());
     }
     return length;
   }
@@ -139,7 +139,7 @@ public class BinarySerializerDeserializer implements SerializerDeserializer {
         break;
       }
       case PROTOBUF: {
-        ProtobufDatumFactory factory = ProtobufDatumFactory.get(col.getDataType().getCode());
+        ProtobufDatumFactory factory = ProtobufDatumFactory.get(col.getDataType().getExtra());
         Message.Builder builder = factory.newBuilder();
         builder.mergeFrom(bytes, offset, length);
         datum = factory.createDatum(builder);

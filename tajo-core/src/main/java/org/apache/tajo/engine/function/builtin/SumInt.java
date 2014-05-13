@@ -68,7 +68,7 @@ public class SumInt extends AggFunction<Datum> {
 
   @Override
   public DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(Type.INT4);
+    return CatalogUtil.newDataType(Type.INT4);
   }
 
   @Override

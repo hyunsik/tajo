@@ -23,7 +23,7 @@ import com.google.gson.annotations.Expose;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
-import org.apache.tajo.datum.NumericDatum;
+import org.apache.tajo.datum.NumberDatum;
 import org.apache.tajo.storage.Tuple;
 
 public class SignedEval extends UnaryEval implements Cloneable {
@@ -50,7 +50,7 @@ public class SignedEval extends UnaryEval implements Cloneable {
 
   @Override
   public Datum eval(Schema schema, Tuple tuple) {
-    NumericDatum result = child.eval(schema, tuple);
+    NumberDatum result = child.eval(schema, tuple);
     if (negative) {
       return result.inverseSign();
     }

@@ -24,6 +24,8 @@ import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.json.CommonGsonHelper;
 import org.apache.tajo.json.GsonObject;
 
+import java.math.BigDecimal;
+
 import static org.apache.tajo.common.TajoDataTypes.Type;
 
 public abstract class Datum implements Comparable<Datum>, GsonObject {
@@ -78,6 +80,10 @@ public abstract class Datum implements Comparable<Datum>, GsonObject {
 
   public double asFloat8() {
     throw new InvalidCastException(type, Type.FLOAT8);
+  }
+
+  public BigDecimal asNumeric() {
+    throw new InvalidCastException(type, Type.NUMERIC);
   }
 
   public String asChars() {

@@ -79,7 +79,7 @@ public class SumDoubleDistinct extends AggFunction<Datum> {
 
   @Override
   public DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(Type.FLOAT8);
+    return CatalogUtil.newDataType(Type.FLOAT8);
   }
 
   @Override

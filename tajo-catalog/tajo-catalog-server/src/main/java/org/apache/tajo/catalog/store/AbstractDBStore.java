@@ -35,15 +35,11 @@ import org.apache.tajo.catalog.proto.CatalogProtos.*;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.exception.InternalException;
 import org.apache.tajo.exception.UnimplementedException;
-import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 import org.apache.tajo.util.FileUtil;
 import org.apache.tajo.util.Pair;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 import static org.apache.tajo.catalog.proto.CatalogProtos.AlterTablespaceProto.AlterTablespaceCommand;
@@ -642,7 +638,8 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       int dbid = getDatabaseId(databaseName);
 
       if (table.getIsExternal()) {
-        String sql = "INSERT INTO TABLES (DB_ID, " + COL_TABLES_NAME + ", TABLE_TYPE, PATH, STORE_TYPE) VALUES(?, ?, ?, ?, ?) ";
+        String sql = "INSERT INTO TABLES (DB_ID, " + COL_TABLES_NAME +
+            ", TABLE_TYPE, PATH, STORE_TYPE) VALUES(?, ?, ?, ?, ?) ";
 
         if (LOG.isDebugEnabled()) {
           LOG.debug(sql);
@@ -688,7 +685,9 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       pstmt.close();
 
       String colSql =
-          "INSERT INTO " + TB_COLUMNS + " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH) VALUES(?, ?, ?, ?, ?) ";
+          "INSERT INTO " + TB_COLUMNS +
+              " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE) " +
+              "VALUES(?, ?, ?, ?, ?, ?, ?) ";
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(colSql);
@@ -700,8 +699,30 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
         pstmt.setInt(1, tableId);
         pstmt.setString(2, CatalogUtil.extractSimpleName(col.getName()));
         pstmt.setInt(3, i);
+
         pstmt.setString(4, col.getDataType().getType().name());
-        pstmt.setInt(5, (col.getDataType().hasLength() ? col.getDataType().getLength() : 0));
+        if (col.getDataType().getType() == Type.NUMERIC) {
+          pstmt.setNull(5, java.sql.Types.INTEGER); // TYPE_LENGTH
+
+          if (col.getDataType().hasLengthOrPrecision()) {
+            pstmt.setInt(6, col.getDataType().getLengthOrPrecision());
+            if (col.getDataType().hasScale()) {
+              pstmt.setInt(7, col.getDataType().getScale());
+            } else {
+              pstmt.setNull(7, java.sql.Types.INTEGER);
+            }
+          } else {
+            pstmt.setNull(6, java.sql.Types.INTEGER);
+          }
+        } else {
+          if (col.getDataType().hasLengthOrPrecision()) {
+            pstmt.setInt(5, col.getDataType().getLengthOrPrecision());
+          } else {
+            pstmt.setNull(5, java.sql.Types.INTEGER);
+          }
+          pstmt.setNull(6, java.sql.Types.INTEGER); // PRECISION
+          pstmt.setNull(7, java.sql.Types.INTEGER); // SCALE
+        }
         pstmt.addBatch();
         pstmt.clearParameters();
       }
@@ -854,7 +875,8 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
         "DELETE FROM " + TB_COLUMNS + " WHERE TID = ? AND COLUMN_NAME = ?";
     final String insertNewColumnSql =
         "INSERT INTO " + TB_COLUMNS +
-            " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH) VALUES(?, ?, ?, ?, ?) ";
+            " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE) " +
+            "VALUES(?, ?, ?, ?, ?, ?, ?) ";
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(selectColumnSql);
@@ -906,7 +928,29 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       pstmt.setString(2, CatalogUtil.extractSimpleName(columnProto.getName()));
       pstmt.setInt(3, ordinalPostion);
       pstmt.setString(4, columnProto.getDataType().getType().name());
-      pstmt.setInt(5, (columnProto.getDataType().hasLength() ? columnProto.getDataType().getLength() : 0));
+
+      if (columnProto.getDataType().getType() == Type.NUMERIC) {
+        pstmt.setNull(5, java.sql.Types.INTEGER); // TYPE_LENGTH
+
+        if (columnProto.getDataType().hasLengthOrPrecision()) {
+          pstmt.setInt(6, columnProto.getDataType().getLengthOrPrecision());
+          if (columnProto.getDataType().hasScale()) {
+            pstmt.setInt(7, columnProto.getDataType().getScale());
+          } else {
+            pstmt.setNull(7, java.sql.Types.INTEGER);
+          }
+        } else {
+          pstmt.setNull(6, java.sql.Types.INTEGER);
+        }
+      } else {
+        if (columnProto.getDataType().hasLengthOrPrecision()) {
+          pstmt.setInt(5, columnProto.getDataType().getLengthOrPrecision());
+        } else {
+          pstmt.setNull(5, java.sql.Types.INTEGER);
+        }
+        pstmt.setNull(6, java.sql.Types.INTEGER); // PRECISION
+        pstmt.setNull(7, java.sql.Types.INTEGER); // SCALE
+      }
       pstmt.executeUpdate();
 
       conn.commit();
@@ -921,8 +965,13 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
 
   private void addNewColumn(int tableId, CatalogProtos.ColumnProto columnProto) throws CatalogException {
 
-    final String insertNewColumnSql = "INSERT INTO " + TB_COLUMNS + " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH) VALUES(?, ?, ?, ?, ?) ";
-    final String columnCountSql = "SELECT COLUMN_NAME, MAX(ORDINAL_POSITION) AS POSITION FROM " + TB_COLUMNS + " WHERE TID = ? GROUP BY COLUMN_NAME";
+    final String insertNewColumnSql =
+        "INSERT INTO " + TB_COLUMNS +
+            " (TID, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, TYPE_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE) " +
+            "VALUES(?, ?, ?, ?, ?, ?, ?) ";
+    final String columnCountSql =
+        "SELECT COLUMN_NAME, MAX(ORDINAL_POSITION) AS POSITION FROM " + TB_COLUMNS +
+            " WHERE TID = ? GROUP BY COLUMN_NAME";
 
     if (LOG.isDebugEnabled()) {
       LOG.debug(insertNewColumnSql);
@@ -950,7 +999,29 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       pstmt.setString(2, CatalogUtil.extractSimpleName(columnProto.getName()));
       pstmt.setInt(3, position + 1);
       pstmt.setString(4, columnProto.getDataType().getType().name());
-      pstmt.setInt(5, (columnProto.getDataType().hasLength() ? columnProto.getDataType().getLength() : 0));
+
+      if (columnProto.getDataType().getType() == Type.NUMERIC) {
+        pstmt.setNull(5, java.sql.Types.INTEGER); // TYPE_LENGTH
+
+        if (columnProto.getDataType().hasLengthOrPrecision()) {
+          pstmt.setInt(6, columnProto.getDataType().getLengthOrPrecision());
+          if (columnProto.getDataType().hasScale()) {
+            pstmt.setInt(7, columnProto.getDataType().getScale());
+          } else {
+            pstmt.setNull(7, java.sql.Types.INTEGER);
+          }
+        } else {
+          pstmt.setNull(6, java.sql.Types.INTEGER);
+        }
+      } else {
+        if (columnProto.getDataType().hasLengthOrPrecision()) {
+          pstmt.setInt(5, columnProto.getDataType().getLengthOrPrecision());
+        } else {
+          pstmt.setNull(5, java.sql.Types.INTEGER);
+        }
+        pstmt.setNull(6, java.sql.Types.INTEGER); // PRECISION
+        pstmt.setNull(7, java.sql.Types.INTEGER); // SCALE
+      }
       pstmt.executeUpdate();
 
     } catch (SQLException sqlException) {
@@ -1204,7 +1275,7 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       // Geting Column Descriptions
       //////////////////////////////////////////
       CatalogProtos.SchemaProto.Builder schemaBuilder = CatalogProtos.SchemaProto.newBuilder();
-      sql = "SELECT COLUMN_NAME, DATA_TYPE, TYPE_LENGTH from " + TB_COLUMNS +
+      sql = "SELECT COLUMN_NAME, DATA_TYPE, TYPE_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE from " + TB_COLUMNS +
           " WHERE " + COL_TABLES_PK + " = ? ORDER BY ORDINAL_POSITION ASC";
 
       if (LOG.isDebugEnabled()) {
@@ -1888,7 +1959,7 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
     builder.setName(res.getString("column_name").trim());
 
     Type type = getDataType(res.getString("data_type").trim());
-    builder.setDataType(CatalogUtil.newSimpleDataType(type));
+    builder.setDataType(CatalogUtil.newDataType(type));
 
     return builder.build();
   }
@@ -1897,12 +1968,24 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
     ColumnProto.Builder builder = ColumnProto.newBuilder();
     builder.setName(res.getString("column_name").trim());
 
-    Type type = getDataType(res.getString("data_type").trim());
-    int typeLength = res.getInt("type_length");
-    if (typeLength > 0) {
-      builder.setDataType(CatalogUtil.newDataTypeWithLen(type, typeLength));
+    Type type = getDataType(res.getString("DATA_TYPE").trim());
+    if (type == Type.NUMERIC) {
+      int precision = res.getInt("NUMERIC_PRECISION");
+      int scale = res.getInt("NUMERIC_SCALE");
+      if (precision > 0 && scale > 0) {
+        builder.setDataType(CatalogUtil.newNumericType(precision, scale));
+      } else if (precision > 0) {
+        builder.setDataType(CatalogUtil.newNumericType(precision, 0));
+      } else {
+        builder.setDataType(CatalogUtil.newDataType(Type.NUMERIC));
+      }
     } else {
-      builder.setDataType(CatalogUtil.newSimpleDataType(type));
+      int typeLength = res.getInt("TYPE_LENGTH");
+      if (typeLength > 0) {
+        builder.setDataType(CatalogUtil.newDataTypeWithMaxLen(type, typeLength));
+      } else {
+        builder.setDataType(CatalogUtil.newDataType(type));
+      }
     }
 
     return builder.build();

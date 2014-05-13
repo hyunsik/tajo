@@ -374,7 +374,7 @@ public class TajoRecordConverter extends GroupConverter {
     final public void addBinary(Binary value) {
       try {
         ProtobufDatumFactory factory =
-            ProtobufDatumFactory.get(dataType.getCode());
+            ProtobufDatumFactory.get(dataType.getExtra());
         Message.Builder builder = factory.newBuilder();
         builder.mergeFrom(value.getBytes());
         parent.add(factory.createDatum(builder));

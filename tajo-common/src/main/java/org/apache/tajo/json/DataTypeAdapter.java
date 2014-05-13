@@ -36,13 +36,17 @@ public class DataTypeAdapter implements GsonSerDerAdapter<DataType> {
     TajoDataTypes.Type type = TajoDataTypes.Type.valueOf(obj.get("type").getAsString());
     builder.setType(type);
 
-    JsonElement len = obj.get("len");
-    if (len != null) {
-      builder.setLength(len.getAsInt());
+    JsonElement lengthOrPrecision = obj.get("lengthOrPrecision");
+    if (lengthOrPrecision != null) {
+      builder.setLengthOrPrecision(lengthOrPrecision.getAsInt());
     }
-    JsonElement code = obj.get("code");
+    JsonElement scale = obj.get("scale");
+    if (scale != null) {
+      builder.setScale(scale.getAsInt());
+    }
+    JsonElement code = obj.get("extra");
     if (code != null) {
-      builder.setCode(code.getAsString());
+      builder.setExtra(code.getAsString());
     }
     return builder.build();
   }
@@ -51,11 +55,14 @@ public class DataTypeAdapter implements GsonSerDerAdapter<DataType> {
   public JsonElement serialize(DataType src, Type typeOfSrc, JsonSerializationContext context) {
     JsonObject json = new JsonObject();
     json.addProperty("type", src.getType().name());
-    if (src.hasLength()) {
-      json.addProperty("len", src.getLength());
+    if (src.hasLengthOrPrecision()) {
+      json.addProperty("lengthOrPrecision", src.getLengthOrPrecision());
     }
-    if (src.hasCode()) {
-      json.addProperty("code", src.getCode());
+    if (src.hasScale()) {
+      json.addProperty("scale", src.getScale());
+    }
+    if (src.hasExtra()) {
+      json.addProperty("extra", src.getExtra());
     }
 
     return json;

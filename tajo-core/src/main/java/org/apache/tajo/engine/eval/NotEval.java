@@ -27,7 +27,7 @@ import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.storage.Tuple;
 
 public class NotEval extends UnaryEval implements Cloneable {
-  private static final DataType RES_TYPE = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+  private static final DataType RES_TYPE = CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
 
   public NotEval(EvalNode child) {
     super(EvalType.NOT, child);

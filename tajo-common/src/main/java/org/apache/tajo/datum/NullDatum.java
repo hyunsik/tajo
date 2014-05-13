@@ -20,6 +20,8 @@ package org.apache.tajo.datum;
 
 import org.apache.tajo.exception.InvalidCastException;
 
+import java.math.BigDecimal;
+
 import static org.apache.tajo.common.TajoDataTypes.Type;
 
 public class NullDatum extends Datum {
@@ -81,6 +83,11 @@ public class NullDatum extends Datum {
   @Override
   public double asFloat8() {
     return 0d;
+  }
+
+  @Override
+  public BigDecimal asNumeric() {
+    return BigDecimal.ZERO;
   }
 
   @Override

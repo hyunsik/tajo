@@ -67,7 +67,7 @@ public class MaxString  extends AggFunction<Datum> {
 
   @Override
   public TajoDataTypes.DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(TajoDataTypes.Type.TEXT);
+    return CatalogUtil.newDataType(TajoDataTypes.Type.TEXT);
   }
 
   @Override

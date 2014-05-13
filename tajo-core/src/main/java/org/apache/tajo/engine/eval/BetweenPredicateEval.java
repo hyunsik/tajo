@@ -28,7 +28,7 @@ import org.apache.tajo.datum.NullDatum;
 import org.apache.tajo.storage.Tuple;
 
 public class BetweenPredicateEval extends EvalNode implements Cloneable {
-  private static final TajoDataTypes.DataType RES_TYPE = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+  private static final TajoDataTypes.DataType RES_TYPE = CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
   @Expose private boolean not;
   @Expose private boolean symmetric;
   @Expose private EvalNode predicand;

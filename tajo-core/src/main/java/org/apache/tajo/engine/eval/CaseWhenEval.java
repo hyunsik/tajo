@@ -159,7 +159,7 @@ public class CaseWhenEval extends EvalNode implements GsonObject {
 
     @Override
     public DataType getValueType() {
-      return CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+      return CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
     }
 
     @Override

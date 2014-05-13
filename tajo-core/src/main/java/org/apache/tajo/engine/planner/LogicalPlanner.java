@@ -35,6 +35,7 @@ import org.apache.tajo.catalog.partition.PartitionMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.engine.exception.VerifyException;
 import org.apache.tajo.engine.planner.LogicalPlan.QueryBlock;
@@ -1471,7 +1472,15 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     TajoDataTypes.DataType.Builder builder = TajoDataTypes.DataType.newBuilder();
     builder.setType(type);
     if (dataType.hasLengthOrPrecision()) {
-      builder.setLength(dataType.getLengthOrPrecision());
+      builder.setLengthOrPrecision(dataType.getLengthOrPrecision());
+      if (dataType.hasScale()) {
+        builder.setScale(dataType.getScale());
+      } else if (type == TajoDataTypes.Type.NUMERIC) {
+        builder.setScale(NumericDatum.DEFAULT_SCALE);
+      }
+    } else if (type == TajoDataTypes.Type.NUMERIC) {
+      builder.setLengthOrPrecision(NumericDatum.DEFAULT_PRECISION);
+      builder.setScale(NumericDatum.DEFAULT_SCALE);
     }
     return builder.build();
   }

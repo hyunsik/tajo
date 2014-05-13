@@ -23,10 +23,11 @@ import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.util.NumberUtil;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
 
-public class Int2Datum extends NumericDatum {
+public class Int2Datum extends NumberDatum {
   private static final int size = 2;
   @Expose private final short val;
 
@@ -77,6 +78,11 @@ public class Int2Datum extends NumericDatum {
 	public double asFloat8() {
 		return val;
 	}
+
+  @Override
+  public BigDecimal asNumeric() {
+    return new BigDecimal(val);
+  }
 
 	@Override
 	public String asChars() {
@@ -296,7 +302,7 @@ public class Int2Datum extends NumericDatum {
   }
 
   @Override
-  public NumericDatum inverseSign() {
+  public NumberDatum inverseSign() {
     return new Int2Datum((short) -val);
   }
 }

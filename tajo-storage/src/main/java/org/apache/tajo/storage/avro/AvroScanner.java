@@ -142,7 +142,7 @@ public class AvroScanner extends FileScanner {
       case PROTOBUF:
         try {
           ProtobufDatumFactory factory =
-              ProtobufDatumFactory.get(dataType.getCode());
+              ProtobufDatumFactory.get(dataType.getExtra());
           Message.Builder builder = factory.newBuilder();
           builder.mergeFrom(bytes);
           return factory.createDatum(builder);

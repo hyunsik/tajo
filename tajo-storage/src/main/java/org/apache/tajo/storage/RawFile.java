@@ -295,6 +295,14 @@ public class RawFile {
             tuple.put(i, DatumFactory.createFloat8(buffer.getDouble()));
             break;
 
+          case NUMERIC: {
+            int len = readRawVarint32();
+            byte [] numericBytes = new byte[len];
+            buffer.get(numericBytes);
+            tuple.put(i, DatumFactory.createNumeric(numericBytes));
+            break;
+          }
+
           case TEXT : {
             int len = readRawVarint32();
             byte [] strBytes = new byte[len];
@@ -640,6 +648,7 @@ public class RawFile {
             buffer.putDouble(t.getFloat8(i));
             break;
 
+          case NUMERIC:
           case CHAR:
           case TEXT: {
             byte [] strBytes = t.getBytes(i);

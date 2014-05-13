@@ -24,10 +24,11 @@ import org.apache.tajo.exception.InvalidCastException;
 import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.util.NumberUtil;
 
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
 
-public class Int8Datum extends NumericDatum {
+public class Int8Datum extends NumberDatum {
   private static final int size = 8;
   @Expose private final long val;
 
@@ -66,6 +67,11 @@ public class Int8Datum extends NumericDatum {
 	public long asInt8() {
 		return val;
 	}
+
+  @Override
+  public BigDecimal asNumeric() {
+    return new BigDecimal(val);
+  }
 
   @Override
 	public byte asByte() {
@@ -309,7 +315,7 @@ public class Int8Datum extends NumericDatum {
   }
 
   @Override
-  public NumericDatum inverseSign() {
+  public NumberDatum inverseSign() {
     return new Int8Datum(-val);
   }
 }

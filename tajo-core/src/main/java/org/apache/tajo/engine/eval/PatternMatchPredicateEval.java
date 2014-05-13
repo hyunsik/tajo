@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public abstract class PatternMatchPredicateEval extends BinaryEval {
-  private static final DataType RES_TYPE = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+  private static final DataType RES_TYPE = CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
 
   @Expose protected boolean not;
   @Expose protected String pattern;

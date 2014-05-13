@@ -30,7 +30,7 @@ import org.apache.tajo.storage.Tuple;
 public class IsNullEval extends UnaryEval {
   // it's just a hack to emulate a binary expression
   private final static ConstEval DUMMY_EVAL = new ConstEval(DatumFactory.createBool(true));
-  private static final DataType RES_TYPE = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+  private static final DataType RES_TYPE = CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
 
   // persistent variables
   @Expose private boolean isNot;

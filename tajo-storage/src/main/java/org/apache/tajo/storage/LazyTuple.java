@@ -21,7 +21,9 @@ package org.apache.tajo.storage;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 
 public class LazyTuple implements Tuple, Cloneable {
@@ -184,6 +186,11 @@ public class LazyTuple implements Tuple, Cloneable {
   @Override
   public double getFloat8(int fieldId) {
     return get(fieldId).asInt8();
+  }
+
+  @Override
+  public BigDecimal getNumeric(int fieldId) {
+    return get(fieldId).asNumeric();
   }
 
   @Override

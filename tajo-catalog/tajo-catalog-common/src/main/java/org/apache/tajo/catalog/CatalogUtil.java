@@ -339,23 +339,29 @@ public class CatalogUtil {
     return revisedSchema.build();
   }
 
-  public static DataType newDataType(Type type, String code) {
-    return newDataType(type, code, 0);
-  }
-
-  public static DataType newDataType(Type type, String code, int len) {
-    DataType.Builder builder = DataType.newBuilder();
-    builder.setType(type)
-        .setCode(code)
-        .setLength(len);
-    return builder.build();
-  }
-
-  public static DataType newSimpleDataType(Type type) {
+  public static DataType newDataType(Type type) {
     return DataType.newBuilder().setType(type).build();
   }
 
-  public static DataType [] newSimpleDataTypeArray(Type... types) {
+  public static DataType newDataTypeWithMaxLen(Type type, int maxLength) {
+    DataType.Builder builder = DataType.newBuilder();
+    builder.setType(type).setLengthOrPrecision(maxLength);
+    return builder.build();
+  }
+
+  public static DataType newNumericType(int precision, int scale) {
+    DataType.Builder builder = DataType.newBuilder();
+    builder.setType(Type.NUMERIC).setLengthOrPrecision(precision).setScale(scale);
+    return builder.build();
+  }
+
+  public static DataType newDataType(Type type, String extra) {
+    DataType.Builder builder = DataType.newBuilder();
+    builder.setType(type).setExtra(extra);
+    return builder.build();
+  }
+
+  public static DataType [] newDataTypeArray(Type... types) {
     DataType [] dataTypes = new DataType[types.length];
     for (int i = 0; i < types.length; i++) {
       dataTypes[i] = DataType.newBuilder().setType(types[i]).build();
@@ -363,15 +369,15 @@ public class CatalogUtil {
     return dataTypes;
   }
 
-  public static DataType newDataTypeWithLen(Type type, int length) {
-    return DataType.newBuilder().setType(type).setLength(length).build();
-  }
-
   public static String columnToDDLString(Column column) {
     StringBuilder sb = new StringBuilder(denormalizeIdentifier(column.getSimpleName()));
     sb.append(" ").append(column.getDataType().getType());
-    if (column.getDataType().hasLength()) {
-      sb.append(" (").append(column.getDataType().getLength()).append(")");
+    if (column.getDataType().hasLengthOrPrecision()) {
+      sb.append(" (").append(column.getDataType().getLengthOrPrecision());
+      if (column.getDataType().hasScale()) {
+        sb.append(",").append(column.getDataType().getScale());
+      }
+      sb.append(")");
     }
     return sb.toString();
   }

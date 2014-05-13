@@ -18,22 +18,337 @@
 
 package org.apache.tajo.datum;
 
+import com.google.gson.annotations.Expose;
+import org.apache.tajo.exception.InvalidCastException;
+import org.apache.tajo.exception.InvalidOperationException;
+import org.apache.tajo.util.ProtoUtil;
 
-import org.apache.tajo.common.TajoDataTypes;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
-public abstract class NumericDatum extends Datum {
+import static org.apache.tajo.common.TajoDataTypes.DataType;
+import static org.apache.tajo.common.TajoDataTypes.Type;
 
-  public NumericDatum(TajoDataTypes.Type type) {
-    super(type);
+
+public class NumericDatum extends NumberDatum {
+  public static final RoundingMode DEFAULT_ROUND_MODE = RoundingMode.HALF_UP;
+  public static final int DEFAULT_PRECISION = 18;
+  public static final int DEFAULT_SCALE = 6;
+  public static final int DIVIDE_DEFAULT_SCALE = 16;
+
+  private static final MathContext FLOAT4_CONTEXT = new MathContext(6, DEFAULT_ROUND_MODE);
+  private static final MathContext FLOAT8_CONTEXT = new MathContext(15, DEFAULT_ROUND_MODE);
+
+  public static final NumericDatum ZERO = new NumericDatum(BigInteger.ZERO, 0);
+  public static final NumericDatum ONE = new NumericDatum(BigInteger.ONE, 0);
+  public static final NumericDatum TEN = new NumericDatum(BigInteger.TEN, 0);
+
+  public static final DataType DEFAULT_NUMERIC_TYPE =
+      DataType.newBuilder().setType(Type.NUMERIC).
+          setLengthOrPrecision(DEFAULT_PRECISION).setScale(DEFAULT_SCALE).build();
+
+  @Expose public final BigDecimal value;
+
+  public NumericDatum(long val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val);
   }
 
-  public abstract Datum plus(Datum datum);
+  public NumericDatum(float val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val, FLOAT4_CONTEXT);
+  }
+
+  public NumericDatum(double val) {
+    super(Type.NUMERIC);
+    value = new BigDecimal(val, FLOAT8_CONTEXT);
+  }
+
+	public NumericDatum(BigInteger unscaled, int scale) {
+    super(Type.NUMERIC);
+		value = new BigDecimal(unscaled, scale);
+	}
+
+  public NumericDatum(BigDecimal val) {
+    super(Type.NUMERIC);
+    this.value = val;
+  }
+
+  public NumericDatum(BigDecimal val, int scale) {
+    super(Type.NUMERIC);
+    this.value = val;
+    this.value.setScale(scale);
+  }
+
+  public NumericDatum(String str, int scale) {
+    super(Type.NUMERIC);
+    this.value = new BigDecimal(str).setScale(scale, DEFAULT_ROUND_MODE);
+  }
+
+  public NumericDatum(String str, int precision, int scale) {
+    super(Type.NUMERIC);
+    MathContext context = new MathContext(precision);
+    this.value = new BigDecimal(str, context).setScale(scale, DEFAULT_ROUND_MODE);
+  }
+
+  public NumericDatum(String str) {
+    super(Type.NUMERIC);
+    this.value = new BigDecimal(str);
+  }
+
+  public NumericDatum(byte [] bytes) {
+    super(Type.NUMERIC);
+    int scale = ProtoUtil.readRawVarint32(bytes, 0);
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale);
+    byte [] unscaledBytes = new byte[bytes.length - scaleBytesLength];
+    System.arraycopy(bytes, scaleBytesLength, unscaledBytes, 0, unscaledBytes.length);
+    value = new BigDecimal(new BigInteger(unscaledBytes), scale);
+  }
+
+  public NumericDatum(byte [] bytes, int offset, int length) {
+    super(Type.NUMERIC);
+    int scale = ProtoUtil.readRawVarint32(bytes, offset);
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale);
+    byte [] unscaledBytes = new byte[length - scaleBytesLength];
+    System.arraycopy(bytes, offset + scaleBytesLength, unscaledBytes, 0, unscaledBytes.length);
+    value = new BigDecimal(new BigInteger(unscaledBytes), scale);
+  }
+
+  public int precision() {
+    return value.precision();
+  }
+
+  public int scale() {
+    return value.scale();
+  }
+
+  public static BigDecimal enforcePrecisionScale(BigDecimal bd, int maxPrecision, int maxScale) {
+    if (bd == null) {
+      return null;
+    }
+
+    bd = trim(bd);
+
+    int maxIntDigits = maxPrecision - maxScale;
+    int intDigits = bd.precision() - bd.scale();
+    if (intDigits > maxIntDigits) {
+      return null;
+    }
+
+    if (bd.scale() > maxScale) {
+      bd = bd.setScale(maxScale, RoundingMode.HALF_UP);
+    }
+
+    return bd;
+  }
+
+  private static BigDecimal trim(BigDecimal d) {
+    if (d.compareTo(BigDecimal.ZERO) == 0) {
+      // Special case for 0, because java doesn't strip zeros correctly on that number.
+      d = BigDecimal.ZERO;
+    } else {
+      d = d.stripTrailingZeros();
+      if (d.scale() < 0) {
+        // no negative scale decimals
+        d = d.setScale(0);
+      }
+    }
+    return d;
+  }
+
+  @Override
+	public boolean asBool() {
+		throw new InvalidCastException(Type.NUMERIC, Type.BOOLEAN);
+	}
+
+  @Override
+  public char asChar() {
+    throw new InvalidCastException(Type.NUMERIC, Type.CHAR);
+  }
+	
+	@Override
+	public short asInt2() {
+		return value.shortValue();
+	}
+
+  @Override
+	public int asInt4() {
+		return value.intValue();
+	}
+
+  @Override
+	public long asInt8() {
+		return value.longValue();
+	}
+
+  @Override
+	public byte asByte() {
+    throw new InvalidCastException(Type.NUMERIC, Type.BIT);
+	}
+
+  @Override
+	public byte [] asByteArray() {
+    BigInteger unscaledValue = value.unscaledValue();
+    int unscaledValueByteLength = unscaledValue.bitLength() / 8 + 1;
+    int scaleBytesLength = ProtoUtil.computeRawVarint32Size(scale());
+    byte [] bytes = new byte[scaleBytesLength + unscaledValueByteLength];
+    ProtoUtil.writeRawVarint32(scale(), bytes, 0);
+    System.arraycopy(unscaledValue.toByteArray(), 0, bytes, scaleBytesLength, unscaledValueByteLength);
+    return bytes;
+	}
+
+  @Override
+	public float asFloat4() {
+		return value.floatValue();
+	}
+
+  @Override
+	public double asFloat8() {
+		return value.doubleValue();
+	}
+
+  @Override
+  public BigDecimal asNumeric() {
+    return value;
+  }
+
+  @Override
+	public String asChars() {
+		return ""+value.toPlainString();
+	}
+
+  @Override
+  public byte[] asTextBytes() {
+    return value.toPlainString().getBytes();
+  }
+
+  @Override
+  public int size() {
+    int unscaledByteLength = value.unscaledValue().bitLength() / 8 + 1;
+    return unscaledByteLength + ProtoUtil.computeRawVarint32Size(unscaledByteLength);
+  }
   
-  public abstract Datum minus(Datum datum);
-  
-  public abstract Datum multiply(Datum datum);
-  
-  public abstract Datum divide(Datum datum);
-  
-  public abstract NumericDatum inverseSign();
+  @Override
+  public int hashCode() {
+    return value.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    if (obj instanceof NumericDatum) {
+      NumericDatum other = (NumericDatum) obj;
+      return value.equals(other.value);
+    }
+    
+    return false;
+  }
+
+  @Override
+  public Datum equalsTo(Datum datum) {
+    switch (datum.type()) {
+      case INT2:
+        return DatumFactory.createBool(asInt2() == datum.asInt2());
+      case INT4:
+        return DatumFactory.createBool(asInt4() == datum.asInt4());
+      case INT8:
+        return DatumFactory.createBool(asInt8() == datum.asInt8());
+      case FLOAT4:
+        return DatumFactory.createBool(asFloat4() == datum.asFloat4());
+      case FLOAT8:
+        return DatumFactory.createBool(asFloat8() == datum.asFloat8());
+      case NUMERIC:
+        return DatumFactory.createBool(asFloat8() == datum.asFloat8());
+      case NULL_TYPE:
+        return datum;
+      default:
+        throw new InvalidOperationException();
+    }
+  }
+
+  @Override
+  public int compareTo(Datum datum) {
+    if (datum.isNull()) {
+      return -1;
+    }
+
+    return value.compareTo(((NumericDatum) datum).value);
+  }
+
+  @Override
+  public Datum plus(Datum datum) {
+    if (datum.isNull()) {
+      return datum;
+    }
+
+    NumericDatum numeric = (NumericDatum) datum;
+    return new NumericDatum(value.add(numeric.value));
+  }
+
+  @Override
+  public Datum minus(Datum datum) {
+    if (datum.isNull()) {
+      return datum;
+    }
+
+    NumericDatum numeric = (NumericDatum) datum;
+    return new NumericDatum(value.subtract(numeric.value));
+  }
+
+  @Override
+  public Datum multiply(Datum datum) {
+    if (datum.isNull()) {
+      return datum;
+    }
+
+    NumericDatum numeric = (NumericDatum) datum;
+    return new NumericDatum(value.multiply(numeric.value));
+  }
+
+  @Override
+  public Datum divide(Datum datum) {
+    if (datum.isNull()) {
+      return datum;
+    }
+    NumericDatum numeric = (NumericDatum) datum;
+    return new NumericDatum(value.divide(numeric.value, DIVIDE_DEFAULT_SCALE, DEFAULT_ROUND_MODE));
+  }
+
+  @Override
+  public Datum modular(Datum datum) {
+    if (datum.isNull()) {
+      return datum;
+    }
+
+    NumericDatum numeric = (NumericDatum) datum;
+    return new NumericDatum(value.remainder(numeric.value));
+  }
+
+  @Override
+  public NumberDatum inverseSign() {
+    return new NumericDatum(value.negate());
+  }
+
+  public static DataType widenType(DataType... dataTypes) {
+    int largerPrecision = Integer.MIN_VALUE;
+    int largerScale = Integer.MIN_VALUE;
+    for (DataType d : dataTypes) {
+      if (d.getType() == Type.NUMERIC) {
+        largerPrecision = Math.max(largerPrecision, d.getLengthOrPrecision());
+        largerScale = Math.max(largerScale, d.getScale());
+      }
+    }
+
+    if (largerPrecision == Integer.MIN_VALUE && largerScale == Integer.MIN_VALUE) {
+      return null;
+    } else {
+      return DataType.newBuilder().setType(Type.NUMERIC).setLengthOrPrecision(largerPrecision).setScale(largerScale)
+          .build();
+    }
+  }
 }

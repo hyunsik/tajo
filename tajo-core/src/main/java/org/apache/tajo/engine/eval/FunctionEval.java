@@ -25,8 +25,12 @@ import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.util.TUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.apache.tajo.catalog.proto.CatalogProtos.FunctionType.DISTINCT_AGGREGATION;
 import static org.apache.tajo.catalog.proto.CatalogProtos.FunctionType.DISTINCT_UDA;
@@ -74,7 +78,22 @@ public abstract class FunctionEval extends EvalNode implements Cloneable {
   }
 	
 	public DataType getValueType() {
-		return this.funcDesc.getReturnType();
+    if (this.funcDesc.getReturnType().getType() == TajoDataTypes.Type.NUMERIC) {
+      List<DataType> dataTypeList = new ArrayList<DataType>();
+      for (EvalNode dataType : argEvals) {
+        dataTypeList.add(dataType.getValueType());
+      }
+
+      DataType widest = NumericDatum.widenType(dataTypeList.toArray(new DataType[dataTypeList.size()]));
+
+      if (widest != null) {
+        return widest;
+      } else {
+        return NumericDatum.DEFAULT_NUMERIC_TYPE;
+      }
+    } else {
+		  return this.funcDesc.getReturnType();
+    }
 	}
 
 	@Override

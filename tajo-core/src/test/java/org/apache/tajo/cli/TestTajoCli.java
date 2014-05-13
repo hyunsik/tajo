@@ -218,7 +218,7 @@ public class TestTajoCli {
         }
       }
     }
-    assertEquals(expectedResult, actual);
+    assertEquals(expectedResult.trim(), actual.trim());
   }
 
   public static class TajoCliOutputTestFormatter extends DefaultTajoCliOutputFormatter {

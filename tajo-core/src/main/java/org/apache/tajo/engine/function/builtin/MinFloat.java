@@ -64,7 +64,7 @@ public class MinFloat extends AggFunction<Float4Datum> {
 
   @Override
   public DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(Type.FLOAT4);
+    return CatalogUtil.newDataType(Type.FLOAT4);
   }
 
   @Override

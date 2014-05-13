@@ -37,6 +37,14 @@ public class TestMathFunctions extends ExprTestBase {
     testSimpleEval("select round(-5.5) as col1 ", new String[]{"-6"});
     testSimpleEval("select round(-5.6) as col1 ", new String[]{"-6"});
 
+    testSimpleEval("select round(1234567890123456.4) as col1 ", new String[]{"1234567890123456"});
+    testSimpleEval("select round(1234567890123456.5) as col1 ", new String[]{"1234567890123457"});
+    testSimpleEval("select round(1234567890123456.6) as col1 ", new String[]{"1234567890123457"});
+
+    testSimpleEval("select round(-1234567890123455.4) as col1 ", new String[]{"-1234567890123455"});
+    testSimpleEval("select round(-1234567890123455.5) as col1 ", new String[]{"-1234567890123456"});
+    testSimpleEval("select round(-1234567890123455.6) as col1 ", new String[]{"-1234567890123456"});
+
     Schema schema = new Schema();
     schema.addColumn("col1", FLOAT8);
     schema.addColumn("col2", FLOAT8);
@@ -44,6 +52,35 @@ public class TestMathFunctions extends ExprTestBase {
 
     testEval(schema, "table1", "1.0, 0.2, 0.4", "select round(col1 + col2 + col3) from table1",
         new String[]{"2"});
+  }
+
+  @Test
+  public void testRoundWithSpecifiedPrecision() throws IOException {
+    testSimpleEval("select round(425,2) ", new String[]{"425.00"});
+    testSimpleEval("select round(-425,2) ", new String[]{"-425.00"});
+
+    testSimpleEval("select round(42.4342,2) ", new String[]{"42.43"});
+    testSimpleEval("select round(42.4352,2) ", new String[]{"42.44"});
+    testSimpleEval("select round(42.4362,2) ", new String[]{"42.44"});
+
+    testSimpleEval("select round(-42.4342,2) ", new String[]{"-42.43"});
+    testSimpleEval("select round(-42.4352,2) ", new String[]{"-42.44"});
+    testSimpleEval("select round(-42.4362,2) ", new String[]{"-42.44"});
+
+    testSimpleEval("select round(1234567890,0) ", new String[]{"1234567890"});
+    testSimpleEval("select round(1234567890,1) ", new String[]{"1234567890.0"});
+    testSimpleEval("select round(1234567890,2) ", new String[]{"1234567890.00"});
+
+    testSimpleEval("select round(1.2345678901234567,13) ", new String[]{"1.2345678901235"});
+    testSimpleEval("select round(1234567890.1234567,3) ", new String[]{"1234567890.123"});
+    testSimpleEval("select round(1234567890.1234567,5) ", new String[]{"1234567890.12346"});
+    testSimpleEval("select round(1234567890.1234567890,7) ", new String[]{"1234567890.1234568"});
+
+    Schema schema = new Schema();
+    schema.addColumn("col1", FLOAT8);
+    schema.addColumn("col2", INT4);
+
+    testEval(schema, "table1", ",", "select round(col1, col2) from table1", new String[]{""});
   }
 
   @Test
@@ -424,28 +461,5 @@ public class TestMathFunctions extends ExprTestBase {
   @Test
   public void testPi() throws IOException {
     testSimpleEval("select pi() as col1 ", new String[]{String.valueOf(Math.PI)});
-  }
-
-  @Test
-  public void testRoundWithSpecifiedPrecision() throws IOException {
-    testSimpleEval("select round(42.4382,2) ", new String[]{"42.44"});
-    testSimpleEval("select round(-42.4382,2) ", new String[]{"-42.44"});
-    testSimpleEval("select round(-425,2) ", new String[]{"-425"});
-    testSimpleEval("select round(425,2) ", new String[]{"425"});
-
-    testSimpleEval("select round(1234567890,0) ", new String[]{"1234567890"});
-    testSimpleEval("select round(1234567890,1) ", new String[]{"1234567890"});
-    testSimpleEval("select round(1234567890,2) ", new String[]{"1234567890"});
-
-    testSimpleEval("select round(1.2345678901234567,13) ", new String[]{"1.2345678901235"});
-    testSimpleEval("select round(1234567890.1234567,3) ", new String[]{"1234567890.123"});
-    testSimpleEval("select round(1234567890.1234567,5) ", new String[]{"1234567890.12346"});
-    //testSimpleEval("select round(1234567890.1234567890,7) ", new String[]{"1234567890.1234568"});
-
-    Schema schema = new Schema();
-    schema.addColumn("col1", FLOAT8);
-    schema.addColumn("col2", INT4);
-
-    testEval(schema, "table1", ",", "select round(col1, col2) from table1", new String[]{""});
   }
 }

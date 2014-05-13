@@ -36,7 +36,7 @@ public class TestEvalTree extends ExprTestBase{
   public void testTupleEval() throws CloneNotSupportedException {
     ConstEval e1 = new ConstEval(DatumFactory.createInt4(1));
     assertCloneEqual(e1);
-    FieldEval e2 = new FieldEval("table1.score", CatalogUtil.newSimpleDataType(INT4)); // it indicates
+    FieldEval e2 = new FieldEval("table1.score", CatalogUtil.newDataType(INT4)); // it indicates
     assertCloneEqual(e2);
 
     Schema schema1 = new Schema();
@@ -86,7 +86,7 @@ public class TestEvalTree extends ExprTestBase{
 
     @Override
     public DataType getValueType() {
-      return CatalogUtil.newSimpleDataType(BOOLEAN);
+      return CatalogUtil.newDataType(BOOLEAN);
     }
 
   }
@@ -124,7 +124,7 @@ public class TestEvalTree extends ExprTestBase{
 
     @Override
     public DataType getValueType() {
-      return CatalogUtil.newSimpleDataType(BOOLEAN);
+      return CatalogUtil.newDataType(BOOLEAN);
     }
   }
 
@@ -255,16 +255,16 @@ public class TestEvalTree extends ExprTestBase{
     e1 = new ConstEval(DatumFactory.createInt4(9));
     e2 = new ConstEval(DatumFactory.createInt4(34));
     BinaryEval expr = new BinaryEval(EvalType.PLUS, e1, e2);
-    assertEquals(CatalogUtil.newSimpleDataType(INT4), expr.getValueType());
+    assertEquals(CatalogUtil.newDataType(INT4), expr.getValueType());
 
     expr = new BinaryEval(EvalType.LTH, e1, e2);
     assertTrue(expr.eval(null, null).asBool());
-    assertEquals(CatalogUtil.newSimpleDataType(BOOLEAN), expr.getValueType());
+    assertEquals(CatalogUtil.newDataType(BOOLEAN), expr.getValueType());
 
     e1 = new ConstEval(DatumFactory.createFloat8(9.3));
     e2 = new ConstEval(DatumFactory.createFloat8(34.2));
     expr = new BinaryEval(EvalType.PLUS, e1, e2);
-    assertEquals(CatalogUtil.newSimpleDataType(FLOAT8), expr.getValueType());
+    assertEquals(CatalogUtil.newDataType(FLOAT8), expr.getValueType());
   }
   
   @Test

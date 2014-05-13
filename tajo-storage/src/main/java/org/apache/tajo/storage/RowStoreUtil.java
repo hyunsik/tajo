@@ -23,6 +23,7 @@ import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.datum.IntervalDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.util.BitArray;
 
 import java.nio.ByteBuffer;
@@ -133,6 +134,12 @@ public class RowStoreUtil {
             tuple.put(i, DatumFactory.createFloat8(d));
             break;
 
+          case NUMERIC:
+            byte [] _numeric = new byte[bb.getInt()];
+            bb.get(_numeric);
+            tuple.put(i, DatumFactory.createNumeric(_numeric));
+            break;
+
           case TEXT:
             byte [] _string = new byte[bb.getInt()];
             bb.get(_string);
@@ -194,6 +201,11 @@ public class RowStoreUtil {
           case INT8: bb.putLong(tuple.get(i).asInt8()); break;
           case FLOAT4: bb.putFloat(tuple.get(i).asFloat4()); break;
           case FLOAT8: bb.putDouble(tuple.get(i).asFloat8()); break;
+          case NUMERIC:
+            byte [] _numeric = tuple.get(i).asByteArray();
+            bb.putInt(_numeric.length);
+            bb.put(_numeric);
+            break;
           case TEXT:
             byte [] _string = tuple.get(i).asByteArray();
             bb.putInt(_string.length);

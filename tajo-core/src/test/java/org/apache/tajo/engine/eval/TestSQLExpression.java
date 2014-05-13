@@ -32,6 +32,11 @@ import static org.apache.tajo.common.TajoDataTypes.Type.TEXT;
 public class TestSQLExpression extends ExprTestBase {
 
   @Test
+  public void testLargeNumbers() throws IOException {
+    testSimpleEval("select 1234567890123456789012345 < 1234567890123456789012345 + 1;", new String[]{"t"});
+  }
+
+  @Test
   public void testQuotedIdentifiers() throws IOException {
     Schema schema = new Schema();
     schema.addColumn("컬럼1", TEXT);
@@ -88,7 +93,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testSimpleEval("select cast (1 as char)", new String[] {"1"});
     testSimpleEval("select cast (119 as char)", new String[] {"1"});
@@ -168,7 +173,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col0 + col0 from table1;", new String [] {"0"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col0 + col1 from table1;", new String [] {"1"});
@@ -270,7 +275,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col1 + col0 from table1;", new String [] {"1"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col1 + col1 from table1;", new String [] {"2"});
@@ -372,7 +377,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col2 + col0 from table1;", new String [] {"2"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col2 + col1 from table1;", new String [] {"3"});
@@ -475,7 +480,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col3 + col0 from table1;", new String[]{"3"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col3 + col1 from table1;", new String [] {"4"});
@@ -582,7 +587,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col4 + col0 from table1;", new String [] {"4.1"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col4 + col1 from table1;", new String [] {"5.1"});
@@ -701,7 +706,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
 
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col5 + col0 from table1;", new String [] {"5.1"});
     testEval(schema, "table1", "0,1,2,3,4.1,5.1,6,7", "select col5 + col1 from table1;", new String [] {"6.1"});
@@ -821,7 +826,7 @@ public class TestSQLExpression extends ExprTestBase {
     schema.addColumn("col4", TajoDataTypes.Type.FLOAT4);
     schema.addColumn("col5", TajoDataTypes.Type.FLOAT8);
     schema.addColumn("col6", TajoDataTypes.Type.TEXT);
-    schema.addColumn("col7", CatalogUtil.newDataType(TajoDataTypes.Type.CHAR, "", 3));
+    schema.addColumn("col7", CatalogUtil.newDataTypeWithMaxLen(TajoDataTypes.Type.CHAR, 3));
     schema.addColumn("col8", TajoDataTypes.Type.BOOLEAN);
 
 

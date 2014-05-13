@@ -26,6 +26,7 @@ import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.datum.NumericDatum;
 import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.storage.Tuple;
 
@@ -53,7 +54,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
             type == EvalType.GTH ||
             type == EvalType.LEQ ||
             type == EvalType.GEQ ) {
-      this.returnType = CatalogUtil.newSimpleDataType(Type.BOOLEAN);
+      this.returnType = CatalogUtil.newDataType(Type.BOOLEAN);
     } else if (
         type == EvalType.PLUS ||
             type == EvalType.MINUS ||
@@ -63,7 +64,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
       this.returnType = determineType(left.getValueType(), right.getValueType());
 
     } else if (type == EvalType.CONCATENATE) {
-      this.returnType = CatalogUtil.newSimpleDataType(Type.TEXT);
+      this.returnType = CatalogUtil.newDataType(Type.TEXT);
     }
   }
 
@@ -109,12 +110,13 @@ public class BinaryEval extends EvalNode implements Cloneable {
       switch(right.getType()) {
       case INT1:
       case INT2:
-      case INT4: return CatalogUtil.newSimpleDataType(Type.INT4);
-      case INT8: return CatalogUtil.newSimpleDataType(Type.INT8);
-      case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
-      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
-      case DATE: return CatalogUtil.newSimpleDataType(Type.DATE);
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case INT4: return CatalogUtil.newDataType(Type.INT4);
+      case INT8: return CatalogUtil.newDataType(Type.INT8);
+      case FLOAT4: return CatalogUtil.newDataType(Type.FLOAT4);
+      case FLOAT8: return CatalogUtil.newDataType(Type.FLOAT8);
+      case NUMERIC: return NumericDatum.DEFAULT_NUMERIC_TYPE;
+      case DATE: return CatalogUtil.newDataType(Type.DATE);
+      case INTERVAL: return CatalogUtil.newDataType(Type.INTERVAL);
       }
     }
 
@@ -123,11 +125,12 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT1:
       case INT2:
       case INT4:
-      case INT8: return CatalogUtil.newSimpleDataType(Type.INT8);
-      case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
-      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
-      case DATE: return CatalogUtil.newSimpleDataType(Type.DATE);
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case INT8: return CatalogUtil.newDataType(Type.INT8);
+      case FLOAT4: return CatalogUtil.newDataType(Type.FLOAT4);
+      case FLOAT8: return CatalogUtil.newDataType(Type.FLOAT8);
+      case NUMERIC: return NumericDatum.DEFAULT_NUMERIC_TYPE;
+      case DATE: return CatalogUtil.newDataType(Type.DATE);
+      case INTERVAL: return CatalogUtil.newDataType(Type.INTERVAL);
       }
     }
 
@@ -135,11 +138,12 @@ public class BinaryEval extends EvalNode implements Cloneable {
       switch(right.getType()) {
       case INT1:
       case INT2:
-      case INT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
-      case INT8: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
-      case FLOAT4: return CatalogUtil.newSimpleDataType(Type.FLOAT4);
-      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case INT4: return CatalogUtil.newDataType(Type.FLOAT4);
+      case INT8: return CatalogUtil.newDataType(Type.FLOAT4);
+      case FLOAT4: return CatalogUtil.newDataType(Type.FLOAT4);
+      case FLOAT8: return CatalogUtil.newDataType(Type.FLOAT8);
+      case NUMERIC: return NumericDatum.DEFAULT_NUMERIC_TYPE;
+      case INTERVAL: return CatalogUtil.newDataType(Type.INTERVAL);
       }
     }
 
@@ -150,8 +154,21 @@ public class BinaryEval extends EvalNode implements Cloneable {
       case INT4:
       case INT8:
       case FLOAT4:
-      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.FLOAT8);
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case FLOAT8: return CatalogUtil.newDataType(Type.FLOAT8);
+      case NUMERIC: return CatalogUtil.newDataType(Type.FLOAT8);
+      case INTERVAL: return CatalogUtil.newDataType(Type.INTERVAL);
+      }
+    }
+
+    case NUMERIC: {
+      switch (right.getType()) {
+      case INT1:
+      case INT2:
+      case INT4:
+      case INT8: return CatalogUtil.newDataType(Type.NUMERIC);
+      case FLOAT4: return CatalogUtil.newDataType(Type.FLOAT8);
+      case FLOAT8: return CatalogUtil.newDataType(Type.FLOAT8);
+      case NUMERIC: NumericDatum.widenType(left, right);
       }
     }
 
@@ -159,25 +176,25 @@ public class BinaryEval extends EvalNode implements Cloneable {
       switch(right.getType()) {
       case INT2:
       case INT4:
-      case INT8: return CatalogUtil.newSimpleDataType(Type.DATE);
+      case INT8: return CatalogUtil.newDataType(Type.DATE);
       case INTERVAL:
-      case TIME: return CatalogUtil.newSimpleDataType(Type.TIMESTAMP);
-      case DATE: return CatalogUtil.newSimpleDataType(Type.INT4);
+      case TIME: return CatalogUtil.newDataType(Type.TIMESTAMP);
+      case DATE: return CatalogUtil.newDataType(Type.INT4);
       }
     }
 
     case TIME: {
       switch(right.getType()) {
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.TIME);
-      case TIME: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
-      case DATE: return CatalogUtil.newSimpleDataType(Type.INT4);
+      case INTERVAL: return CatalogUtil.newDataType(Type.TIME);
+      case TIME: return CatalogUtil.newDataType(Type.INTERVAL);
+      case DATE: return CatalogUtil.newDataType(Type.INT4);
       }
     }
 
     case TIMESTAMP: {
       switch (right.getType()) {
-      case INTERVAL: return CatalogUtil.newSimpleDataType(Type.TIMESTAMP);
-      case TIMESTAMP: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case INTERVAL: return CatalogUtil.newDataType(Type.TIMESTAMP);
+      case TIMESTAMP: return CatalogUtil.newDataType(Type.INTERVAL);
       }
     }
 
@@ -185,7 +202,7 @@ public class BinaryEval extends EvalNode implements Cloneable {
       switch (right.getType()) {
       case INTERVAL:
       case FLOAT4:
-      case FLOAT8: return CatalogUtil.newSimpleDataType(Type.INTERVAL);
+      case FLOAT8: return CatalogUtil.newDataType(Type.INTERVAL);
       }
     }
 

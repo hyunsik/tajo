@@ -49,7 +49,7 @@ public class ConstEval extends EvalNode implements Comparable<ConstEval>, Clonea
 
   @Override
 	public DataType getValueType() {
-    return CatalogUtil.newSimpleDataType(datum.type());
+    return CatalogUtil.newDataType(datum.type());
 	}
 
 	@Override

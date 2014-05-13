@@ -12,5 +12,5 @@ CREATE DATABASE IF NOT EXISTS "TestTajoDump";
 --
 -- Name: "TestTajoDump"."TableName1"; Type: TABLE; Storage: CSV
 --
-CREATE TABLE "TestTajoDump"."TableName1" ("Age" INT4, "FirstName" TEXT, lastname TEXT) USING CSV WITH ('csvfile.delimiter'='|');
+CREATE TABLE "TestTajoDump"."TableName1" ("Age" CHAR (30), "FirstName" TEXT, lastname TEXT, salary NUMERIC (10,5), bonus NUMERIC (18,6)) USING CSV WITH ('csvfile.delimiter'='|');
 

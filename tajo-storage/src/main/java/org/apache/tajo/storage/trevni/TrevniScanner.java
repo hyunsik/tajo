@@ -139,7 +139,7 @@ public class TrevniScanner extends FileScanner {
           break;
 
         case PROTOBUF: {
-          ProtobufDatumFactory factory = ProtobufDatumFactory.get(dataType.getCode());
+          ProtobufDatumFactory factory = ProtobufDatumFactory.get(dataType.getExtra());
           Message.Builder builder = factory.newBuilder();
           builder.mergeFrom(((ByteBuffer)columns[i].nextValue()).array());
           tuple.put(tid, factory.createDatum(builder));

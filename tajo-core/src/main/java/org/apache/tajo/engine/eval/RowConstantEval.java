@@ -38,7 +38,7 @@ public class RowConstantEval extends EvalNode {
 
   @Override
   public DataType getValueType() {
-    return CatalogUtil.newSimpleDataType(values[0].type());
+    return CatalogUtil.newDataType(values[0].type());
   }
 
   @Override

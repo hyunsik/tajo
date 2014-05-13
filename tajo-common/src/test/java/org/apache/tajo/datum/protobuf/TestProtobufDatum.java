@@ -34,7 +34,7 @@ public class TestProtobufDatum {
   public void testCreate() throws IOException, NoSuchMethodException, ClassNotFoundException {
     TajoDataTypes.DataType.Builder builder = TajoDataTypes.DataType.newBuilder();
     builder.setType(TajoDataTypes.Type.PROTOBUF);
-    builder.setCode(TajoIdProtos.QueryIdProto.class.getName());
+    builder.setExtra(TajoIdProtos.QueryIdProto.class.getName());
 
     ProtobufDatumFactory factory = ProtobufDatumFactory.get(builder.build());
     TajoIdProtos.QueryIdProto.Builder queryIdBuilder = factory.newBuilder();

@@ -52,7 +52,6 @@ public class TestSQLAnalyzer {
     return visitor.visitSql(context);
   }
 
-
   @Test
   public void testSelect1() throws IOException {
     String sql = FileUtil.readTextFile(new File("src/test/resources/queries/default/select_1.sql"));

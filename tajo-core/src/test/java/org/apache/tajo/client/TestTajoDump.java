@@ -31,7 +31,7 @@ public class TestTajoDump extends QueryTestCaseBase {
   public void testDump1() throws Exception {
     if (!testingCluster.isHCatalogStoreRunning()) {
       executeString("CREATE TABLE \"" + getCurrentDatabase() +
-          "\".\"TableName1\" (\"Age\" int, \"FirstName\" TEXT, lastname TEXT)");
+          "\".\"TableName1\" (\"Age\" CHAR(30), \"FirstName\" TEXT, lastname TEXT, salary NUMERIC(10, 5), bonus NUMERIC);");
 
       UserGroupInformation userInfo = UserGroupInformation.getCurrentUser();
       ByteArrayOutputStream bos = new ByteArrayOutputStream();

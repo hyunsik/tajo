@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 public class TestCatalogUtil {
   @Test
   public final void testGetCanonicalName() {
-    String canonical = CatalogUtil.getCanonicalSignature("sum", CatalogUtil.newSimpleDataTypeArray(Type.INT4,
+    String canonical = CatalogUtil.getCanonicalSignature("sum", CatalogUtil.newDataTypeArray(Type.INT4,
         Type.INT8));
     assertEquals("sum(int4,int8)", canonical);
   }
@@ -70,15 +70,15 @@ public class TestCatalogUtil {
   @Test
   public final void testCompareDataTypeIncludeVariableLength() {
     assertTrue(CatalogUtil.isMatchedFunction(
-        Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT8, Type.INT4)), Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT4, Type.INT4))
+        Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT8, Type.INT4)), Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT4, Type.INT4))
     ));
 
   assertFalse(CatalogUtil.isMatchedFunction(
-      Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT4, Type.INT4)), Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT8, Type.INT4))
+      Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT4, Type.INT4)), Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT8, Type.INT4))
   ));
 
     assertTrue(CatalogUtil.isMatchedFunction(
-        Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT8, Type.INT8_ARRAY)), Arrays.asList(CatalogUtil.newSimpleDataTypeArray(Type.FLOAT4, Type.INT4, Type.INT4))
+        Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT8, Type.INT8_ARRAY)), Arrays.asList(CatalogUtil.newDataTypeArray(Type.FLOAT4, Type.INT4, Type.INT4))
     ));
   }
 }

@@ -32,7 +32,7 @@ import org.apache.tajo.storage.Tuple;
 import java.util.Set;
 
 public class InEval extends BinaryEval {
-  private static final TajoDataTypes.DataType RES_TYPE = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.BOOLEAN);
+  private static final TajoDataTypes.DataType RES_TYPE = CatalogUtil.newDataType(TajoDataTypes.Type.BOOLEAN);
 
   @Expose private boolean not;
   Set<Datum> values;

@@ -315,8 +315,8 @@ public class TajoMaster extends CompositeService {
           for (int i=0; i < paramOptionArray.length + 1; i++) {
             FunctionDesc functionDesc = new FunctionDesc(eachFunctionName,
                 function.getClass(), function.getFunctionType(),
-                CatalogUtil.newSimpleDataType(returnType),
-                paramTypes.length == 0 ? CatalogUtil.newSimpleDataTypeArray() : CatalogUtil.newSimpleDataTypeArray(paramTypes));
+                CatalogUtil.newDataType(returnType),
+                paramTypes.length == 0 ? CatalogUtil.newDataTypeArray() : CatalogUtil.newDataTypeArray(paramTypes));
 
             functionDesc.setDescription(description);
             functionDesc.setExample(example);

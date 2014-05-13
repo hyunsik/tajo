@@ -9,8 +9,8 @@ Options:
 	'csvfile.delimiter'='|'
 
 schema: 
-col1	INT4
-col2	INT4
+col1 INT4
+col2 INT4
 
 
 
@@ -23,7 +23,5 @@ Options:
 	'csvfile.delimiter'='|'
 
 schema: 
-col1	INT4
-col2	INT4
-
-
+col1 INT4
+col2 INT4

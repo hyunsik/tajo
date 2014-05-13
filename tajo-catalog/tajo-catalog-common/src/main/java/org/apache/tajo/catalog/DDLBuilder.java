@@ -83,8 +83,12 @@ public class DDLBuilder {
       sb.append(CatalogUtil.denormalizeIdentifier(column.getSimpleName())).append(" ");
       TajoDataTypes.DataType dataType = column.getDataType();
       sb.append(dataType.getType().name());
-      if (column.getDataType().hasLength() && column.getDataType().getLength() > 0) {
-        sb.append(" (").append(column.getDataType().getLength()).append(")");
+      if (column.getDataType().hasLengthOrPrecision()) {
+        sb.append(" (").append(column.getDataType().getLengthOrPrecision());
+        if (column.getDataType().hasScale()) {
+          sb.append(",").append(column.getDataType().getScale());
+        }
+        sb.append(")");
       }
     }
     sb.append(")");

@@ -842,12 +842,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
   @Override
   public LiteralValue visitUnsigned_numeric_literal(@NotNull SQLParser.Unsigned_numeric_literalContext ctx) {
     if (ctx.NUMBER() != null) {
-      long lValue = Long.parseLong(ctx.getText());
-      if (lValue >= Integer.MIN_VALUE && lValue <= Integer.MAX_VALUE) {
-        return new LiteralValue(ctx.getText(), LiteralType.Unsigned_Integer);
-      } else {
-        return new LiteralValue(ctx.getText(), LiteralType.Unsigned_Large_Integer);
-      }
+      return new LiteralValue(ctx.getText(), LiteralType.Unsigned_Integer);
     } else {
       return new LiteralValue(ctx.getText(), LiteralType.Unsigned_Float);
     }
@@ -1209,8 +1204,22 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
       } else { // approximate number
         SQLParser.Approximate_numeric_typeContext approximateType =
             predefined_type.numeric_type().approximate_numeric_type();
-        if (approximateType.FLOAT() != null || approximateType.FLOAT4() != null
-            || approximateType.REAL() != null) {
+        if (approximateType.FLOAT() != null) {
+          if (checkIfExist(approximateType.precision_param())) {
+            int precision = Integer.parseInt(approximateType.precision_param().precision.getText());
+            if (precision < 1) {
+              throw new SQLSyntaxError("precision for type float must be at least 1 bit");
+            } else if (1 <= precision && precision <= 24) {
+              typeDefinition = new DataTypeExpr(Type.FLOAT4.name());
+            } else if (25 <= precision && precision <= 53) {
+              typeDefinition = new DataTypeExpr(Type.FLOAT8.name());
+            } else {
+              throw new SQLSyntaxError("precision for type float must be less than 54 bits");
+            }
+          } else {
+            typeDefinition = new DataTypeExpr(Type.FLOAT4.name());
+          }
+        } else if (approximateType.FLOAT4() != null || approximateType.REAL() != null) {
           typeDefinition = new DataTypeExpr(Type.FLOAT4.name());
         } else if (approximateType.FLOAT8() != null || approximateType.DOUBLE() != null) {
           typeDefinition = new DataTypeExpr(Type.FLOAT8.name());

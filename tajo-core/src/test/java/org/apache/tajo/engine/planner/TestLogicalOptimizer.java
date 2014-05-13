@@ -94,8 +94,8 @@ public class TestLogicalOptimizer {
     catalog.createTable(score);
 
     FunctionDesc funcDesc = new FunctionDesc("sumtest", SumInt.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4));
 
     catalog.createFunction(funcDesc);
     sqlAnalyzer = new SQLAnalyzer();

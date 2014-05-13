@@ -28,6 +28,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 public class DatumFactory {
 
@@ -45,6 +46,8 @@ public class DatumFactory {
         return Float4Datum.class;
       case FLOAT8:
         return Float8Datum.class;
+      case NUMERIC:
+        return NumericDatum.class;
       case CHAR:
         return CharDatum.class;
       case TEXT:
@@ -87,6 +90,8 @@ public class DatumFactory {
       return createFloat4(value);
     case FLOAT8:
       return createFloat8(value);
+    case NUMERIC:
+      return new NumericDatum(value);
     case CHAR:
       return createChar(value);
     case TEXT:
@@ -123,6 +128,8 @@ public class DatumFactory {
         return createFloat4(Bytes.toFloat(bytes));
       case FLOAT8:
         return createFloat8(Bytes.toDouble(bytes));
+      case NUMERIC:
+      return new NumericDatum(bytes);
       case CHAR:
         return createChar(bytes);
       case TEXT:
@@ -158,6 +165,10 @@ public class DatumFactory {
     switch (type.getType()) {
     case INT4:
       return new Int4Datum(val);
+    case INT8:
+      return new Int8Datum(val);
+    case NUMERIC:
+      return new NumericDatum(val);
     case DATE:
       return new DateDatum(val);
     default:
@@ -169,6 +180,8 @@ public class DatumFactory {
     switch (type.getType()) {
     case INT8:
       return new Int8Datum(val);
+    case NUMERIC:
+      return new NumericDatum(val);
     case TIMESTAMP:
       return createTimeStampFromMillis(val);
     case TIME:
@@ -252,6 +265,30 @@ public class DatumFactory {
 
   public static Float8Datum createFloat8(String val) {
     return new Float8Datum(Double.valueOf(val));
+  }
+
+  public static Datum createNumeric(String val, DataType dataType) {
+    BigDecimal bigDecimal = new BigDecimal(val);
+    BigDecimal scaled = NumericDatum.enforcePrecisionScale(bigDecimal, dataType.getLengthOrPrecision(),
+        dataType.getScale());
+    if (scaled != null) {
+      return new NumericDatum(scaled);
+    } else {
+      return NullDatum.get();
+    }
+  }
+
+  public static NumericDatum createNumeric(BigDecimal val) {
+    if (val.equals(NumericDatum.ONE)) {
+      return NumericDatum.ONE;
+    } else if (val.equals(NumericDatum.ZERO)) {
+      return NumericDatum.ZERO;
+    }
+    return new NumericDatum(val);
+  }
+
+  public static NumericDatum createNumeric(byte [] bytes) {
+    return new NumericDatum(bytes);
   }
 
   public static TextDatum createText(String val) {
@@ -374,6 +411,20 @@ public class DatumFactory {
       return DatumFactory.createFloat4(operandDatum.asFloat4());
     case FLOAT8:
       return DatumFactory.createFloat8(operandDatum.asFloat8());
+    case NUMERIC: {
+      BigDecimal bigDecimal = operandDatum.asNumeric();
+      if (target.getLengthOrPrecision() > 0) {
+        BigDecimal casted = NumericDatum.enforcePrecisionScale(bigDecimal,
+            target.getLengthOrPrecision(), target.getScale());
+        if (casted != null) {
+          return createNumeric(casted);
+        } else {
+          return NullDatum.get();
+        }
+      } else {
+        return DatumFactory.createNumeric(bigDecimal);
+      }
+    }
     case TEXT:
       return DatumFactory.createText(operandDatum.asTextBytes());
     case DATE:

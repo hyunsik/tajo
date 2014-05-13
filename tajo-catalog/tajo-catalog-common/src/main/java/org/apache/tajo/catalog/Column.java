@@ -50,7 +50,7 @@ public class Column implements ProtoObject<ColumnProto>, GsonObject {
    * @param type Data Type without length
    */
   public Column(String name, TajoDataTypes.Type type) {
-    this(name, CatalogUtil.newSimpleDataType(type));
+    this(name, CatalogUtil.newDataType(type));
   }
 
   /**
@@ -60,7 +60,7 @@ public class Column implements ProtoObject<ColumnProto>, GsonObject {
    * @param typeLength The length of type
    */
   public Column(String name, TajoDataTypes.Type type, int typeLength) {
-    this(name, CatalogUtil.newDataTypeWithLen(type, typeLength));
+    this(name, CatalogUtil.newDataTypeWithMaxLen(type, typeLength));
   }
 
 	public Column(ColumnProto proto) {
@@ -134,8 +134,12 @@ public class Column implements ProtoObject<ColumnProto>, GsonObject {
 	public String toString() {
     StringBuilder sb = new StringBuilder(getQualifiedName());
     sb.append(" (").append(getDataType().getType());
-    if (getDataType().getLength()  > 0) {
-      sb.append("(" + getDataType().getLength() + ")");
+    if (getDataType().getLengthOrPrecision()  > 0) {
+      sb.append("(" + getDataType().getLengthOrPrecision());
+      if (getDataType().hasScale()) {
+        sb.append(",").append(getDataType().getScale());
+      }
+      sb.append(")");
     }
     sb.append(")");
 	  return sb.toString();

@@ -71,7 +71,7 @@ public class ProtobufDatumFactory {
   public static ProtobufDatumFactory get(DataType dataType) {
     Preconditions.checkArgument(dataType.getType() == TajoDataTypes.Type.PROTOBUF,
         "ProtobufDatumFactory only can accepts Protocol Buffer Datum Type.");
-    return get(dataType.getCode());
+    return get(dataType.getExtra());
   }
 
   public static ProtobufDatumFactory get(String className) {

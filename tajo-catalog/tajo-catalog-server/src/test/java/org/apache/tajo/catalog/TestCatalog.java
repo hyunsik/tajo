@@ -491,18 +491,18 @@ public class TestCatalog {
   public final void testRegisterAndFindFunc() throws Exception {
     assertFalse(catalog.containFunction("test10", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("test10", TestFunc2.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB));
 
     catalog.createFunction(meta);
-    assertTrue(catalog.containFunction("test10", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB)));
-    FunctionDesc retrived = catalog.getFunction("test10", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB));
+    assertTrue(catalog.containFunction("test10", CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB)));
+    FunctionDesc retrived = catalog.getFunction("test10", CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB));
 
     assertEquals(retrived.getSignature(), "test10");
     assertEquals(retrived.getFuncClass(), TestFunc2.class);
     assertEquals(retrived.getFuncType(), FunctionType.GENERAL);
 
-    assertFalse(catalog.containFunction("test10", CatalogUtil.newSimpleDataTypeArray(Type.BLOB, Type.INT4)));
+    assertFalse(catalog.containFunction("test10", CatalogUtil.newDataTypeArray(Type.BLOB, Type.INT4)));
   }
   
 
@@ -510,12 +510,12 @@ public class TestCatalog {
 	public final void testRegisterFunc() throws Exception { 
 		assertFalse(catalog.containFunction("test2", FunctionType.UDF));
 		FunctionDesc meta = new FunctionDesc("test2", TestFunc1.class, FunctionType.UDF,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4));
 
     catalog.createFunction(meta);
-		assertTrue(catalog.containFunction("test2", CatalogUtil.newSimpleDataTypeArray(Type.INT4)));
-		FunctionDesc retrived = catalog.getFunction("test2", CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+		assertTrue(catalog.containFunction("test2", CatalogUtil.newDataTypeArray(Type.INT4)));
+		FunctionDesc retrived = catalog.getFunction("test2", CatalogUtil.newDataTypeArray(Type.INT4));
 
 		assertEquals(retrived.getSignature(),"test2");
 		assertEquals(retrived.getFuncClass(),TestFunc1.class);
@@ -525,8 +525,8 @@ public class TestCatalog {
   @Test
   public final void testSuchFunctionException() throws Exception {
     try {
-      assertFalse(catalog.containFunction("test123", CatalogUtil.newSimpleDataTypeArray(Type.INT4)));
-      catalog.getFunction("test123", CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+      assertFalse(catalog.containFunction("test123", CatalogUtil.newDataTypeArray(Type.INT4)));
+      catalog.getFunction("test123", CatalogUtil.newDataTypeArray(Type.INT4));
       fail();
     } catch (NoSuchFunctionException nsfe) {
       // succeed test
@@ -537,21 +537,21 @@ public class TestCatalog {
 
   @Test
   public final void testDropFunction() throws Exception {
-    assertFalse(catalog.containFunction("test3", CatalogUtil.newSimpleDataTypeArray(Type.INT4)));
+    assertFalse(catalog.containFunction("test3", CatalogUtil.newDataTypeArray(Type.INT4)));
     FunctionDesc meta = new FunctionDesc("test3", TestFunc1.class, FunctionType.UDF,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4));
     catalog.createFunction(meta);
-    assertTrue(catalog.containFunction("test3", CatalogUtil.newSimpleDataTypeArray(Type.INT4)));
+    assertTrue(catalog.containFunction("test3", CatalogUtil.newDataTypeArray(Type.INT4)));
     catalog.dropFunction("test3");
-    assertFalse(catalog.containFunction("test3", CatalogUtil.newSimpleDataTypeArray(Type.INT4)));
+    assertFalse(catalog.containFunction("test3", CatalogUtil.newDataTypeArray(Type.INT4)));
 
-    assertFalse(catalog.containFunction("test3", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB)));
+    assertFalse(catalog.containFunction("test3", CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB)));
     FunctionDesc overload = new FunctionDesc("test3", TestFunc2.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB));
     catalog.createFunction(overload);
-    assertTrue(catalog.containFunction("test3", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.BLOB)));
+    assertTrue(catalog.containFunction("test3", CatalogUtil.newDataTypeArray(Type.INT4, Type.BLOB)));
   }
 
   @Test
@@ -837,81 +837,81 @@ public class TestCatalog {
   public final void testFindIntFunc() throws Exception {
     assertFalse(catalog.containFunction("testint", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("testint", TestIntFunc.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4, Type.INT4));
     assertTrue(catalog.createFunction(meta));
 
     // UPGRADE TO INT4 SUCCESS==> LOOK AT SECOND PARAM BELOW
-    FunctionDesc retrieved = catalog.getFunction("testint", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.INT2));
+    FunctionDesc retrieved = catalog.getFunction("testint", CatalogUtil.newDataTypeArray(Type.INT4, Type.INT2));
 
     assertEquals(retrieved.getSignature(), "testint");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.INT4));
-    assertEquals(retrieved.getParamTypes()[1] , CatalogUtil.newSimpleDataType(Type.INT4));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.INT4));
+    assertEquals(retrieved.getParamTypes()[1] , CatalogUtil.newDataType(Type.INT4));
   }
 
   @Test(expected=NoSuchFunctionException.class)
   public final void testFindIntInvalidFunc() throws Exception {
     assertFalse(catalog.containFunction("testintinvalid", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("testintinvalid", TestIntFunc.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.INT4, Type.INT4));
     assertTrue(catalog.createFunction(meta));
 
     //UPGRADE TO INT8 WILL FAIL ==> LOOK AT SECOND PARAM BELOW
-    catalog.getFunction("testintinvalid", CatalogUtil.newSimpleDataTypeArray(Type.INT4, Type.INT8));
+    catalog.getFunction("testintinvalid", CatalogUtil.newDataTypeArray(Type.INT4, Type.INT8));
   }
 
   @Test
   public final void testFindFloatFunc() throws Exception {
     assertFalse(catalog.containFunction("testfloat", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("testfloat", TestFloatFunc.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.FLOAT8, Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.FLOAT8, Type.INT4));
     assertTrue(catalog.createFunction(meta));
 
     //UPGRADE TO FLOAT 8 SUCCESS==> LOOK AT FIRST PARAM BELOW
     FunctionDesc retrieved = catalog.getFunction("testfloat",
-        CatalogUtil.newSimpleDataTypeArray(Type.FLOAT4, Type.INT4));
+        CatalogUtil.newDataTypeArray(Type.FLOAT4, Type.INT4));
 
     assertEquals(retrieved.getSignature(), "testfloat");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.FLOAT8));
-    assertEquals(retrieved.getParamTypes()[1] , CatalogUtil.newSimpleDataType(Type.INT4));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.FLOAT8));
+    assertEquals(retrieved.getParamTypes()[1] , CatalogUtil.newDataType(Type.INT4));
   }
 
   @Test(expected=NoSuchFunctionException.class)
   public final void testFindFloatInvalidFunc() throws Exception {
     assertFalse(catalog.containFunction("testfloatinvalid", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("testfloatinvalid", TestFloatFunc.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.FLOAT8, Type.INT4));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.FLOAT8, Type.INT4));
     assertTrue(catalog.createFunction(meta));
 
     // UPGRADE TO DECIMAL WILL FAIL ==> LOOK AT FIRST PARAM BELOW
-    catalog.getFunction("testfloatinvalid", CatalogUtil.newSimpleDataTypeArray(Type.NUMERIC, Type.INT4));
+    catalog.getFunction("testfloatinvalid", CatalogUtil.newDataTypeArray(Type.NUMERIC, Type.INT4));
   }
 
   @Test
   public final void testFindAnyTypeParamFunc() throws Exception {
     assertFalse(catalog.containFunction("testany", FunctionType.GENERAL));
     FunctionDesc meta = new FunctionDesc("testany", TestAnyParamFunc.class, FunctionType.GENERAL,
-        CatalogUtil.newSimpleDataType(Type.INT4),
-        CatalogUtil.newSimpleDataTypeArray(Type.ANY));
+        CatalogUtil.newDataType(Type.INT4),
+        CatalogUtil.newDataTypeArray(Type.ANY));
     assertTrue(catalog.createFunction(meta));
 
-    FunctionDesc retrieved = catalog.getFunction("testany", CatalogUtil.newSimpleDataTypeArray(Type.INT1));
+    FunctionDesc retrieved = catalog.getFunction("testany", CatalogUtil.newDataTypeArray(Type.INT1));
     assertEquals(retrieved.getSignature(), "testany");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.ANY));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.ANY));
 
-    retrieved = catalog.getFunction("testany", CatalogUtil.newSimpleDataTypeArray(Type.INT8));
+    retrieved = catalog.getFunction("testany", CatalogUtil.newDataTypeArray(Type.INT8));
     assertEquals(retrieved.getSignature(), "testany");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.ANY));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.ANY));
 
-    retrieved = catalog.getFunction("testany", CatalogUtil.newSimpleDataTypeArray(Type.FLOAT4));
+    retrieved = catalog.getFunction("testany", CatalogUtil.newDataTypeArray(Type.FLOAT4));
     assertEquals(retrieved.getSignature(), "testany");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.ANY));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.ANY));
 
-    retrieved = catalog.getFunction("testany", CatalogUtil.newSimpleDataTypeArray(Type.TEXT));
+    retrieved = catalog.getFunction("testany", CatalogUtil.newDataTypeArray(Type.TEXT));
     assertEquals(retrieved.getSignature(), "testany");
-    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newSimpleDataType(Type.ANY));
+    assertEquals(retrieved.getParamTypes()[0], CatalogUtil.newDataType(Type.ANY));
   }
 }

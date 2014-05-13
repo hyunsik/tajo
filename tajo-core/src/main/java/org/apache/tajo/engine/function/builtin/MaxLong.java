@@ -63,7 +63,7 @@ public class MaxLong extends AggFunction<Int8Datum> {
 
   @Override
   public DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(Type.INT8);
+    return CatalogUtil.newDataType(Type.INT8);
   }
 
   @Override

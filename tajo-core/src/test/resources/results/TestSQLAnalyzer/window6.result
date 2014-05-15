@@ -1,87 +1,42 @@
 {
-  "distinct": false,
-  "targets": [
+  "IsDistinct": false,
+  "Projections": [
     {
-      "child": {
-        "name": "dt",
-        "type": "Column"
+      "Expr": {
+        "ColumnName": "dt",
+        "OpType": "Column"
       },
-      "type": "Target"
+      "OpType": "Target"
     },
     {
-      "child": {
-        "name": "dt2",
-        "type": "Column"
+      "Expr": {
+        "ColumnName": "dt2",
+        "OpType": "Column"
       },
-      "type": "Target"
+      "OpType": "Target"
     },
     {
-      "child": {
-        "function": {
-          "distinct": false,
-          "signature": "sum",
-          "params": [
-            {
-              "name": "xy",
-              "type": "Column"
-            }
-          ],
-          "type": "GeneralSetFunction"
-        },
-        "windowSpec": {
-          "partitionKeys": [
-            {
-              "signature": "round",
-              "params": [
-                {
-                  "name": "dt",
-                  "type": "Column"
-                }
-              ],
-              "type": "Function"
-            },
-            {
-              "name": "dt2",
-              "type": "Column"
-            }
-          ],
-          "sortSpecs": [
-            {
-              "key": {
-                "signature": "ceil",
-                "params": [
-                  {
-                    "name": "dt",
-                    "type": "Column"
-                  }
-                ],
-                "type": "Function"
-              },
-              "asc": true,
-              "nullFirst": false
-            }
-          ],
-          "windowFrame": {
-            "unit": "ROW",
-            "startBound": {
-              "boundType": "UNBOUNDED_PRECEDING"
-            }
-          },
-          "type": "WindowSpec"
-        },
-        "type": "WindowFunction"
+      "Expr": {
+        "Signature": "sum",
+        "FuncParams": [
+          {
+            "ColumnName": "xy",
+            "OpType": "Column"
+          }
+        ],
+        "OpType": "WindowFunction"
       },
-      "type": "Target"
+      "OpType": "Target"
     }
   ],
-  "child": {
-    "relations": [
+  "Expr": {
+    "Relations": [
       {
-        "tableName": "sum_example",
-        "type": "Relation"
+        "TableName": "sum_example",
+        "OpType": "Relation"
       }
     ],
-    "type": "RelationList"
+    "OpType": "RelationList"
   },
-  "type": "Projection"
+  "OpType": "Projection"
 }

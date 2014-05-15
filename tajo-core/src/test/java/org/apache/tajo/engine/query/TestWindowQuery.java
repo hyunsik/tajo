@@ -35,9 +35,6 @@ public class TestWindowQuery extends QueryTestCaseBase {
 
   @Test
   public final void testNonFromSelect1() throws Exception {
-    // select upper('abc');
-    ResultSet res = executeQuery();
-    assertResultSet(res);
-    cleanupQuery(res);
+
   }
 }

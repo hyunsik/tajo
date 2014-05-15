@@ -1021,4 +1021,63 @@ public class TestPhysicalPlanner {
 
     assertTrue(exec instanceof SortAggregateExec);
   }
+
+  String [] WINDOW = {
+    "select deptName, sum(score) OVER() from score",
+    "select deptName, class, sum(score), max(score), min(score) from score group by deptName, class",
+  };
+
+  @Test
+  public final void testWindowAggPlan() throws IOException, PlanningException {
+    FileFragment[] frags = StorageManager.splitNG(conf, "default.score", score.getMeta(), score.getPath(),
+        Integer.MAX_VALUE);
+    Path workDir = CommonTestingUtil.getTestDir("target/test-data/testSortGroupByPlan");
+    TaskAttemptContext ctx = new TaskAttemptContext(conf, LocalTajoTestingUtility.newQueryUnitAttemptId(masterPlan),
+        new FileFragment[]{frags[0]}, workDir);
+    ctx.setEnforcer(new Enforcer());
+    Expr context = analyzer.parse(WINDOW[0]);
+    LogicalPlan plan = planner.createPlan(session, context);
+    System.out.println(plan);
+//    LogicalNode node = optimizer.optimize(plan);
+
+    PhysicalPlanner phyPlanner = new PhysicalPlannerImpl(conf,sm);
+    PhysicalExec exec = phyPlanner.createPlan(ctx, plan.getRootBlock().getRoot());
+
+    /*HashAggregateExec hashAgg = (HashAggregateExec) exec;
+
+    SeqScanExec scan = (SeqScanExec) hashAgg.getSubOp();
+
+    Column [] grpColumns = hashAgg.getAnnotation().getGroupingColumns();
+    QueryBlock.SortSpec [] specs = new QueryBlock.SortSpec[grpColumns.length];
+    for (int i = 0; i < grpColumns.length; i++) {
+      specs[i] = new QueryBlock.SortSpec(grpColumns[i], true, false);
+    }
+    SortNode annotation = new SortNode(specs);
+    annotation.setInSchema(scan.getSchema());
+    annotation.setOutSchema(scan.getSchema());
+    SortExec sort = new SortExec(annotation, scan);
+    exec = new SortAggregateExec(hashAgg.getAnnotation(), sort);*/
+
+    int i = 0;
+    Tuple tuple;
+    exec.init();
+    while ((tuple = exec.next()) != null) {
+      assertEquals(6, tuple.get(2).asInt4()); // sum
+      assertEquals(3, tuple.get(3).asInt4()); // max
+      assertEquals(1, tuple.get(4).asInt4()); // min
+      i++;
+    }
+    assertEquals(10, i);
+
+    exec.rescan();
+    i = 0;
+    while ((tuple = exec.next()) != null) {
+      assertEquals(6, tuple.get(2).asInt4()); // sum
+      assertEquals(3, tuple.get(3).asInt4()); // max
+      assertEquals(1, tuple.get(4).asInt4()); // min
+      i++;
+    }
+    exec.close();
+    assertEquals(10, i);
+  }
 }

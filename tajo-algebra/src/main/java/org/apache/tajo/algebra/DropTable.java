@@ -24,11 +24,11 @@ import com.google.gson.annotations.SerializedName;
 
 public class DropTable extends Expr {
   @Expose @SerializedName("TableName")
-  private final String tableName;
+  private String tableName;
   @Expose @SerializedName("IfExists")
-  private final boolean ifExists;
+  private boolean ifExists;
   @Expose @SerializedName("IsPurge")
-  private final boolean purge;
+  private boolean purge;
 
   public DropTable(String tableName, boolean ifExists, boolean purge) {
     super(OpType.DropTable);

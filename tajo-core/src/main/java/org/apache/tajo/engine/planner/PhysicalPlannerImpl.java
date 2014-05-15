@@ -174,6 +174,13 @@ public class PhysicalPlannerImpl implements PhysicalPlanner {
         stack.pop();
         return createGroupByPlan(ctx, grpNode, leftExec);
 
+      case WINDOW_AGG:
+        WindowAggNode windowAggNode = (WindowAggNode) logicalNode;
+        stack.push(windowAggNode);
+        leftExec = createPlanRecursive(ctx, windowAggNode.getChild(), stack);
+        stack.pop();
+        return createGroupByPlan(ctx, grpNode, leftExec);
+
       case HAVING:
         HavingNode havingNode = (HavingNode) logicalNode;
         stack.push(havingNode);
@@ -960,6 +967,48 @@ public class PhysicalPlannerImpl implements PhysicalPlanner {
     } else {
       return createSortAggregation(context, null, groupbyNode, subOp);
     }
+  }
+
+  public PhysicalExec createWindowAgg(TaskAttemptContext context,WindowAggNode windowAggNode, PhysicalExec subOp)
+      throws IOException {
+
+    Column[] grpColumns = windowAggNode.getPartitionKeys();
+    SortSpec[] sortSpecs = new SortSpec[grpColumns.length];
+    for (int i = 0; i < grpColumns.length; i++) {
+      sortSpecs[i] = new SortSpec(grpColumns[i], true, false);
+    }
+
+    if (property != null) {
+      List<CatalogProtos.SortSpecProto> sortSpecProtos = property.getGroupby().getSortSpecsList();
+
+      List<SortSpec> enforcedSortSpecList = Lists.newArrayList();
+      int i = 0;
+      outer:
+      for (int j = 0; j < sortSpecProtos.size(); j++) {
+        SortSpec enforcedSortSpecs = new SortSpec(sortSpecProtos.get(j));
+
+        for (Column grpKey : grpColumns) { // if this sort key is included in grouping columns, skip it.
+          if (enforcedSortSpecs.getSortKey().equals(grpKey)) {
+            continue outer;
+          }
+        }
+
+        enforcedSortSpecList.add(enforcedSortSpecs);
+      }
+
+      sortSpecs = ObjectArrays.concat(sortSpecs, TUtil.toArray(enforcedSortSpecList, SortSpec.class), SortSpec.class);
+    }
+
+    SortNode sortNode = LogicalPlan.createNodeWithoutPID(SortNode.class);
+    sortNode.setSortSpecs(sortSpecs);
+    sortNode.setInSchema(subOp.getSchema());
+    sortNode.setOutSchema(subOp.getSchema());
+    ExternalSortExec sortExec = new ExternalSortExec(ctx, sm, sortNode, subOp);
+    LOG.info("The planner chooses [Sort Aggregation] in (" + TUtil.arrayToString(sortSpecs) + ")");
+
+
+
+    return createBestAggregationPlan(context, groupbyNode, subOp);
   }
 
   public PhysicalExec createSortPlan(TaskAttemptContext context, SortNode sortNode,

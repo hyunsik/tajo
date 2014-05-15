@@ -1,118 +1,48 @@
 {
-  "distinct": false,
-  "targets": [
+  "IsDistinct": false,
+  "Projections": [
     {
-      "child": {
-        "name": "dt",
-        "type": "Column"
+      "Expr": {
+        "ColumnName": "dt",
+        "OpType": "Column"
       },
-      "type": "Target"
+      "OpType": "Target"
     },
     {
-      "child": {
-        "name": "dt2",
-        "type": "Column"
+      "Expr": {
+        "ColumnName": "dt2",
+        "OpType": "Column"
       },
-      "type": "Target"
+      "OpType": "Target"
     },
     {
-      "child": {
-        "function": {
-          "distinct": false,
-          "signature": "row_number",
-          "params": [],
-          "type": "GeneralSetFunction"
-        },
-        "windowSpec": {
-          "windowName": "window1",
-          "type": "WindowSpec"
-        },
-        "type": "WindowFunction"
+      "Expr": {
+        "Signature": "row_number",
+        "FuncParams": [],
+        "OpType": "WindowFunction"
       },
-      "type": "Target"
+      "OpType": "Target"
     },
     {
-      "child": {
-        "function": {
-          "distinct": false,
-          "signature": "rank",
-          "params": [],
-          "type": "GeneralSetFunction"
-        },
-        "windowSpec": {
-          "windowName": "window1",
-          "type": "WindowSpec"
-        },
-        "type": "WindowFunction"
+      "Expr": {
+        "Signature": "rank",
+        "FuncParams": [],
+        "OpType": "WindowFunction"
       },
-      "type": "Target"
+      "OpType": "Target"
     }
   ],
-  "child": {
-    "definitions": [
-      {
-        "windowName": "window1",
-        "windowSpec": {
-          "partitionKeys": [
-            {
-              "signature": "round",
-              "params": [
-                {
-                  "name": "dt",
-                  "type": "Column"
-                }
-              ],
-              "type": "Function"
-            },
-            {
-              "name": "dt2",
-              "type": "Column"
-            }
-          ],
-          "sortSpecs": [
-            {
-              "key": {
-                "signature": "ceil",
-                "params": [
-                  {
-                    "name": "dt",
-                    "type": "Column"
-                  }
-                ],
-                "type": "Function"
-              },
-              "asc": true,
-              "nullFirst": false
-            }
-          ],
-          "windowFrame": {
-            "unit": "ROW",
-            "startBound": {
-              "boundType": "PRECEDING",
-              "number": {
-                "valueType": "Unsigned_Integer",
-                "value": "1",
-                "type": "Literal"
-              }
-            },
-            "endBound": {
-              "boundType": "CURRENT_ROW"
-            }
-          },
-          "type": "WindowSpec"
-        }
-      }
-    ],
-    "child": {
-      "relations": [
+  "Expr": {
+    "Expr": {
+      "Relations": [
         {
-          "tableName": "sum_example",
-          "type": "Relation"
+          "TableName": "sum_example",
+          "OpType": "Relation"
         }
       ],
-      "type": "RelationList"
+      "OpType": "RelationList"
     },
-    "type": "Window"
+    "OpType": "Window"
   },
-  "type": "Projection"
+  "OpType": "Projection"
 }

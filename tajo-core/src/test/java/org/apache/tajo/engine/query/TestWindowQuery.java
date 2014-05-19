@@ -72,4 +72,29 @@ public class TestWindowQuery extends QueryTestCaseBase {
     assertResultSet(res);
     cleanupQuery(res);
   }
+
+  @Test
+  public final void rowNumber1() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, row_number() OVER () as row_num FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void rowNumber2() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, row_number() OVER (PARTITION BY L_ORDERKEY) as row_num FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void rowNumber3() throws Exception {
+    ResultSet res = executeString(
+    "SELECT l_orderkey, row_number() OVER (PARTITION BY L_ORDERKEY) as row_num, l_discount, sum(l_discount) " +
+        "OVER (PARTITION BY L_ORDERKEY) as total FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
 }

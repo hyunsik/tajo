@@ -55,23 +55,8 @@ public class RowNumber extends WindowAggFunction<Datum> {
   }
 
   @Override
-  public void eval(FunctionContext ctx, Tuple params) {
-    ((RowNumberContext) ctx).count++;
-  }
-
-  @Override
   public void merge(FunctionContext ctx, Tuple part) {
-    ((RowNumberContext) ctx).count += part.get(0).asInt8();
-  }
-
-  @Override
-  public Datum getPartialResult(FunctionContext ctx) {
-    return DatumFactory.createInt8(((RowNumberContext) ctx).count);
-  }
-
-  @Override
-  public DataType getPartialResultType() {
-    return CatalogUtil.newSimpleDataType(Type.INT8);
+    ((RowNumberContext) ctx).count++;
   }
 
   @Override
@@ -80,6 +65,6 @@ public class RowNumber extends WindowAggFunction<Datum> {
   }
 
   protected class RowNumberContext implements FunctionContext {
-    long count;
+    long count = 0;
   }
 }

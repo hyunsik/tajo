@@ -31,6 +31,7 @@ import org.apache.tajo.storage.VTuple;
 
 public class WindowFunctionEval extends AggregationFunctionCallEval implements Cloneable {
   @Expose protected String windowName;
+  private Tuple params;
 
   public WindowFunctionEval(String windowName, FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs) {
     super(EvalType.WINDOW_FUNCTION, desc, instance, givenArgs);
@@ -46,21 +47,27 @@ public class WindowFunctionEval extends AggregationFunctionCallEval implements C
     throw new UnsupportedOperationException("Cannot execute eval() of aggregation function");
   }
 
-  public Datum terminate(FunctionContext context) {
-    if (firstPhase) {
-      return instance.getPartialResult(context);
-    } else {
-      return instance.terminate(context);
+  public void merge(FunctionContext context, Schema schema, Tuple tuple) {
+    if (params == null) {
+      this.params = new VTuple(argEvals.length);
     }
+
+    if (argEvals != null) {
+      for (int i = 0; i < argEvals.length; i++) {
+        params.put(i, argEvals[i].eval(schema, tuple));
+      }
+    }
+
+    instance.merge(context, params);
+  }
+
+  public Datum terminate(FunctionContext context) {
+    return instance.terminate(context);
   }
 
   @Override
   public DataType getValueType() {
-    if (firstPhase) {
-      return instance.getPartialResultType();
-    } else {
-      return funcDesc.getReturnType();
-    }
+    return funcDesc.getReturnType();
   }
 
   @Override

@@ -23,6 +23,7 @@ import org.apache.tajo.catalog.json.CatalogGsonHelper;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
+import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.storage.Tuple;
 
 public abstract class WindowAggFunction<T extends Datum> extends AggFunction<T> {
@@ -33,15 +34,19 @@ public abstract class WindowAggFunction<T extends Datum> extends AggFunction<T> 
 
   public abstract FunctionContext newContext();
 
-  public abstract void eval(FunctionContext ctx, Tuple params);
-
-  public void merge(FunctionContext ctx, Tuple part) {
-    eval(ctx, part);
+  public void eval(FunctionContext ctx, Tuple params) {
+    throw new InvalidOperationException("Window function does not support eval()");
   }
 
-  public abstract Datum getPartialResult(FunctionContext ctx);
+  public abstract void merge(FunctionContext ctx, Tuple part);
 
-  public abstract DataType getPartialResultType();
+  public Datum getPartialResult(FunctionContext ctx) {
+    throw new InvalidOperationException("Window function does not support getPartialResult()");
+  }
+
+  public DataType getPartialResultType() {
+    throw new InvalidOperationException("Window function does not support getPartialResultType()");
+  }
 
   public abstract T terminate(FunctionContext ctx);
 

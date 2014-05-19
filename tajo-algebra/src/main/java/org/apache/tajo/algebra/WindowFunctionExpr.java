@@ -22,14 +22,14 @@ import com.google.common.base.Objects;
 import com.google.gson.annotations.Expose;
 import org.apache.tajo.util.TUtil;
 
-public class WindowFunctionExpr extends FunctionExpr {
+public class WindowFunctionExpr extends GeneralSetFunctionExpr {
 
   // over clause - only one of both is used.
   @Expose private String windowName;
   @Expose private WindowSpecExpr windowSpec;
 
   public WindowFunctionExpr(GeneralSetFunctionExpr function) {
-    super(OpType.WindowFunction, function.getSignature(), function.getParams());
+    super(OpType.WindowFunction, function.getSignature(), function.isDistinct(), function.getParams());
   }
 
   public boolean hasWindowName() {
@@ -62,7 +62,7 @@ public class WindowFunctionExpr extends FunctionExpr {
   }
 
   @Override
-  boolean equalsTo(Expr expr) {
+  public boolean equalsTo(Expr expr) {
     return TUtil.checkEquals(windowName, windowSpec);
   }
 }

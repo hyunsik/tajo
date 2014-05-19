@@ -34,7 +34,6 @@ public class GeneralSetFunctionExpr extends FunctionExpr {
    */
   protected GeneralSetFunctionExpr(OpType type, String signature, boolean distinct, Expr [] params) {
     super(type, signature, params);
-    Preconditions.checkArgument(OpType.isAggregationFunction(type));
     this.distinct = distinct;
   }
 

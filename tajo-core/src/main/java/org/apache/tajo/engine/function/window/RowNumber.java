@@ -55,7 +55,7 @@ public class RowNumber extends WindowAggFunction<Datum> {
   }
 
   @Override
-  public void merge(FunctionContext ctx, Tuple part) {
+  public void eval(FunctionContext ctx, Tuple params) {
     ((RowNumberContext) ctx).count++;
   }
 

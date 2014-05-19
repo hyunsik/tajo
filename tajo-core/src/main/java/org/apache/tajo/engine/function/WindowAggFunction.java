@@ -34,11 +34,11 @@ public abstract class WindowAggFunction<T extends Datum> extends AggFunction<T> 
 
   public abstract FunctionContext newContext();
 
-  public void eval(FunctionContext ctx, Tuple params) {
-    throw new InvalidOperationException("Window function does not support eval()");
-  }
+  public abstract void eval(FunctionContext ctx, Tuple params);
 
-  public abstract void merge(FunctionContext ctx, Tuple part);
+  public void merge(FunctionContext ctx, Tuple part) {
+    throw new InvalidOperationException("Window function does not support getPartialResult()");
+  }
 
   public Datum getPartialResult(FunctionContext ctx) {
     throw new InvalidOperationException("Window function does not support getPartialResult()");

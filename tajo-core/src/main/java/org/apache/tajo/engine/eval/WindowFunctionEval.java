@@ -58,7 +58,7 @@ public class WindowFunctionEval extends AggregationFunctionCallEval implements C
       }
     }
 
-    instance.merge(context, params);
+    instance.eval(context, params);
   }
 
   public Datum terminate(FunctionContext context) {

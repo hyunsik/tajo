@@ -19,13 +19,14 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
 import org.apache.tajo.util.TUtil;
 
 public class WindowFunctionExpr extends FunctionExpr {
 
   // over clause - only one of both is used.
-  private String windowName;
-  private WindowSpecExpr windowSpec;
+  @Expose private String windowName;
+  @Expose private WindowSpecExpr windowSpec;
 
   public WindowFunctionExpr(GeneralSetFunctionExpr function) {
     super(OpType.WindowFunction, function.getSignature(), function.getParams());

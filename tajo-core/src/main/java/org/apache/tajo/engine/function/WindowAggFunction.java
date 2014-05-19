@@ -52,6 +52,6 @@ public abstract class WindowAggFunction<T extends Datum> extends AggFunction<T> 
 
   @Override
   public CatalogProtos.FunctionType getFunctionType() {
-    return CatalogProtos.FunctionType.AGGREGATION;
+    return CatalogProtos.FunctionType.WINDOW;
   }
 }

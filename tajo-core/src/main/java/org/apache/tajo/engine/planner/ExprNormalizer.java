@@ -269,7 +269,7 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
     ctx.windowSpecs.add(windowSpecReferences);
 
     expr.setWindowName(windowName);
-    expr.setWindowSpec(null);
+    expr.setWindowSpec(new WindowSpecExpr());
 
     String functionName = ctx.block.namedExprsMgr.addExpr(expr);
     ctx.windowAggExprs.add(new NamedExpr(expr, functionName));
@@ -304,10 +304,6 @@ class ExprNormalizer extends SimpleAlgebraVisitor<ExprNormalizer.ExprNormalizedR
       }
     }
     return expr;
-  }
-
-  public String addWindowSpec(WindowSpec windowSpec) {
-    return null;
   }
 
   public static class WindowSpecReferences {

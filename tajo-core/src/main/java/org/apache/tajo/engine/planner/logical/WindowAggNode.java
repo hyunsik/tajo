@@ -21,7 +21,7 @@ package org.apache.tajo.engine.planner.logical;
 import com.google.gson.annotations.Expose;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.SortSpec;
-import org.apache.tajo.engine.eval.AggregationFunctionCallEval;
+import org.apache.tajo.engine.eval.WindowFunctionEval;
 import org.apache.tajo.engine.planner.PlanString;
 import org.apache.tajo.engine.planner.PlannerUtil;
 import org.apache.tajo.engine.planner.Target;
@@ -34,7 +34,7 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
   @Expose private SortSpec [] sortSpecs;
 
   /** Aggregation Functions */
-  @Expose private AggregationFunctionCallEval [] aggrFunctions;
+  @Expose private WindowFunctionEval[] windowFuncs;
   /**
    * It's a list of targets. The grouping columns should be followed by aggregation functions.
    * aggrFunctions keep actual aggregation functions, but it only contains field references.
@@ -79,15 +79,15 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
   }
 
   public boolean hasAggFunctions() {
-    return this.aggrFunctions != null;
+    return this.windowFuncs != null;
   }
 
-  public AggregationFunctionCallEval [] getAggFunctions() {
-    return this.aggrFunctions;
+  public WindowFunctionEval [] getWindowFunctions() {
+    return this.windowFuncs;
   }
 
-  public void setAggFunctions(AggregationFunctionCallEval[] evals) {
-    this.aggrFunctions = evals;
+  public void setWindowFunctions(WindowFunctionEval[] evals) {
+    this.windowFuncs = evals;
   }
 
   @Override
@@ -113,11 +113,11 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
   public String toString() {
     StringBuilder sb = new StringBuilder("GroupBy (");
     if (partitionKeys != null || partitionKeys.length > 0) {
-      sb.append("grouping set=").append(TUtil.arrayToString(partitionKeys));
+      sb.append("partition keys=").append(TUtil.arrayToString(partitionKeys));
       sb.append(", ");
     }
     if (hasAggFunctions()) {
-      sb.append("funcs=").append(TUtil.arrayToString(aggrFunctions));
+      sb.append("funcs=").append(TUtil.arrayToString(windowFuncs));
     }
     sb.append(")");
     return sb.toString();
@@ -129,7 +129,7 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
       WindowAggNode other = (WindowAggNode) obj;
       boolean eq = super.equals(other);
       eq = eq && TUtil.checkEquals(partitionKeys, other.partitionKeys);
-      eq = eq && TUtil.checkEquals(aggrFunctions, other.aggrFunctions);
+      eq = eq && TUtil.checkEquals(windowFuncs, other.windowFuncs);
       eq = eq && TUtil.checkEquals(targets, other.targets);
       return eq;
     } else {
@@ -147,10 +147,10 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
       }
     }
 
-    if (aggrFunctions != null) {
-      grp.aggrFunctions = new AggregationFunctionCallEval[aggrFunctions.length];
-      for (int i = 0; i < aggrFunctions.length; i++) {
-        grp.aggrFunctions[i] = (AggregationFunctionCallEval) aggrFunctions[i].clone();
+    if (windowFuncs != null) {
+      grp.windowFuncs = new WindowFunctionEval[windowFuncs.length];
+      for (int i = 0; i < windowFuncs.length; i++) {
+        grp.windowFuncs[i] = (WindowFunctionEval) windowFuncs[i].clone();
       }
     }
 
@@ -200,9 +200,9 @@ public class WindowAggNode extends UnaryNode implements Projectable, Cloneable {
       sb = new StringBuilder();
       sb.append("(");
 
-      for (int j = 0; j < aggrFunctions.length; j++) {
-        sb.append(aggrFunctions[j]);
-        if(j < aggrFunctions.length - 1) {
+      for (int j = 0; j < windowFuncs.length; j++) {
+        sb.append(windowFuncs[j]);
+        if(j < windowFuncs.length - 1) {
           sb.append(",");
         }
       }

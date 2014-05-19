@@ -703,6 +703,8 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
       givenArgs[0] = visit(ctx, stack, params[0]);
       if (windowFunc.getSignature().equalsIgnoreCase("count")) {
         paramTypes[0] = CatalogUtil.newSimpleDataType(TajoDataTypes.Type.ANY);
+      } else if (windowFunc.getSignature().equalsIgnoreCase("row_number")) {
+        paramTypes[0] = CatalogUtil.newSimpleDataType(Type.INT8);
       } else {
         paramTypes[0] = givenArgs[0].getValueType();
       }

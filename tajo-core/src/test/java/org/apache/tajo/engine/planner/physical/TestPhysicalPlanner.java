@@ -1023,7 +1023,9 @@ public class TestPhysicalPlanner {
   }
 
   String [] WINDOW = {
-    "select deptName, sum(score) OVER() from score",
+    "select deptName, class, sum(score) OVER() from score",
+    "select deptName, score, sum(score) OVER(PARTITION BY deptName) from score",
+    "select deptName, class, score, sum(score) OVER(PARTITION BY deptName, class) from score",
     "select deptName, class, sum(score), max(score), min(score) from score group by deptName, class",
   };
 
@@ -1035,7 +1037,7 @@ public class TestPhysicalPlanner {
     TaskAttemptContext ctx = new TaskAttemptContext(conf, LocalTajoTestingUtility.newQueryUnitAttemptId(masterPlan),
         new FileFragment[]{frags[0]}, workDir);
     ctx.setEnforcer(new Enforcer());
-    Expr context = analyzer.parse(WINDOW[0]);
+    Expr context = analyzer.parse(WINDOW[1]);
     LogicalPlan plan = planner.createPlan(session, context);
     System.out.println(plan);
 //    LogicalNode node = optimizer.optimize(plan);
@@ -1062,22 +1064,9 @@ public class TestPhysicalPlanner {
     Tuple tuple;
     exec.init();
     while ((tuple = exec.next()) != null) {
-      assertEquals(6, tuple.get(2).asInt4()); // sum
-      assertEquals(3, tuple.get(3).asInt4()); // max
-      assertEquals(1, tuple.get(4).asInt4()); // min
-      i++;
-    }
-    assertEquals(10, i);
-
-    exec.rescan();
-    i = 0;
-    while ((tuple = exec.next()) != null) {
-      assertEquals(6, tuple.get(2).asInt4()); // sum
-      assertEquals(3, tuple.get(3).asInt4()); // max
-      assertEquals(1, tuple.get(4).asInt4()); // min
+      System.out.println(tuple);
       i++;
     }
     exec.close();
-    assertEquals(10, i);
   }
 }

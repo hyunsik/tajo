@@ -34,7 +34,24 @@ public class TestWindowQuery extends QueryTestCaseBase {
   }
 
   @Test
-  public final void testNonFromSelect1() throws Exception {
+  public final void testWindow1() throws Exception {
+    ResultSet res = executeString("SELECT sum(l_quantity) OVER () FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
 
+  @Test
+  public final void testWindow2() throws Exception {
+    ResultSet res = executeString("SELECT l_orderkey, l_quantity, sum(l_quantity) OVER () FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void testWindow3() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, l_quantity, sum(l_quantity) OVER (PARTITION BY l_orderkey) FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
   }
 }

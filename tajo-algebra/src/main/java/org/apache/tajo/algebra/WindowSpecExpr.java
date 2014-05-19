@@ -19,13 +19,14 @@
 package org.apache.tajo.algebra;
 
 import com.google.common.base.Objects;
+import com.google.gson.annotations.Expose;
 import org.apache.tajo.util.TUtil;
 
 public class WindowSpecExpr implements Cloneable {
-  private String windowName;
-  private Expr [] partitionKeys; // OVER (PARTITION BY ?,...,?)
-  private Sort.SortSpec [] sortSpecs; // OVER (... ORDER BY ?,...,?)
-  private WindowFrame windowFrame;
+  @Expose private String windowName;
+  @Expose private Expr [] partitionKeys; // OVER (PARTITION BY ?,...,?)
+  @Expose private Sort.SortSpec [] sortSpecs; // OVER (... ORDER BY ?,...,?)
+  @Expose private WindowFrame windowFrame;
 
   public boolean hasWindowName() {
     return windowName != null;
@@ -136,9 +137,9 @@ public class WindowSpecExpr implements Cloneable {
   }
 
   public static class WindowFrame implements Cloneable {
-    WindowFrameUnit unit;
-    private WindowStartBound startBound;
-    private WindowEndBound endBound;
+    @Expose WindowFrameUnit unit;
+    @Expose private WindowStartBound startBound;
+    @Expose private WindowEndBound endBound;
 
     public WindowFrame(WindowFrameUnit unit, WindowStartBound startBound) {
       this.unit = unit;
@@ -173,8 +174,8 @@ public class WindowSpecExpr implements Cloneable {
   }
 
   public static class WindowStartBound implements Cloneable {
-    private WindowFrameStartBoundType boundType;
-    private Expr number;
+    @Expose private WindowFrameStartBoundType boundType;
+    @Expose private Expr number;
 
     public WindowStartBound(WindowFrameStartBoundType type) {
       this.boundType = type;
@@ -206,8 +207,8 @@ public class WindowSpecExpr implements Cloneable {
   }
 
   public static class WindowEndBound implements Cloneable {
-    private WindowFrameEndBoundType boundType;
-    private Expr number;
+    @Expose private WindowFrameEndBoundType boundType;
+    @Expose private Expr number;
 
     public WindowEndBound(WindowFrameEndBoundType type) {
       this.boundType = type;

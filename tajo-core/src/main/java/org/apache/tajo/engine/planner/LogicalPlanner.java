@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.derby.impl.sql.compile.WindowReferenceNode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
@@ -208,7 +207,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     LogicalNode child = visit(context, stack, projection.getChild());
 
     if (block.hasWindowSpecs()) {
-      child = insertWindowAggNode(context, child, stack, referencesPair.getSecond());
+      child = insertWindowAggNode(context, child, stack, referenceNames, referencesPair.getSecond());
     }
 
     // check if it is implicit aggregation. If so, it inserts group-by node to its child.
@@ -424,7 +423,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     } else if (projectable instanceof WindowAggNode) {
       WindowAggNode windowAggNode = (WindowAggNode) projectable;
       if (windowAggNode.hasAggFunctions()) {
-        for (AggregationFunctionCallEval f : windowAggNode.getAggFunctions()) {
+        for (AggregationFunctionCallEval f : windowAggNode.getWindowFunctions()) {
           Set<Column> columns = EvalTreeUtil.findUniqueColumns(f);
           for (Column c : columns) {
             if (!projectable.getInSchema().contains(c)) {
@@ -448,6 +447,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
   }
 
   private LogicalNode insertWindowAggNode(PlanContext context, LogicalNode child, Stack<Expr> stack,
+                                          String [] referenceNames,
                                           ExprNormalizer.WindowSpecReferences [] windowSpecReferenceses)
       throws PlanningException {
     LogicalPlan plan = context.plan;
@@ -460,13 +460,12 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
     if (windowSpecReferenceses[0].hasPartitionKeys()) {
       Column [] partitionKeyColumns = new Column[windowSpecReferenceses[0].getPartitionKeys().length];
+      int i = 0;
       for (String partitionKey : windowSpecReferenceses[0].getPartitionKeys()) {
-        for (int i = 0; i < partitionKeyColumns.length; i++) {
-          if (block.namedExprsMgr.isEvaluated(partitionKey)) {
-            partitionKeyColumns[i] = block.namedExprsMgr.getTarget(partitionKey).getNamedColumn();
-          } else {
-            throw new PlanningException("Each grouping column expression must be a scalar expression.");
-          }
+        if (block.namedExprsMgr.isEvaluated(partitionKey)) {
+          partitionKeyColumns[i++] = block.namedExprsMgr.getTarget(partitionKey).getNamedColumn();
+        } else {
+          throw new PlanningException("Each grouping column expression must be a scalar expression.");
         }
       }
       windowAggNode.setPartitionKeys(partitionKeyColumns);
@@ -491,6 +490,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       windowAggNode.setSortSpecs(annotatedSortSpecs);
     }
 
+
     List<String> aggEvalNames = new ArrayList<String>();
     List<WindowFunctionEval> aggEvals = new ArrayList<WindowFunctionEval>();
 
@@ -507,12 +507,14 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       }
     }
 
-    Target [] targets = new Target[child.getOutSchema().size() + aggEvalNames.size()];
-    System.arraycopy(PlannerUtil.schemaToTargets(child.getOutSchema()), 0, targets, 0, child.getOutSchema().size());
-    for (int i = 0; i < aggEvalNames.size(); i++) {
-      targets[child.getOutSchema().size() + i] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
+    Target [] targets = new Target[referenceNames.length];
+    for (int i = 0; i < referenceNames.length - aggEvals.size(); i++) {
+      targets[i] = block.namedExprsMgr.getTarget(referenceNames[i]);
     }
-    windowAggNode.setAggFunctions(aggEvals.toArray(new AggregationFunctionCallEval[aggEvals.size()]));
+    for (int i = referenceNames.length - aggEvalNames.size(), j = 0; j < aggEvalNames.size(); j++) {
+      targets[i] = block.namedExprsMgr.getTarget(aggEvalNames.get(j));
+    }
+    windowAggNode.setWindowFunctions(aggEvals.toArray(new WindowFunctionEval[aggEvals.size()]));
     windowAggNode.setTargets(targets);
     verifyProjectedFields(block, windowAggNode);
     return windowAggNode;
@@ -1617,10 +1619,28 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     Util SECTION
   ===============================================================================================*/
 
+  public static boolean checkIfBeEvaluatedAtWindowAgg(EvalNode evalNode, WindowAggNode node) {
+    Set<Column> columnRefs = EvalTreeUtil.findUniqueColumns(evalNode);
+
+    if (columnRefs.size() > 0 && !node.getInSchema().containsAll(columnRefs)) {
+      return false;
+    }
+
+    if (EvalTreeUtil.findDistinctAggFunction(evalNode).size() > 0) {
+      return false;
+    }
+
+    return true;
+  }
+
   public static boolean checkIfBeEvaluatedAtGroupBy(EvalNode evalNode, GroupbyNode node) {
     Set<Column> columnRefs = EvalTreeUtil.findUniqueColumns(evalNode);
 
     if (columnRefs.size() > 0 && !node.getInSchema().containsAll(columnRefs)) {
+      return false;
+    }
+
+    if (EvalTreeUtil.findEvalsByType(evalNode, EvalType.WINDOW_FUNCTION).size() > 0) {
       return false;
     }
 
@@ -1632,6 +1652,10 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     Set<Column> columnRefs = EvalTreeUtil.findUniqueColumns(evalNode);
 
     if (EvalTreeUtil.findDistinctAggFunction(evalNode).size() > 0) {
+      return false;
+    }
+
+    if (EvalTreeUtil.findEvalsByType(evalNode, EvalType.WINDOW_FUNCTION).size() > 0) {
       return false;
     }
 

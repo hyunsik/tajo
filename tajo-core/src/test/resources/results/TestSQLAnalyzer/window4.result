@@ -10,6 +10,18 @@
     },
     {
       "Expr": {
+        "windowSpec": {
+          "sortSpecs": [
+            {
+              "SortKey": {
+                "ColumnName": "dt",
+                "OpType": "Column"
+              },
+              "IsAsc": true,
+              "IsNullFirst": false
+            }
+          ]
+        },
         "Signature": "sum",
         "FuncParams": [
           {

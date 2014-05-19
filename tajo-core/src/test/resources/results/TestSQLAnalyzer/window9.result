@@ -17,6 +17,9 @@
     },
     {
       "Expr": {
+        "windowSpec": {
+          "windowName": "window1"
+        },
         "Signature": "row_number",
         "FuncParams": [],
         "OpType": "WindowFunction"
@@ -25,6 +28,9 @@
     },
     {
       "Expr": {
+        "windowSpec": {
+          "windowName": "window1"
+        },
         "Signature": "rank",
         "FuncParams": [],
         "OpType": "WindowFunction"

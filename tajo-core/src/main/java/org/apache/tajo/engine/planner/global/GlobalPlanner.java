@@ -1086,17 +1086,16 @@ public class GlobalPlanner {
     private ExecutionBlock buildWindowAgg(GlobalPlanContext context, ExecutionBlock lastBlock,
                                         WindowAggNode windowAgg) throws PlanningException {
       MasterPlan masterPlan = context.plan;
-      ExecutionBlock currentBlock;
 
-      DataChannel channel = null;
       ExecutionBlock childBlock = lastBlock;
-      currentBlock = masterPlan.newExecutionBlock();
+      ExecutionBlock currentBlock = masterPlan.newExecutionBlock();
+      DataChannel channel;
       if (windowAgg.hasPartitionKeys()) { // if there is at one distinct aggregation function
-        channel = new DataChannel(childBlock, currentBlock, RANGE_SHUFFLE, 1);
+        channel = new DataChannel(childBlock, currentBlock, RANGE_SHUFFLE, 32);
         channel.setShuffleKeys(windowAgg.getPartitionKeys());
       } else {
         channel = new DataChannel(childBlock, currentBlock, HASH_SHUFFLE, 1);
-        channel.setShuffleKeys(new Column[] {});
+        channel.setShuffleKeys(null);
       }
       channel.setSchema(windowAgg.getInSchema());
       channel.setStoreType(storeType);
@@ -1110,15 +1109,13 @@ public class GlobalPlanner {
         sortNode.setInSchema(scanNode.getOutSchema());
         sortNode.setSortSpecs(PlannerUtil.columnsToSortSpecs(windowAgg.getPartitionKeys()));
         sortNode.setChild(childNode);
+        childBlock.setPlan(sortNode);
 
         windowAgg.setChild(scanNode);
-
-        sortNode.setChild(childNode);
-        childBlock.setPlan(sortNode);
       } else {
         windowAgg.setInSchema(scanNode.getOutSchema());
         windowAgg.setChild(scanNode);
-        childBlock.setPlan(windowAgg.getChild());
+        childBlock.setPlan(childNode);
       }
 
       currentBlock.setPlan(windowAgg);

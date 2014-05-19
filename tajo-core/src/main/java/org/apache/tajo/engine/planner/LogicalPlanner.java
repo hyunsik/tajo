@@ -490,7 +490,6 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       windowAggNode.setSortSpecs(annotatedSortSpecs);
     }
 
-
     List<String> aggEvalNames = new ArrayList<String>();
     List<WindowFunctionEval> aggEvals = new ArrayList<WindowFunctionEval>();
 
@@ -508,11 +507,24 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     }
 
     Target [] targets = new Target[referenceNames.length];
-    for (int i = 0; i < referenceNames.length - aggEvals.size(); i++) {
-      targets[i] = block.namedExprsMgr.getTarget(referenceNames[i]);
+    List<Integer> windowFuncIndices = Lists.newArrayList();
+    Projection projection = (Projection) stack.peek();
+    int windowFuncIdx = 0;
+    for (NamedExpr expr : projection.getNamedExprs()) {
+      if (expr.getExpr().getType() == OpType.WindowFunction) {
+        windowFuncIndices.add(windowFuncIdx);
+      }
+      windowFuncIdx++;
     }
-    for (int i = referenceNames.length - aggEvalNames.size(), j = 0; j < aggEvalNames.size(); j++) {
-      targets[i] = block.namedExprsMgr.getTarget(aggEvalNames.get(j));
+
+    int targetIdx = 0;
+    for (int i = 0; i < referenceNames.length ; i++) {
+      if (!windowFuncIndices.contains(i)) {
+        targets[targetIdx++] = block.namedExprsMgr.getTarget(referenceNames[i]);
+      }
+    }
+    for (int i = 0; i < aggEvalNames.size(); i++) {
+      targets[targetIdx++] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
     }
     windowAggNode.setWindowFunctions(aggEvals.toArray(new WindowFunctionEval[aggEvals.size()]));
     windowAggNode.setTargets(targets);

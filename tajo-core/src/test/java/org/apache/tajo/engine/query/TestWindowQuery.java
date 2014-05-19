@@ -54,4 +54,22 @@ public class TestWindowQuery extends QueryTestCaseBase {
     assertResultSet(res);
     cleanupQuery(res);
   }
+
+  @Test
+  public final void testWindow4() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, l_discount, sum(l_discount) OVER (PARTITION BY l_orderkey), sum(l_quantity) " +
+            "OVER (PARTITION BY l_orderkey) FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void testWindow5() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, sum(l_discount) OVER (PARTITION BY l_orderkey), l_discount, sum(l_quantity) " +
+            "OVER (PARTITION BY l_orderkey) FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
 }

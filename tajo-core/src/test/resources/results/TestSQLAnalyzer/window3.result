@@ -10,6 +10,20 @@
     },
     {
       "Expr": {
+        "windowSpec": {
+          "partitionKeys": [
+            {
+              "Signature": "round",
+              "FuncParams": [
+                {
+                  "ColumnName": "dt",
+                  "OpType": "Column"
+                }
+              ],
+              "OpType": "Function"
+            }
+          ]
+        },
         "Signature": "sum",
         "FuncParams": [
           {

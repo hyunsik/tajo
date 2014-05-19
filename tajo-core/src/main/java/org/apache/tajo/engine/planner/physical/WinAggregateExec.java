@@ -18,8 +18,10 @@
 
 package org.apache.tajo.engine.planner.physical;
 
+import org.apache.tajo.catalog.Column;
+import org.apache.tajo.engine.eval.AggregationFunctionCallEval;
 import org.apache.tajo.engine.function.FunctionContext;
-import org.apache.tajo.engine.planner.logical.GroupbyNode;
+import org.apache.tajo.engine.planner.logical.WindowAggNode;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 import org.apache.tajo.worker.TaskAttemptContext;
@@ -40,32 +42,68 @@ import java.io.IOException;
  * If currentKey is different from the last key, it computes final aggregation results, and then
  * it makes an output tuple.
  */
-public class WinAggregateExec extends AggregationExec {
+public class WinAggregateExec extends UnaryPhysicalExec {
+  protected int nonAggregatedColumnNum;
+  protected int nonAggregatedColumns[];
+  protected int partitionKeyNum;
+  protected int partitionKeyIds[];
+  protected final int aggFunctionsNum;
+  protected final AggregationFunctionCallEval aggFunctions[];
   private Tuple lastKey = null;
   private boolean finished = false;
   private FunctionContext contexts[];
 
-  public WinAggregateExec(TaskAttemptContext context, GroupbyNode plan, PhysicalExec child) throws IOException {
-    super(context, plan, child);
+  public WinAggregateExec(TaskAttemptContext context, WindowAggNode plan, PhysicalExec child) throws IOException {
+    super(context, plan.getInSchema(), plan.getOutSchema(), child);
     contexts = new FunctionContext[plan.getAggFunctions().length];
+
+    if (plan.hasPartitionKeys()) {
+      final Column[] keyColumns = plan.getPartitionKeys();
+      partitionKeyNum = keyColumns.length;
+      partitionKeyIds = new int[partitionKeyNum];
+      Column col;
+      for (int idx = 0; idx < plan.getPartitionKeys().length; idx++) {
+        col = keyColumns[idx];
+        partitionKeyIds[idx] = inSchema.getColumnId(col.getQualifiedName());
+      }
+    }
+
+    if (plan.hasAggFunctions()) {
+      aggFunctions = plan.getAggFunctions();
+      aggFunctionsNum = aggFunctions.length;
+    } else {
+      aggFunctions = new AggregationFunctionCallEval[0];
+      aggFunctionsNum = 0;
+    }
+
+    nonAggregatedColumnNum = plan.getTargets().length - aggFunctionsNum;
+    nonAggregatedColumns = new int[nonAggregatedColumnNum];
+    for (int idx = 0; idx < plan.getTargets().length - aggFunctionsNum; idx++) {
+      nonAggregatedColumns[idx] = inSchema.getColumnId(plan.getTargets()[idx].getCanonicalName());
+    }
   }
+
+  boolean accumulatedPhase = false;
+  boolean hasPartitionKeys = false;
 
   @Override
   public Tuple next() throws IOException {
-    Tuple currentKey;
+    Tuple currentKey = null;
     Tuple tuple;
     Tuple outputTuple = null;
 
     while(!context.isStopped() && (tuple = child.next()) != null) {
 
-      // get a key tuple
-      currentKey = new VTuple(groupingKeyIds.length);
-      for(int i = 0; i < groupingKeyIds.length; i++) {
-        currentKey.put(i, tuple.get(groupingKeyIds[i]));
+      if (hasPartitionKeys) {
+        // get a key tuple
+        currentKey = new VTuple(partitionKeyIds.length);
+        for (int i = 0; i < partitionKeyIds.length; i++) {
+          currentKey.put(i, tuple.get(partitionKeyIds[i]));
+        }
       }
 
       /** Aggregation State */
-      if (lastKey == null || lastKey.equals(currentKey)) {
+      if (hasPartitionKeys && (lastKey == null || lastKey.equals(currentKey))) {
         if (lastKey == null) {
           for(int i = 0; i < aggFunctionsNum; i++) {
             contexts[i] = aggFunctions[i].newContext();
@@ -82,13 +120,15 @@ public class WinAggregateExec extends AggregationExec {
       } else { /** Finalization State */
         // finalize aggregate and return
         outputTuple = new VTuple(outSchema.size());
-        int tupleIdx = 0;
+        int columnIdx = 0;
 
-        for(; tupleIdx < groupingKeyNum; tupleIdx++) {
-          outputTuple.put(tupleIdx, lastKey.get(tupleIdx));
+
+        for(; columnIdx < nonAggregatedColumnNum; columnIdx++) {
+          outputTuple.put(columnIdx, tuple.get(nonAggregatedColumns[columnIdx]));
         }
-        for(int aggFuncIdx = 0; aggFuncIdx < aggFunctionsNum; tupleIdx++, aggFuncIdx++) {
-          outputTuple.put(tupleIdx, aggFunctions[aggFuncIdx].terminate(contexts[aggFuncIdx]));
+
+        for(int aggFuncIdx = 0; aggFuncIdx < aggFunctionsNum; columnIdx++, aggFuncIdx++) {
+          outputTuple.put(columnIdx, aggFunctions[aggFuncIdx].terminate(contexts[aggFuncIdx]));
         }
 
         for(int evalIdx = 0; evalIdx < aggFunctionsNum; evalIdx++) {
@@ -104,7 +144,7 @@ public class WinAggregateExec extends AggregationExec {
     if (!finished) {
       outputTuple = new VTuple(outSchema.size());
       int tupleIdx = 0;
-      for(; tupleIdx < groupingKeyNum; tupleIdx++) {
+      for(; tupleIdx < partitionKeyNum; tupleIdx++) {
         outputTuple.put(tupleIdx, lastKey.get(tupleIdx));
       }
       for(int aggFuncIdx = 0; aggFuncIdx < aggFunctionsNum; tupleIdx++, aggFuncIdx++) {

@@ -76,7 +76,7 @@ public class TestWindowQuery extends QueryTestCaseBase {
   @Test
   public final void testWindowWithOrderBy1() throws Exception {
     ResultSet res = executeString(
-        "SELECT l_orderkey, rank() OVER (ORDER BY l_discount) FROM LINEITEM");
+        "SELECT l_orderkey, l_discount, rank() OVER (ORDER BY l_discount) r1 FROM LINEITEM");
     assertResultSet(res);
     cleanupQuery(res);
   }
@@ -84,7 +84,24 @@ public class TestWindowQuery extends QueryTestCaseBase {
   @Test
   public final void testWindowWithOrderBy2() throws Exception {
     ResultSet res = executeString(
-        "SELECT l_orderkey, l_partkey, rank() OVER (ORDER BY l_orderkey,l_partkey) FROM LINEITEM");
+        "SELECT l_orderkey, l_discount, rank() OVER (PARTITION BY L_ORDERKEY ORDER BY l_discount) r1 FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void testWindowWithOrderBy3() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, l_partkey, rank() OVER (PARTITION BY L_ORDERKEY ORDER BY l_partkey desc) r1 FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
+  public final void testWindowWithOrderBy4() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, l_partkey, rank() OVER (ORDER BY l_orderkey) r1, rank() OVER(ORDER BY l_partkey desc) r2 " +
+            "FROM LINEITEM");
     assertResultSet(res);
     cleanupQuery(res);
   }

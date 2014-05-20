@@ -19,19 +19,23 @@
 package org.apache.tajo.engine.planner.physical;
 
 import com.google.common.collect.Lists;
+import org.apache.tajo.algebra.WindowSpecExpr;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.eval.WindowFunctionEval;
 import org.apache.tajo.engine.function.FunctionContext;
 import org.apache.tajo.engine.planner.logical.WindowAggNode;
 import org.apache.tajo.storage.Tuple;
+import org.apache.tajo.storage.TupleComparator;
 import org.apache.tajo.storage.VTuple;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import static org.apache.tajo.algebra.WindowSpecExpr.WindowFrameStartBoundType;
 import static org.apache.tajo.catalog.proto.CatalogProtos.FunctionType;
 
 /**
@@ -45,27 +49,30 @@ public class WinAggregateExec extends UnaryPhysicalExec {
   protected final int functionNum;
   protected final WindowFunctionEval functions[];
   private FunctionContext contexts [];
-  private FunctionContext newContexts [];
   private Tuple lastKey = null;
   private boolean noMoreTuples = false;
   private final boolean hasPartitionKeys;
 
-  private int [] windowFuncIndices;
-  private int [] aggFuncIndices;
+  private boolean [] windowFuncFlags;
+  private boolean [] aggregatedFuncFlags;
+  private boolean [] orderedFuncFlags;
+  private boolean [] currentRowFlags;
 
   enum WindowState {
     INIT,
-    ACCUMULATING,
-    AGGREGATION,
+    AGGREGATING,
+    EVALUATION,
     RETRIEVING,
     END_OF_TUPLE
   }
 
   boolean firstTime = true;
-  List<Tuple> accumulated = null;
-  List<Tuple> nextAccumulated = null;
+  List<Tuple> evaluatedTuples = null;
+  List<Tuple> accumulatedInTuples = null;
+  List<Tuple> nextAccumulatedProjected = null;
+  List<Tuple> nextAccumulatedInTuples = null;
   WindowState state = WindowState.INIT;
-  Iterator<Tuple> windowTupleIterator = null;
+  Iterator<Tuple> tupleInFrameIterator = null;
 
   public WinAggregateExec(TaskAttemptContext context, WindowAggNode plan, PhysicalExec child) throws IOException {
     super(context, plan.getInSchema(), plan.getOutSchema(), child);
@@ -90,26 +97,32 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       functions = plan.getWindowFunctions();
       functionNum = functions.length;
 
-      List<Integer> windowFuncList = Lists.newArrayList();
-      List<Integer> aggFuncList = Lists.newArrayList();
+      windowFuncFlags = new boolean[functions.length];
+      aggregatedFuncFlags = new boolean[functions.length];
+      orderedFuncFlags = new boolean[functions.length];
+      currentRowFlags = new boolean[functions.length];
+      List<Integer> aggFuncIdxList = Lists.newArrayList();
+
       for (int i = 0; i < functions.length; i++) {
         FunctionType type = functions[i].getFuncDesc().getFuncType();
+
+        if (functions[i].getWindowFrame().getStartBound().getBoundType() == WindowFrameStartBoundType.CURRENT_ROW) {
+          currentRowFlags[i] = true;
+        }
+
         switch (type) {
         case WINDOW:
-          windowFuncList.add(i); break;
+          if (functions[i].hasSortSpecs()) {
+            orderedFuncFlags[i] = true;
+          } else {
+            windowFuncFlags[i] = true;
+          }
+          break;
         default:
-          aggFuncList.add(i); break;
+          aggregatedFuncFlags[i] = true;
+          aggFuncIdxList.add(i);
         }
       }
-      windowFuncIndices = new int[windowFuncList.size()];
-      for (int i = 0; i < windowFuncList.size(); i++) {
-        windowFuncIndices[i] = windowFuncList.get(i);
-      }
-      aggFuncIndices = new int[aggFuncList.size()];
-      for (int i = 0; i < aggFuncList.size(); i++) {
-        aggFuncIndices[i] = aggFuncList.get(i);
-      }
-
     } else {
       functions = new WindowFunctionEval[0];
       functionNum = 0;
@@ -135,7 +148,7 @@ public class WinAggregateExec extends UnaryPhysicalExec {
 
       if (state == WindowState.INIT) {
         initWindow();
-        transition(WindowState.ACCUMULATING);
+        transition(WindowState.AGGREGATING);
       }
 
       if (state != WindowState.RETRIEVING) { // read an input tuple and build a partition key
@@ -143,7 +156,7 @@ public class WinAggregateExec extends UnaryPhysicalExec {
 
         if (readTuple == null) { // the end of tuple
           noMoreTuples = true;
-          transition(WindowState.AGGREGATION);
+          transition(WindowState.EVALUATION);
         }
 
         if (readTuple != null && hasPartitionKeys) { // get a key tuple
@@ -154,18 +167,20 @@ public class WinAggregateExec extends UnaryPhysicalExec {
         }
       }
 
-      if (state == WindowState.ACCUMULATING) {
+      if (state == WindowState.AGGREGATING) {
         accumulatingWindow(currentKey, readTuple);
       }
 
-      if (state == WindowState.AGGREGATION) {
-        aggregationWindow();
+      if (state == WindowState.EVALUATION) {
+        evaluationWindowFrame();
+
+        tupleInFrameIterator = evaluatedTuples.iterator();
         transition(WindowState.RETRIEVING);
       }
 
       if (state == WindowState.RETRIEVING) {
-        if (windowTupleIterator.hasNext()) {
-          return windowTupleIterator.next();
+        if (tupleInFrameIterator.hasNext()) {
+          return tupleInFrameIterator.next();
         } else {
           finalizeWindow();
         }
@@ -177,7 +192,8 @@ public class WinAggregateExec extends UnaryPhysicalExec {
 
   private void initWindow() {
     if (firstTime) {
-      accumulated = Lists.newArrayList();
+      accumulatedInTuples = Lists.newArrayList();
+
       contexts = new FunctionContext[functionNum];
       for(int evalIdx = 0; evalIdx < functionNum; evalIdx++) {
         contexts[evalIdx] = functions[evalIdx].newContext();
@@ -186,91 +202,86 @@ public class WinAggregateExec extends UnaryPhysicalExec {
     }
   }
 
-  private void accumulatingWindow(Tuple currentKey, Tuple tuple) {
+  private void accumulatingWindow(Tuple currentKey, Tuple inTuple) {
     if (lastKey == null || lastKey.equals(currentKey)) {
-      accumulatingWindowContinuously(tuple);
+      accumulatedInTuples.add(new VTuple(inTuple));
 
       if (!hasPartitionKeys) {
-        transition(WindowState.AGGREGATION);
+        transition(WindowState.EVALUATION);
       }
     } else {
-      preAccumulatingNextWindow(tuple);
-      transition(WindowState.AGGREGATION);
+      preAccumulatingNextWindow(inTuple);
+      transition(WindowState.EVALUATION);
     }
 
     lastKey = currentKey;
   }
 
-  private void accumulatingWindowContinuously(Tuple tuple) {
-    int columnIdx = 0;
-    Tuple outputTuple = new VTuple(outSchema.size());
-    for(; columnIdx < nonFunctionColumnNum; columnIdx++) {
-      outputTuple.put(columnIdx, tuple.get(nonFunctionColumns[columnIdx]));
+  private void preAccumulatingNextWindow(Tuple inTuple) {
+    Tuple projectedTuple = new VTuple(outSchema.size());
+    for(int idx = 0; idx < nonFunctionColumnNum; idx++) {
+      projectedTuple.put(idx, inTuple.get(nonFunctionColumns[idx]));
     }
-
-    // aggregate all functions
-    for (int i = 0; i < functionNum; i++) {
-      functions[i].merge(contexts[i], inSchema, tuple);
-    }
-
-    evaluateWindowPerFrame(contexts, columnIdx, outputTuple);
-    accumulated.add(outputTuple);
+    nextAccumulatedProjected = Lists.newArrayList();
+    nextAccumulatedProjected.add(projectedTuple);
+    nextAccumulatedInTuples = Lists.newArrayList();
+    nextAccumulatedInTuples.add(new VTuple(inTuple));
   }
 
-  private void evaluateWindowPerFrame(FunctionContext[] contexts, int funcStartPos, Tuple outputTuple) {
-    for (int i = 0; i < windowFuncIndices.length; i++) {
-      int actualIdx = windowFuncIndices[i];
-      outputTuple.put(funcStartPos + windowFuncIndices[actualIdx], functions[actualIdx].terminate(contexts[actualIdx]));
-    }
-  }
+  private void evaluationWindowFrame() {
+    TupleComparator comp;
+    for (int idx = 0; idx < functions.length; idx++) {
 
-  private void preAccumulatingNextWindow(Tuple tuple) {
-    int columnIdx = 0;
-    Tuple outputTuple = new VTuple(outSchema.size());
-    for(; columnIdx < nonFunctionColumnNum; columnIdx++) {
-      outputTuple.put(columnIdx, tuple.get(nonFunctionColumns[columnIdx]));
-    }
+      if (orderedFuncFlags[idx]) {
+        comp = new TupleComparator(inSchema, functions[idx].getSortSpecs());
+        Collections.sort(accumulatedInTuples, comp);
+      }
 
-    newContexts = new FunctionContext[functions.length];
-    for (int i = 0; i < functionNum; i++) {
-      newContexts[i] = functions[i].newContext();
-      functions[i].merge(newContexts[i], inSchema, tuple);
+      for (int i = 0; i < accumulatedInTuples.size(); i++) {
+        Tuple inTuple = accumulatedInTuples.get(i);
 
-      evaluateWindowPerFrame(newContexts, columnIdx, outputTuple);
-    }
+        Tuple projectedTuple = new VTuple(outSchema.size());
+        for(int c = 0; c < nonFunctionColumnNum; c++) {
+          projectedTuple.put(c, inTuple.get(nonFunctionColumns[c]));
+        }
 
-    nextAccumulated = Lists.newArrayList();
-    nextAccumulated.add(outputTuple);
-  }
+        functions[idx].merge(contexts[idx], inSchema, inTuple);
+        if (currentRowFlags[idx]) {
+          Datum result = functions[idx].terminate(contexts[idx]);
+          projectedTuple.put(nonFunctionColumnNum + idx, result);
+        }
+      }
 
-  private void aggregationWindow() {
-    // aggregation accumulated one
-    Datum [] aggregatedValues = new Datum[aggFuncIndices.length];
-    for(int i = 0; i < aggFuncIndices.length; i++) {
-      aggregatedValues[i] = functions[aggFuncIndices[i]].terminate(contexts[aggFuncIndices[i]]);
-    }
-
-    for (Tuple t : accumulated) { // insert aggregated values into tuples
-      for (int i = 0; i < aggFuncIndices.length; i++) {
-        t.put(nonFunctionColumnNum + aggFuncIndices[i], aggregatedValues[i]);
+      if (aggregatedFuncFlags[idx]) {
+        Datum result = functions[idx].terminate(contexts[idx]);
+        for (int i = 0; i < accumulatedInTuples.size(); i++) {
+          Tuple outTuple = evaluatedTuples.get(i);
+          outTuple.put(nonFunctionColumnNum + idx, result);
+        }
       }
     }
-
-    windowTupleIterator = accumulated.iterator();
   }
 
   private void finalizeWindow() {
-    accumulated.clear();
-    if (hasPartitionKeys) {
-      transition(WindowState.INIT);
-      contexts = newContexts;
-      accumulated = nextAccumulated;
-    } else {
-      transition(WindowState.ACCUMULATING);
-    }
+    accumulatedInTuples.clear();
+    evaluatedTuples.clear();
 
     if (noMoreTuples) {
       transition(WindowState.END_OF_TUPLE);
+    } else {
+      if (hasPartitionKeys) {
+        evaluatedTuples = nextAccumulatedProjected;
+        accumulatedInTuples = nextAccumulatedInTuples;
+      } else {
+        // it reuses the firstly created lists.
+        evaluatedTuples.clear();
+        accumulatedInTuples.clear();
+      }
+      contexts = new FunctionContext[functionNum];
+      for(int evalIdx = 0; evalIdx < functionNum; evalIdx++) {
+        contexts[evalIdx] = functions[evalIdx].newContext();
+      }
+      transition(WindowState.INIT);
     }
   }
 

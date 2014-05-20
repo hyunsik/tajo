@@ -32,6 +32,7 @@ import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.engine.function.AggFunction;
 import org.apache.tajo.engine.function.GeneralFunction;
 import org.apache.tajo.engine.planner.logical.NodeType;
+import org.apache.tajo.engine.planner.logical.WindowSpec;
 import org.apache.tajo.exception.InternalException;
 import org.apache.tajo.util.Pair;
 import org.apache.tajo.util.TUtil;
@@ -41,9 +42,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import static org.apache.tajo.algebra.WindowSpecExpr.WindowFrameEndBoundType;
+import static org.apache.tajo.algebra.WindowSpecExpr.WindowFrameStartBoundType;
+import static org.apache.tajo.algebra.WindowSpecExpr.WindowFrameUnit;
 import static org.apache.tajo.catalog.proto.CatalogProtos.FunctionType;
 import static org.apache.tajo.common.TajoDataTypes.DataType;
 import static org.apache.tajo.common.TajoDataTypes.Type;
+import static org.apache.tajo.engine.planner.logical.WindowSpec.WindowEndBound;
+import static org.apache.tajo.engine.planner.logical.WindowSpec.WindowStartBound;
 
 /**
  * <code>ExprAnnotator</code> makes an annotated expression called <code>EvalNode</code> from an
@@ -694,6 +700,8 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     TajoDataTypes.DataType[] paramTypes = new TajoDataTypes.DataType[params.length];
     FunctionType functionType;
 
+    WindowSpec.WindowFrame frame = null;
+
     if (params.length > 0) {
       givenArgs[0] = visit(ctx, stack, params[0]);
       if (windowFunc.getSignature().equalsIgnoreCase("count")) {
@@ -706,6 +714,18 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     } else {
       if (windowFunc.getSignature().equalsIgnoreCase("rank")) {
         givenArgs = sortKeys;
+      }
+    }
+
+    if (frame == null) {
+      if (windowSpec.hasOrderBy()) {
+        frame = new WindowSpec.WindowFrame(WindowFrameUnit.ROW,
+            new WindowStartBound(WindowFrameStartBoundType.CURRENT_ROW),
+            new WindowEndBound(WindowFrameEndBoundType.CURRENT_ROW));
+      } else {
+        frame = new WindowSpec.WindowFrame(WindowFrameUnit.RANGE,
+            new WindowStartBound(WindowFrameStartBoundType.UNBOUNDED_PRECEDING),
+            new WindowEndBound(WindowFrameEndBoundType.UNBOUNDED_FOLLOWING));
       }
     }
 
@@ -727,7 +747,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     FunctionDesc funcDesc = catalog.getFunction(funcName, functionType, paramTypes);
 
     try {
-      return new WindowFunctionEval(funcDesc, (AggFunction) funcDesc.newInstance(), givenArgs);
+      return new WindowFunctionEval(funcDesc, (AggFunction) funcDesc.newInstance(), givenArgs, frame);
     } catch (InternalException e) {
       throw new PlanningException(e);
     }

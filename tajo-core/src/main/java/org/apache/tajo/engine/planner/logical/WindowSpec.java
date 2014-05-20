@@ -68,9 +68,9 @@ public class WindowSpec {
   }
 
   public static class WindowFrame {
-    WindowSpecExpr.WindowFrameUnit unit;
-    private WindowStartBound startBound;
-    private WindowEndBound endBound;
+    @Expose WindowSpecExpr.WindowFrameUnit unit;
+    @Expose private WindowStartBound startBound;
+    @Expose private WindowEndBound endBound;
 
     public WindowFrame(WindowSpecExpr.WindowFrameUnit unit, WindowStartBound startBound) {
       this.unit = unit;

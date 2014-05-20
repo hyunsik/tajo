@@ -19,6 +19,7 @@
 package org.apache.tajo.engine.eval;
 
 import com.google.gson.annotations.Expose;
+import org.apache.tajo.algebra.WindowSpecExpr;
 import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.SortSpec;
@@ -26,16 +27,23 @@ import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.function.AggFunction;
 import org.apache.tajo.engine.function.FunctionContext;
-import org.apache.tajo.engine.function.WindowAggFunction;
+import org.apache.tajo.engine.planner.logical.WindowSpec;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 
 public class WindowFunctionEval extends AggregationFunctionCallEval implements Cloneable {
   @Expose private SortSpec [] sortSpecs;
+  @Expose WindowSpec.WindowFrame windowFrame;
   private Tuple params;
 
-  public WindowFunctionEval(FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs) {
+  public WindowFunctionEval(FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs,
+                            WindowSpec.WindowFrame windowFrame) {
     super(EvalType.WINDOW_FUNCTION, desc, instance, givenArgs);
+    this.windowFrame = windowFrame;
+  }
+
+  public boolean hasSortSpecs() {
+    return sortSpecs != null;
   }
 
   public void setSortSpecs(SortSpec [] sortSpecs) {
@@ -44,6 +52,10 @@ public class WindowFunctionEval extends AggregationFunctionCallEval implements C
 
   public SortSpec [] getSortSpecs() {
     return sortSpecs;
+  }
+
+  public WindowSpec.WindowFrame getWindowFrame() {
+    return windowFrame;
   }
 
   @Override

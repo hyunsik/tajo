@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
+import static org.apache.tajo.catalog.proto.CatalogProtos.FunctionType;
+
 /**
  * This is the sort-based window operator.
  */
@@ -48,6 +50,8 @@ public class WinAggregateExec extends UnaryPhysicalExec {
   private Tuple lastKey = null;
   private boolean noMoreTuples = false;
   private final boolean hasPartitionKeys;
+
+  private int [] windowFuncIndices;
   private int [] aggFuncIndices;
 
   enum WindowState {
@@ -87,11 +91,20 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       functions = plan.getWindowFunctions();
       functionNum = functions.length;
 
+      List<Integer> windowFuncList = Lists.newArrayList();
       List<Integer> aggFuncList = Lists.newArrayList();
       for (int i = 0; i < functions.length; i++) {
-        if (functions[i].getFuncDesc().getFuncType() != CatalogProtos.FunctionType.WINDOW) {
+        FunctionType type = functions[i].getFuncDesc().getFuncType();
+        switch (type) {
+        case WINDOW:
+          windowFuncList.add(i); break;
+        default:
           aggFuncList.add(i);
         }
+      }
+      windowFuncIndices = new int[windowFuncList.size()];
+      for (int i = 0; i < aggFuncList.size(); i++) {
+        windowFuncIndices[i] = windowFuncList.get(i);
       }
       aggFuncIndices = new int[aggFuncList.size()];
       for (int i = 0; i < aggFuncList.size(); i++) {
@@ -199,10 +212,9 @@ public class WinAggregateExec extends UnaryPhysicalExec {
     // aggregate
     for (int i = 0; i < functionNum; i++) {
       functions[i].merge(contexts[i], inSchema, tuple);
-
-      if (functions[i].getFuncDesc().getFuncType() == CatalogProtos.FunctionType.WINDOW) {
-        outputTuple.put(columnIdx + i, functions[i].terminate(contexts[i]));
-      }
+    }
+    for (int i = 0; i < windowFuncIndices.length; i++) {
+      outputTuple.put(columnIdx + i, functions[i].terminate(contexts[i]));
     }
     accumulated.add(outputTuple);
   }
@@ -219,7 +231,7 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       newContexts[i] = functions[i].newContext();
       functions[i].merge(newContexts[i], inSchema, tuple);
 
-      if (functions[i].getFuncDesc().getFuncType() == CatalogProtos.FunctionType.WINDOW) {
+      if (functions[i].getFuncDesc().getFuncType() == FunctionType.WINDOW) {
         outputTuple.put(columnIdx + i, functions[i].terminate(newContexts[i]));
       }
     }

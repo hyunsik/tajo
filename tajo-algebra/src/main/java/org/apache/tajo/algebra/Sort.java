@@ -66,7 +66,7 @@ public class Sort extends UnaryOperator {
     return sort;
   }
 
-  public static class SortSpec {
+  public static class SortSpec implements Cloneable {
     @Expose @SerializedName("SortKey")
     private Expr key;
     @Expose @SerializedName("IsAsc")

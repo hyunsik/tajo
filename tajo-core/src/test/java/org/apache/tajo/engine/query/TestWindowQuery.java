@@ -74,6 +74,14 @@ public class TestWindowQuery extends QueryTestCaseBase {
   }
 
   @Test
+  public final void testWindowWithOrderBy1() throws Exception {
+    ResultSet res = executeString(
+        "SELECT l_orderkey, rank() OVER (ORDER BY l_discount) FROM LINEITEM");
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
   public final void rowNumber1() throws Exception {
     ResultSet res = executeString(
         "SELECT l_orderkey, row_number() OVER () as row_num FROM LINEITEM");

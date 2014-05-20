@@ -21,6 +21,7 @@ package org.apache.tajo.engine.eval;
 import com.google.gson.annotations.Expose;
 import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.Schema;
+import org.apache.tajo.catalog.SortSpec;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.function.AggFunction;
@@ -30,16 +31,19 @@ import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 
 public class WindowFunctionEval extends AggregationFunctionCallEval implements Cloneable {
-  @Expose protected String windowName;
+  @Expose private SortSpec [] sortSpecs;
   private Tuple params;
 
-  public WindowFunctionEval(String windowName, FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs) {
+  public WindowFunctionEval(FunctionDesc desc, AggFunction instance, EvalNode[] givenArgs) {
     super(EvalType.WINDOW_FUNCTION, desc, instance, givenArgs);
-    this.windowName = windowName;
   }
 
-  public String getWindowName() {
-    return windowName;
+  public void setSortSpecs(SortSpec [] sortSpecs) {
+    this.sortSpecs = sortSpecs;
+  }
+
+  public SortSpec [] getSortSpecs() {
+    return sortSpecs;
   }
 
   @Override
@@ -73,7 +77,12 @@ public class WindowFunctionEval extends AggregationFunctionCallEval implements C
   @Override
   public Object clone() throws CloneNotSupportedException {
     WindowFunctionEval windowFunctionEval = (WindowFunctionEval) super.clone();
-    windowFunctionEval.windowName = windowName;
+    if (sortSpecs != null) {
+      windowFunctionEval.sortSpecs = new SortSpec[sortSpecs.length];
+      for (int i = 0; i < sortSpecs.length; i++) {
+        windowFunctionEval.sortSpecs[i] = (SortSpec) sortSpecs[i].clone();
+      }
+    }
     return windowFunctionEval;
   }
 }

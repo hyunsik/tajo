@@ -29,30 +29,39 @@ public final class Rank extends WindowAggFunction {
     });
   }
 
+  public static boolean checkEquality(RankContext context, Tuple params) {
+    for (int i = 0; i < context.latest.length; i++) {
+      if (!context.latest[i].equalsTo(params.get(i)).isTrue()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   @Override
   public void eval(FunctionContext context, Tuple params) {
-    CountDistinctValueContext distinctContext = (CountDistinctValueContext) context;
-    Datum value = params.get(0);
-    if ((distinctContext.latest == null ||
-        (!distinctContext.latest.equals(value)) && !(value instanceof NullDatum))) {
-      distinctContext.latest = value;
-      distinctContext.count++;
+    RankContext ctx = (RankContext) context;
+
+    if ((ctx.latest == null || checkEquality(ctx, params))) {
+      ctx.latest = params.getValues();
+      ctx.count++;
     }
   }
 
   @Override
   public Int8Datum terminate(FunctionContext ctx) {
-    return DatumFactory.createInt8(((CountDistinctValueContext) ctx).count);
+    return DatumFactory.createInt8(((RankContext) ctx).count);
   }
 
   @Override
   public FunctionContext newContext() {
-    return new CountDistinctValueContext();
+    return new RankContext();
   }
 
-  private class CountDistinctValueContext implements FunctionContext {
+  private class RankContext implements FunctionContext {
     long count = 0;
-    Datum latest = null;
+    Datum [] latest = null;
   }
 
   @Override

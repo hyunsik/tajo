@@ -21,6 +21,7 @@ package org.apache.tajo.engine.planner;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -456,8 +457,26 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     windowAggNode.setChild(child);
     windowAggNode.setInSchema(child.getOutSchema());
 
-    WindowSpecExpr windowSpecExpr = block.getWindowSpecs().get(windowSpecReferenceses[0].getWindowName());
+    List<String> winFuncRefs = new ArrayList<String>();
+    List<WindowFunctionEval> winFuncs = new ArrayList<WindowFunctionEval>();
+    List<WindowSpecExpr> rawWindowSpecs = Lists.newArrayList();
+    for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
+      NamedExpr rawTarget = it.next();
+      try {
+        EvalNode evalNode = exprAnnotator.createEvalNode(context.plan, context.queryBlock, rawTarget.getExpr());
+        if (evalNode.getType() == EvalType.WINDOW_FUNCTION) {
+          winFuncRefs.add(rawTarget.getAlias());
+          winFuncs.add((WindowFunctionEval) evalNode);
+          block.namedExprsMgr.markAsEvaluated(rawTarget.getAlias(), evalNode);
 
+          // TODO - Later, we also consider the possibility that a window function contains only a window name.
+          rawWindowSpecs.add(((WindowFunctionExpr) (rawTarget.getExpr())).getWindowSpec());
+        }
+      } catch (VerifyException ve) {
+      }
+    }
+
+    // we only consider one window definition.
     if (windowSpecReferenceses[0].hasPartitionKeys()) {
       Column [] partitionKeyColumns = new Column[windowSpecReferenceses[0].getPartitionKeys().length];
       int i = 0;
@@ -471,38 +490,36 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       windowAggNode.setPartitionKeys(partitionKeyColumns);
     }
 
-    if (windowSpecReferenceses[0].hasOrderBy()) {
-      Sort.SortSpec [] sortSpecs = windowSpecExpr.getSortSpecs();
-      int sortNum = sortSpecs.length;
-      String [] referNames = windowSpecReferenceses[0].getOrderKeys();
-      SortSpec [] annotatedSortSpecs = new SortSpec[sortNum];
+    SortSpec [][] sortGroups = new SortSpec[rawWindowSpecs.size()][];
 
-      Column column;
-      for (int i = 0; i < sortNum; i++) {
-        if (block.namedExprsMgr.isEvaluated(windowSpecReferenceses[0].getOrderKeys()[i])) {
-          column = block.namedExprsMgr.getTarget(referNames[i]).getNamedColumn();
-        } else {
-          throw new IllegalStateException("Unexpected State: " + TUtil.arrayToString(sortSpecs));
+    for (int winSpecIdx = 0; winSpecIdx < rawWindowSpecs.size(); winSpecIdx++) {
+      WindowSpecExpr spec = rawWindowSpecs.get(winSpecIdx);
+      if (spec.hasOrderBy()) {
+        Sort.SortSpec [] sortSpecs = spec.getSortSpecs();
+        int sortNum = sortSpecs.length;
+        String [] sortKeyRefNames = windowSpecReferenceses[winSpecIdx].getOrderKeys();
+        SortSpec [] annotatedSortSpecs = new SortSpec[sortNum];
+
+        Column column;
+        for (int i = 0; i < sortNum; i++) {
+          if (block.namedExprsMgr.isEvaluated(sortKeyRefNames[i])) {
+            column = block.namedExprsMgr.getTarget(sortKeyRefNames[i]).getNamedColumn();
+          } else {
+            throw new IllegalStateException("Unexpected State: " + TUtil.arrayToString(sortSpecs));
+          }
+          annotatedSortSpecs[i] = new SortSpec(column, sortSpecs[i].isAscending(), sortSpecs[i].isNullFirst());
         }
-        annotatedSortSpecs[i] = new SortSpec(column, sortSpecs[i].isAscending(), sortSpecs[i].isNullFirst());
-      }
 
-      windowAggNode.setSortSpecs(annotatedSortSpecs);
+        sortGroups[winSpecIdx] = annotatedSortSpecs;
+      } else {
+        sortGroups[winSpecIdx] = null;
+      }
     }
 
-    List<String> aggEvalNames = new ArrayList<String>();
-    List<WindowFunctionEval> aggEvals = new ArrayList<WindowFunctionEval>();
-
-    for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
-      NamedExpr rawTarget = it.next();
-      try {
-        EvalNode evalNode = exprAnnotator.createEvalNode(context.plan, context.queryBlock, rawTarget.getExpr());
-        if (evalNode.getType() == EvalType.WINDOW_FUNCTION) {
-          aggEvalNames.add(rawTarget.getAlias());
-          aggEvals.add((WindowFunctionEval) evalNode);
-          block.namedExprsMgr.markAsEvaluated(rawTarget.getAlias(), evalNode);
-        }
-      } catch (VerifyException ve) {
+    for (int i = 0; i < winFuncRefs.size(); i++) {
+      WindowFunctionEval winFunc = winFuncs.get(i);
+      if (sortGroups[i] != null) {
+        winFunc.setSortSpecs(sortGroups[i]);
       }
     }
 
@@ -516,6 +533,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       }
       windowFuncIdx++;
     }
+    windowAggNode.setWindowFunctions(winFuncs.toArray(new WindowFunctionEval[winFuncs.size()]));
 
     int targetIdx = 0;
     for (int i = 0; i < referenceNames.length ; i++) {
@@ -523,10 +541,9 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
         targets[targetIdx++] = block.namedExprsMgr.getTarget(referenceNames[i]);
       }
     }
-    for (int i = 0; i < aggEvalNames.size(); i++) {
-      targets[targetIdx++] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
+    for (int i = 0; i < winFuncRefs.size(); i++) {
+      targets[targetIdx++] = block.namedExprsMgr.getTarget(winFuncRefs.get(i));
     }
-    windowAggNode.setWindowFunctions(aggEvals.toArray(new WindowFunctionEval[aggEvals.size()]));
     windowAggNode.setTargets(targets);
     verifyProjectedFields(block, windowAggNode);
     return windowAggNode;

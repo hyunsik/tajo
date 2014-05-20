@@ -20,7 +20,6 @@ package org.apache.tajo.engine.planner.physical;
 
 import com.google.common.collect.Lists;
 import org.apache.tajo.catalog.Column;
-import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.eval.WindowFunctionEval;
 import org.apache.tajo.engine.function.FunctionContext;
@@ -99,11 +98,11 @@ public class WinAggregateExec extends UnaryPhysicalExec {
         case WINDOW:
           windowFuncList.add(i); break;
         default:
-          aggFuncList.add(i);
+          aggFuncList.add(i); break;
         }
       }
       windowFuncIndices = new int[windowFuncList.size()];
-      for (int i = 0; i < aggFuncList.size(); i++) {
+      for (int i = 0; i < windowFuncList.size(); i++) {
         windowFuncIndices[i] = windowFuncList.get(i);
       }
       aggFuncIndices = new int[aggFuncList.size()];
@@ -209,14 +208,20 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       outputTuple.put(columnIdx, tuple.get(nonFunctionColumns[columnIdx]));
     }
 
-    // aggregate
+    // aggregate all functions
     for (int i = 0; i < functionNum; i++) {
       functions[i].merge(contexts[i], inSchema, tuple);
     }
-    for (int i = 0; i < windowFuncIndices.length; i++) {
-      outputTuple.put(columnIdx + i, functions[i].terminate(contexts[i]));
-    }
+
+    evaluateWindowPerFrame(contexts, columnIdx, outputTuple);
     accumulated.add(outputTuple);
+  }
+
+  private void evaluateWindowPerFrame(FunctionContext[] contexts, int funcStartPos, Tuple outputTuple) {
+    for (int i = 0; i < windowFuncIndices.length; i++) {
+      int actualIdx = windowFuncIndices[i];
+      outputTuple.put(funcStartPos + windowFuncIndices[actualIdx], functions[actualIdx].terminate(contexts[actualIdx]));
+    }
   }
 
   private void preAccumulatingNextWindow(Tuple tuple) {
@@ -231,9 +236,7 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       newContexts[i] = functions[i].newContext();
       functions[i].merge(newContexts[i], inSchema, tuple);
 
-      if (functions[i].getFuncDesc().getFuncType() == FunctionType.WINDOW) {
-        outputTuple.put(columnIdx + i, functions[i].terminate(newContexts[i]));
-      }
+      evaluateWindowPerFrame(newContexts, columnIdx, outputTuple);
     }
 
     nextAccumulated = Lists.newArrayList();
@@ -247,7 +250,7 @@ public class WinAggregateExec extends UnaryPhysicalExec {
       aggregatedValues[i] = functions[aggFuncIndices[i]].terminate(contexts[aggFuncIndices[i]]);
     }
 
-    for (Tuple t : accumulated) {
+    for (Tuple t : accumulated) { // insert aggregated values into tuples
       for (int i = 0; i < aggFuncIndices.length; i++) {
         t.put(nonFunctionColumnNum + aggFuncIndices[i], aggregatedValues[i]);
       }

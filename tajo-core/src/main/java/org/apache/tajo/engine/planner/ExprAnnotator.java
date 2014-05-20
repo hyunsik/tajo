@@ -26,7 +26,6 @@ import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.exception.NoSuchFunctionException;
-import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.*;
 import org.apache.tajo.engine.eval.*;
@@ -666,37 +665,25 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
 
   public EvalNode visitWindowFunction(Context ctx, Stack<Expr> stack, WindowFunctionExpr windowFunc)
       throws PlanningException {
-    String windowName;
-    WindowSpecExpr windowSpec;
 
-    if (windowFunc.hasWindowName()) {
-      windowName = windowFunc.getWindowName();
-      windowSpec = ctx.currentBlock.getWindowSpecs().get(windowName);
-    } else {
-      windowName = ctx.currentBlock.addWindowSpecs(windowFunc.getWindowSpec());
-      windowSpec = windowFunc.getWindowSpec();
-    }
+    WindowSpecExpr windowSpec = windowFunc.getWindowSpec();
 
-    windowFunc.setWindowName(windowName);
     Expr key;
-
-    String [] partitionKeyReferenceNames = null;
     if (windowSpec.hasPartitionBy()) {
-      partitionKeyReferenceNames = new String [windowSpec.getPartitionKeys().length];
       for (int i = 0; i < windowSpec.getPartitionKeys().length; i++) {
         key = windowSpec.getPartitionKeys()[i];
         visit(ctx, stack, key);
-        partitionKeyReferenceNames[i] = ctx.currentBlock.namedExprsMgr.addExpr(key);
+        ctx.currentBlock.namedExprsMgr.addExpr(key);
       }
     }
 
-    String [] orderKeyReferenceNames = null;
+    EvalNode [] sortKeys = null;
     if (windowSpec.hasOrderBy()) {
-      orderKeyReferenceNames = new String[windowSpec.getSortSpecs().length];
+      sortKeys = new EvalNode[windowSpec.getSortSpecs().length];
       for (int i = 0; i < windowSpec.getSortSpecs().length; i++) {
         key = windowSpec.getSortSpecs()[i].getKey();
-        visit(ctx, stack, key);
-        orderKeyReferenceNames[i] = ctx.currentBlock.namedExprsMgr.addExpr(key);
+        sortKeys[i] = visit(ctx, stack, key);
+        ctx.currentBlock.namedExprsMgr.addExpr(key);
       }
     }
 
@@ -715,6 +702,10 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
         paramTypes[0] = CatalogUtil.newSimpleDataType(Type.INT8);
       } else {
         paramTypes[0] = givenArgs[0].getValueType();
+      }
+    } else {
+      if (windowFunc.getSignature().equalsIgnoreCase("rank")) {
+        givenArgs = sortKeys;
       }
     }
 
@@ -736,7 +727,7 @@ public class ExprAnnotator extends BaseAlgebraVisitor<ExprAnnotator.Context, Eva
     FunctionDesc funcDesc = catalog.getFunction(funcName, functionType, paramTypes);
 
     try {
-      return new WindowFunctionEval(windowName, funcDesc, (AggFunction) funcDesc.newInstance(), givenArgs);
+      return new WindowFunctionEval(funcDesc, (AggFunction) funcDesc.newInstance(), givenArgs);
     } catch (InternalException e) {
       throw new PlanningException(e);
     }

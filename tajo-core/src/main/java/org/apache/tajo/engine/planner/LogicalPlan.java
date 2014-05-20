@@ -579,7 +579,7 @@ public class LogicalPlan {
     private final Map<String, RelationNode> canonicalNameToRelationMap = TUtil.newHashMap();
     private final Map<String, List<String>> aliasMap = TUtil.newHashMap();
     private final Map<OpType, List<Expr>> operatorToExprMap = TUtil.newHashMap();
-    private final Map<String, WindowSpecExpr> windowSpecs = TUtil.newHashMap();
+    private boolean hasWindowFunction = false;
     /**
      * It's a map between nodetype and node. node types can be duplicated. So, latest node type is only kept.
      */
@@ -756,53 +756,57 @@ public class LogicalPlan {
       return (T) exprToNodeMap.get(ObjectUtils.identityToString(expr));
     }
 
+    public void setHasWindowFunction() {
+      hasWindowFunction = true;
+    }
+
     public boolean hasWindowSpecs() {
-      return this.windowSpecs.size() > 0;
+      return hasWindowFunction;
     }
-
-    public String addWindowSpecs(WindowSpecExpr windowSpecExpr) {
-      if (windowSpecExpr.hasWindowName()) {
-        if (!windowSpecs.containsKey(windowSpecExpr.getWindowName())) {
-          windowSpecs.put(windowSpecExpr.getWindowName(), windowSpecExpr);
-        }
-        return windowSpecExpr.getWindowName();
-      } else {
-        WindowSpecExpr newWindowSpec = null;
-
-        try {
-          newWindowSpec = (WindowSpecExpr) windowSpecExpr.clone();
-        } catch (CloneNotSupportedException e) {
-          throw new RuntimeException(e);
-        }
-        newWindowSpec.setWindowName(null); // remove name
-
-        String windowName = null;
-        for (WindowSpecExpr existing : windowSpecs.values()) {
-          WindowSpecExpr noNameExistingWindow = null;
-          try {
-            noNameExistingWindow = (WindowSpecExpr) windowSpecExpr.clone();
-          } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-          }
-          if (newWindowSpec.equals(noNameExistingWindow)) {
-            windowName = existing.getWindowName();
-            break;
-          }
-        }
-
-        if (windowName == null) {
-          windowName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
-        }
-
-        newWindowSpec.setWindowName(windowName);
-        windowSpecs.put(newWindowSpec.getWindowName(), newWindowSpec);
-        return windowName;
-      }
-    }
-
-    public Map<String, WindowSpecExpr> getWindowSpecs() {
-      return windowSpecs;
-    }
+//
+//    public String addWindowSpecs(WindowSpecExpr windowSpecExpr) {
+//      if (windowSpecExpr.hasWindowName()) {
+//        if (!windowSpecs.containsKey(windowSpecExpr.getWindowName())) {
+//          windowSpecs.put(windowSpecExpr.getWindowName(), windowSpecExpr);
+//        }
+//        return windowSpecExpr.getWindowName();
+//      } else {
+//        WindowSpecExpr newWindowSpec = null;
+//
+//        try {
+//          newWindowSpec = (WindowSpecExpr) windowSpecExpr.clone();
+//        } catch (CloneNotSupportedException e) {
+//          throw new RuntimeException(e);
+//        }
+//        newWindowSpec.setWindowName(null); // remove name
+//
+//        String windowName = null;
+//        for (WindowSpecExpr existing : windowSpecs.values()) {
+//          WindowSpecExpr noNameExistingWindow = null;
+//          try {
+//            noNameExistingWindow = (WindowSpecExpr) windowSpecExpr.clone();
+//          } catch (CloneNotSupportedException e) {
+//            throw new RuntimeException(e);
+//          }
+//          if (newWindowSpec.equals(noNameExistingWindow)) {
+//            windowName = existing.getWindowName();
+//            break;
+//          }
+//        }
+//
+//        if (windowName == null) {
+//          windowName = NONAMED_WINDOW_PREFIX + "window" + noNameWindowId++;
+//        }
+//
+//        newWindowSpec.setWindowName(windowName);
+//        windowSpecs.put(newWindowSpec.getWindowName(), newWindowSpec);
+//        return windowName;
+//      }
+//    }
+//
+//    public Map<String, WindowSpecExpr> getWindowSpecs() {
+//      return windowSpecs;
+//    }
 
     /**
      * This flag can be changed as a plan is generated.

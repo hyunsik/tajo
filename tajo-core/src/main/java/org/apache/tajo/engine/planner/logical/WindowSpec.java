@@ -26,12 +26,12 @@ import org.apache.tajo.catalog.SortSpec;
 import org.apache.tajo.engine.eval.EvalNode;
 import org.apache.tajo.util.TUtil;
 
+import java.util.Comparator;
+
 public class WindowSpec {
   @Expose private String windowName;
 
   @Expose private Column[] partitionKeys;
-
-  @Expose private SortSpec[] orderByKeys;
 
   @Expose private WindowFrame windowFrame;
 
@@ -47,14 +47,6 @@ public class WindowSpec {
     return partitionKeys;
   }
 
-  public boolean hasOrderBy() {
-    return orderByKeys != null;
-  }
-
-  public SortSpec [] getOrderByKeys() {
-    return orderByKeys;
-  }
-
   public boolean hasWindowFrame() {
     return windowFrame != null;
   }
@@ -68,7 +60,7 @@ public class WindowSpec {
     if (obj instanceof WindowSpec) {
       WindowSpec another = (WindowSpec) obj;
       return TUtil.checkEquals(partitionKeys, another.partitionKeys) &&
-          TUtil.checkEquals(orderByKeys, another.orderByKeys) &&
+
           TUtil.checkEquals(windowFrame, another.windowFrame);
     } else {
       return false;

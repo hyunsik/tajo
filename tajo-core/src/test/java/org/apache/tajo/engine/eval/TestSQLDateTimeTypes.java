@@ -45,7 +45,7 @@ public class TestSQLDateTimeTypes extends ExprTestBase {
   @Test
   public void testTimeLiteral() throws IOException {
     testSimpleEval("select TIME '10:09:37';",
-        new String[]{"10:09:37"});
+        new String[]{"10:09:37" + getUserTimeZoneDisplay()});
   }
 
   @Test

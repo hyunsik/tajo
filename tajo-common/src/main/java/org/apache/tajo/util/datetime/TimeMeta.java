@@ -21,7 +21,7 @@ package org.apache.tajo.util.datetime;
 import org.apache.tajo.util.datetime.DateTimeConstants.DateStyle;
 
 public class TimeMeta {
-  public int      fsecs;
+  public int      fsecs;    // 1/1,000,000 secs
   public int			secs;
   public int			minutes;
   public int			hours;

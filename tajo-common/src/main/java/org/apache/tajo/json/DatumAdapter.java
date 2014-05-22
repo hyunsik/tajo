@@ -38,7 +38,6 @@ public class DatumAdapter implements GsonSerDerAdapter<Datum> {
     case TIME:
       return new TimeDatum(jsonObject.get("value").getAsLong());
     case TIMESTAMP:
-      //return new TimestampDatum(new DateTime(jsonObject.get("value").getAsLong()));
       return new TimestampDatum(jsonObject.get("value").getAsLong());
     case INTERVAL:
       String[] values = jsonObject.get("value").getAsString().split(",");

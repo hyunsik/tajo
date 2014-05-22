@@ -267,11 +267,7 @@ public class DatumFactory {
   }
 
   public static DateDatum createDate(int year, int month, int day) {
-    TimeMeta tm = new TimeMeta();
-    tm.years = year;
-    tm.monthOfYear = month;
-    tm.dayOfMonth = day;
-    return new DateDatum(DateTimeUtil.date2j(tm.years, tm.monthOfYear, tm.dayOfMonth));
+    return new DateDatum(DateTimeUtil.date2j(year, month, day));
   }
 
   public static DateDatum createDate(String dateStr) {
@@ -284,7 +280,6 @@ public class DatumFactory {
   }
 
   public static TimeDatum createTime(String dateStr) {
-    //TimeMeta tm = DateTimeFormat.parseDateTime(dateStr, "HH24:MI:SS.MS");
     TimeMeta tm = DateTimeUtil.decodeDateTime(dateStr);
     return new TimeDatum(DateTimeUtil.toTime(tm));
   }

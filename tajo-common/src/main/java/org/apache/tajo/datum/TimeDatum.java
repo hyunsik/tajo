@@ -98,6 +98,9 @@ public class TimeDatum extends Datum {
   public String asChars(TimeZone timeZone, boolean includeTimeZone) {
     TimeMeta tm = toTimeMeta();
     DateTimeUtil.toUserTimezone(tm, timeZone);
+    if (includeTimeZone) {
+      tm.timeZone = timeZone.getRawOffset() / 1000;
+    }
     return DateTimeUtil.encodeTime(tm, DateStyle.ISO_DATES);
   }
 
@@ -171,7 +174,8 @@ public class TimeDatum extends Datum {
   @Override
   public int compareTo(Datum datum) {
     if (datum.type() == TajoDataTypes.Type.TIME) {
-      return Long.compare(time, ((TimeDatum)datum).time);
+      TimeDatum another = (TimeDatum)datum;
+      return (time < another.time) ? -1 : ((time == another.time) ? 0 : 1);
     } else if (datum instanceof NullDatum || datum.isNull()) {
       return -1;
     } else {

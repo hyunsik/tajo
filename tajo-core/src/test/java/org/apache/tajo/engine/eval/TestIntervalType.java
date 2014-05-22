@@ -43,7 +43,7 @@ public class TestIntervalType extends ExprTestBase {
     testSimpleEval("select timestamp '2001-09-28 01:00' + interval '23 hours'",
         new String[]{"2001-09-29 00:00:00" + getUserTimeZoneDisplay()});
 
-    testSimpleEval("select time '01:00' + interval '3 hours'", new String[]{"04:00:00"});
+    testSimpleEval("select time '01:00' + interval '3 hours'", new String[]{"04:00:00" + getUserTimeZoneDisplay()});
 
     testSimpleEval("select date '2001-10-01' - date '2001-09-28'", new String[]{"3"});
     testSimpleEval("select date '2001-10-01' - 7", new String[]{"2001-09-24"});
@@ -51,7 +51,7 @@ public class TestIntervalType extends ExprTestBase {
         new String[]{"2001-09-27 23:00:00" + getUserTimeZoneDisplay()});
 
     testSimpleEval("select time '05:00' - time '03:00'", new String[]{"02:00:00"});
-    testSimpleEval("select time '05:00' - interval '2 hours'", new String[]{"03:00:00"});
+    testSimpleEval("select time '05:00' - interval '2 hours'", new String[]{"03:00:00" + getUserTimeZoneDisplay()});
     testSimpleEval("select timestamp '2001-09-28 23:00' - interval '23 hours'",
         new String[]{"2001-09-28 00:00:00" + getUserTimeZoneDisplay()});
 
@@ -70,9 +70,12 @@ public class TestIntervalType extends ExprTestBase {
         new String[]{"2001-09-07 01:00:00" + getUserTimeZoneDisplay()});
     testSimpleEval("select interval '10 day 01:00:00' + date '2001-08-28'",
         new String[]{"2001-09-07 01:00:00" + getUserTimeZoneDisplay()});
-    testSimpleEval("select time '10:20:30' + interval '1 day 01:00:00'", new String[]{"11:20:30"});
-    testSimpleEval("select interval '1 day 01:00:00' + time '10:20:30'", new String[]{"11:20:30"});
-    testSimpleEval("select time '10:20:30' - interval '1 day 01:00:00'", new String[]{"09:20:30"});
+    testSimpleEval("select time '10:20:30' + interval '1 day 01:00:00'",
+        new String[]{"11:20:30" + getUserTimeZoneDisplay()});
+    testSimpleEval("select interval '1 day 01:00:00' + time '10:20:30'",
+        new String[]{"11:20:30" + getUserTimeZoneDisplay()});
+    testSimpleEval("select time '10:20:30' - interval '1 day 01:00:00'",
+        new String[]{"09:20:30" + getUserTimeZoneDisplay()});
 
     testSimpleEval("select (interval '1 month 20 day' + interval '50 day')", new String[]{"1 month 70 days"});
     testSimpleEval("select date '2013-01-01' + interval '1 month 70 day'",

@@ -1884,6 +1884,9 @@ public class DateTimeUtil {
       default :
         sb.append(String.format("%02d:%02d:", tm.hours, tm.minutes));
         appendSecondsToEncodeOutput(sb, tm.secs, tm.fsecs, 6, true);
+        if (tm.timeZone != 0 && tm.timeZone != Integer.MAX_VALUE) {
+          sb.append(getTimeZoneDisplayTime(tm.timeZone));
+        }
         break;
     }
 

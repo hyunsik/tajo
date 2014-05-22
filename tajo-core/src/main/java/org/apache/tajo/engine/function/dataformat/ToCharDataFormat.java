@@ -57,19 +57,9 @@ public class ToCharDataFormat extends GeneralFunction {
     });
   }
 
-  StringBuilder result = new StringBuilder();
-  String num="";
-  String pttn="";
-  ArrayList<Integer> commaIndex;
-
-  long dotUpper=0;
-
-  String dotUpperPttn = "";
-  String dotUnderPttn = "";
-
-  boolean hasOthersPattern () {
+  boolean hasOthersPattern (int[] commaIndex, String pttn) {
     int cntdot = 0;
-    commaIndex = new ArrayList<Integer>();
+    int cntIndex = 0;
     for(int i=0; i<pttn.length(); i++) {
       if(pttn.charAt(i)!='0' && pttn.charAt(i)!='9' && pttn.charAt(i)!=',') {
         if(pttn.charAt(i)=='.') {
@@ -83,19 +73,18 @@ public class ToCharDataFormat extends GeneralFunction {
         }
       }
       else if(pttn.charAt(i)==',') {
-        commaIndex.add(new Integer(i));
+        commaIndex[cntIndex++]=i;
       }
     }
     return false;
   }
 
-  void pickCommaPattern() {
-    pttn = pttn.replaceAll(",","");
-  }
 
-  void getFormatedNumber() {
-    double tmp=Double.parseDouble(num);
-    dotUpper=(long)tmp;
+
+  void getFormatedNumber(StringBuilder result, double tmpNum, String pttn, long dotUpper) {
+    dotUpper=(long)tmpNum;
+    String dotUpperPttn = "";
+    String dotUnderPttn = "";
 
     int dotIndex=pttn.indexOf(".");
     if(dotIndex!=-1) {
@@ -130,8 +119,6 @@ public class ToCharDataFormat extends GeneralFunction {
       result.append(String.valueOf(tmpUpper));
     }
 
-    double tmpNum=tmp;
-
     // Formatted decimal point digits
     if(!dotUnderPttn.equals("") /*|| tmpNum-(double)dotUpper != 0.*/) {
       int dotUnderPttnLen = dotUnderPttn.length();
@@ -141,7 +128,8 @@ public class ToCharDataFormat extends GeneralFunction {
       String dotUnderNum = String.valueOf(tmpNum);
       int startIndex = dotUnderNum.indexOf(".");
       dotUnderNum = dotUnderNum.substring(startIndex+1, dotUnderNum.length());
-      double tmpDotUnderNum=Double.parseDouble(dotUnderNum) * Math.pow(0.1, dotUnderNum.length());
+      double underNum = Double.parseDouble(dotUnderNum);
+      double tmpDotUnderNum=underNum * Math.pow(0.1, dotUnderNum.length());
 
       double roundNum = 0.;
       if(tmpNum > 0) {
@@ -174,22 +162,22 @@ public class ToCharDataFormat extends GeneralFunction {
     }
   }
 
-  void insertCommaPattern() {
+  void insertCommaPattern(StringBuilder result, int[] commaIndex, double tmpNum) {
     int increaseIndex=0;
     if(result.charAt(0)=='-')
       increaseIndex++;
-    for (Integer aCommaIndex : commaIndex) {
-      int tmpIndex = aCommaIndex;
-      if (result.charAt(tmpIndex - 1 + increaseIndex) == ' ') {
-        increaseIndex--;
-      } else {
-        result.insert(tmpIndex + increaseIndex, ',');
+    for (int aCommaIndex : commaIndex) {
+      if(aCommaIndex!=-1) {
+        if (result.charAt(aCommaIndex - 1 + increaseIndex) == ' ') {
+          increaseIndex--;
+        } else {
+          result.insert(aCommaIndex + increaseIndex, ',');
+        }
       }
     }
 
     int minusIndex = 0;
-    if(Double.parseDouble(num) < 0) {
-      //result.replace(0,0," ");
+    if(tmpNum < 0) {
       for(minusIndex=0;minusIndex<result.length();minusIndex++) {
         if(result.charAt(minusIndex+1)!=' ' || result.charAt(minusIndex)=='0' || result.charAt(minusIndex)=='#') {
           break;
@@ -206,8 +194,13 @@ public class ToCharDataFormat extends GeneralFunction {
 
   @Override
   public Datum eval(Tuple params) {
+    String num="";
+    String pttn="";
+    long dotUpper=0;
+
     Datum number = params.get(0);
     Datum pattern = params.get(1);
+    StringBuilder result = new StringBuilder();
 
     if(number instanceof NullDatum || pattern instanceof NullDatum) {
       return NullDatum.get();
@@ -215,14 +208,19 @@ public class ToCharDataFormat extends GeneralFunction {
 
     num = number.asChars();
     pttn = pattern.asChars();
+    int[] commaIndex = new int[pttn.length()];
+    for(int i=0;i<commaIndex.length;i++)
+      commaIndex[i]=-1;
 
-    if(hasOthersPattern()) {
+    if(hasOthersPattern(commaIndex, pttn)) {
       return NullDatum.get();
     }
-    pickCommaPattern();
+    //pickCommaPattern
+    pttn = pttn.replaceAll(",","");
 
-    getFormatedNumber();
-    insertCommaPattern();
+    double tmpNum = Double.parseDouble(num);
+    getFormatedNumber(result, tmpNum, pttn, dotUpper);
+    insertCommaPattern(result, commaIndex, tmpNum);
 
     //paste pattern into Array[keep index];
     return DatumFactory.createText(result.toString());

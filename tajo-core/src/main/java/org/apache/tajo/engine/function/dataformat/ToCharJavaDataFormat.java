@@ -53,8 +53,7 @@ import java.text.DecimalFormat;
     }
 )
 public class ToCharJavaDataFormat extends GeneralFunction {
-  private final DecimalFormat decimalFormat = new DecimalFormat();
-  private StringBuilder result = new StringBuilder();
+
 
   public ToCharJavaDataFormat() {
     super(new Column[] {
@@ -63,11 +62,11 @@ public class ToCharJavaDataFormat extends GeneralFunction {
     });
   }
 
-  public void evaluate(String num) {
+  public void evaluate(String num, StringBuilder result) {
     result.append(num);
   }
 
-  public void evaluate(String num, String pttn) {
+  public void evaluate(String num, String pttn, DecimalFormat decimalFormat, StringBuilder result) {
     double number = Double.parseDouble(num);
     //String pattern = pttn.replace("9", "#");
     decimalFormat.applyPattern(pttn);
@@ -79,6 +78,9 @@ public class ToCharJavaDataFormat extends GeneralFunction {
     Datum number = params.get(0);
     Datum pattern = null;
 
+    DecimalFormat decimalFormat = new DecimalFormat();
+    StringBuilder result = new StringBuilder();
+
     String num = "";
     String pttn = "";
 
@@ -88,13 +90,13 @@ public class ToCharJavaDataFormat extends GeneralFunction {
 
     if(params.size() == 1) {
       num = number.asChars();
-      this.evaluate(num);
+      this.evaluate(num, result);
     }
     else {
       pattern = params.get(1);
       num = number.asChars();
       pttn = pattern.asChars();
-      this.evaluate(num, pttn);
+      this.evaluate(num, pttn, decimalFormat, result);
     }
 
     return DatumFactory.createText(result.toString());

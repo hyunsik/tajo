@@ -326,8 +326,7 @@ public class TajoConf extends Configuration {
     CLI_OUTPUT_FORMATTER_CLASS("tajo.cli.output.formatter", "org.apache.tajo.cli.DefaultTajoCliOutputFormatter"),
 
     //PLANNER
-    PLANNER_USE_FILTER_PUSHDOWN("tajo.planner.use.filter.pushdown", true)
-    CLI_OUTPUT_FORMATTER_CLASS("tajo.cli.output.formatter", "org.apache.tajo.cli.DefaultTajoCliOutputFormatter"),
+    PLANNER_USE_FILTER_PUSHDOWN("tajo.planner.use.filter.pushdown", true),
 
     //TIME & DATE
     TAJO_TIMEZONE("tajo.timezone", System.getProperty("user.timezone")),

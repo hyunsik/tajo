@@ -694,7 +694,6 @@ value_expression
 common_value_expression
   : numeric_value_expression
   | string_value_expression
-  | datetime_value_expression
   | NULL
   ;
 
@@ -756,7 +755,8 @@ time_zone_field
   ;
 
 extract_source
-  : datetime_value_expression
+  : column_reference
+  | datetime_literal
   ;
 
 /*
@@ -803,53 +803,6 @@ trim_operands
 
 trim_specification
   : LEADING | TRAILING | BOTH
-  ;
-
-/*
-===============================================================================
-  6.30 <datetime_value_expression>
-===============================================================================
-*/
-datetime_value_expression
-  : datetime_term
-  ;
-datetime_term
-  : datetime_factor
-  ;
-
-datetime_factor
-  : datetime_primary
-  ;
-
-datetime_primary
-  : value_expression_primary
-  | datetime_value_function
-  ;
-
-/*
-===============================================================================
-  6.31 <datetime_value_function>
-===============================================================================
-*/
-
-datetime_value_function
-  : current_date_value_function
-  | current_time_value_function
-  | current_timestamp_value_function
-  ;
-
-current_date_value_function
-  : CURRENT_DATE
-  | CURRENT_DATE LEFT_PAREN RIGHT_PAREN
-  ;
-
-current_time_value_function
-  : CURRENT_TIME
-  | CURRENT_TIME LEFT_PAREN RIGHT_PAREN
-  ;
-
-current_timestamp_value_function
-  : CURRENT_TIMESTAMP
   ;
 
 /*

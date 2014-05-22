@@ -16,36 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.engine.function.datetime;
+package org.apache.tajo.engine.function.builtin;
 
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.DatumFactory;
-import org.apache.tajo.datum.TimestampDatum;
 import org.apache.tajo.engine.function.GeneralFunction;
 import org.apache.tajo.engine.function.annotation.Description;
 import org.apache.tajo.engine.function.annotation.ParamTypes;
 import org.apache.tajo.storage.Tuple;
 
 @Description(
-    functionName = "now",
-    description = "Get current time. Result is TIMESTAMP type.",
-    example = "> SELECT now();\n2014-04-18 22:54:29.280",
-    returnType = TajoDataTypes.Type.TIMESTAMP,
-    paramTypes = {@ParamTypes(paramTypes = {})}
+  functionName = "today",
+  description = "get current time millis",
+  example = "> SELECT today();",
+  returnType = TajoDataTypes.Type.INT8,
+  paramTypes = {@ParamTypes(paramTypes = {})}
 )
-public class NowTimestamp extends GeneralFunction {
-  TimestampDatum datum;
+public class Today extends GeneralFunction {
 
-  public NowTimestamp() {
+  public Today() {
     super(NoArgs);
   }
 
   @Override
   public Datum eval(Tuple params) {
-    if (datum == null) {
-      datum = DatumFactory.createTimeStampFromMillis(System.currentTimeMillis());
-    }
-    return datum;
+    return DatumFactory.createInt8(System.currentTimeMillis());
   }
 }

@@ -1059,8 +1059,8 @@ public class TestPhysicalPlanner {
     FileFragment[] frags = StorageManager.splitNG(conf, "default.score", score.getMeta(), score.getPath(),
         Integer.MAX_VALUE);
     Path workDir = CommonTestingUtil.getTestDir("target/test-data/testSortGroupByPlan");
-    TaskAttemptContext ctx = new TaskAttemptContext(conf, LocalTajoTestingUtility.newQueryUnitAttemptId(masterPlan),
-        new FileFragment[]{frags[0]}, workDir);
+    TaskAttemptContext ctx = new TaskAttemptContext(conf, new QueryContext(),
+        LocalTajoTestingUtility.newQueryUnitAttemptId(masterPlan), new FileFragment[]{frags[0]}, workDir);
     ctx.setEnforcer(new Enforcer());
     Expr context = analyzer.parse(WINDOW[1]);
     LogicalPlan plan = planner.createPlan(session, context);

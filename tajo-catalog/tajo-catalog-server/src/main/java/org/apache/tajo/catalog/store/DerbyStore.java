@@ -276,6 +276,18 @@ public class DerbyStore extends AbstractDBStore {
         baseTableMaps.put(TB_PARTTIONS, true);
       }
 
+      // PARTITION_METHODS STORE
+      if (!baseTableMaps.get(TB_PARTITION_METHODS_STORE)) {
+        String sql = readSchemaFile("partition_methods_store.sql");
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(sql);
+        }
+        stmt.addBatch(sql);
+        stmt.executeBatch();
+        LOG.info("Table '" + TB_PARTITION_METHODS_STORE + "' is created.");
+        baseTableMaps.put(TB_PARTITION_METHODS_STORE, true);
+      }
       insertSchemaVersion();
 
     } catch (SQLException se) {
@@ -339,6 +351,7 @@ public class DerbyStore extends AbstractDBStore {
       baseTableMaps.put(TB_INDEXES, false);
       baseTableMaps.put(TB_PARTITION_METHODS, false);
       baseTableMaps.put(TB_PARTTIONS, false);
+      baseTableMaps.put(TB_PARTITION_METHODS_STORE,false);
 
       while (res.next()) {
         baseTableMaps.put(res.getString("TABLE_NAME"), true);

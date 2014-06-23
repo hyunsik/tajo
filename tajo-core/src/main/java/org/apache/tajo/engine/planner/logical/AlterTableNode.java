@@ -20,8 +20,12 @@ package org.apache.tajo.engine.planner.logical;
 
 
 import com.google.gson.annotations.Expose;
+import org.apache.hadoop.fs.Path;
 import org.apache.tajo.algebra.AlterTableOpType;
+import org.apache.tajo.algebra.OpType;
 import org.apache.tajo.catalog.Column;
+import org.apache.tajo.catalog.partition.PartitionMethodDesc;
+import org.apache.tajo.catalog.partition.PartitionPredicateMethodDesc;
 import org.apache.tajo.engine.planner.PlanString;
 
 public class AlterTableNode extends LogicalNode {
@@ -35,9 +39,13 @@ public class AlterTableNode extends LogicalNode {
   @Expose
   private String newColumnName;
   @Expose
-  private Column addNewColumn;
+  private Column column; //Renamed it to be generic based on the OpType the role it plays changes.
+  @Expose
+  private PartitionPredicateMethodDesc partition;
   @Expose
   private AlterTableOpType alterTableOpType;
+  @Expose
+  private Path path;
 
   public AlterTableNode(int pid) {
     super(pid, NodeType.ALTER_TABLE);
@@ -75,12 +83,20 @@ public class AlterTableNode extends LogicalNode {
     this.newColumnName = newColumnName;
   }
 
-  public Column getAddNewColumn() {
-    return addNewColumn;
+  public Column getColumn() {
+    return column;
   }
 
-  public void setAddNewColumn(Column addNewColumn) {
-    this.addNewColumn = addNewColumn;
+  public void setColumn(Column column) {
+    this.column = column;
+  }
+
+  public PartitionPredicateMethodDesc getPartition() {
+    return partition;
+  }
+
+  public void setPartition(PartitionPredicateMethodDesc partitions) {
+    this.partition = partitions;
   }
 
   public AlterTableOpType getAlterTableOpType() {
@@ -89,6 +105,18 @@ public class AlterTableNode extends LogicalNode {
 
   public void setAlterTableOpType(AlterTableOpType alterTableOpType) {
     this.alterTableOpType = alterTableOpType;
+  }
+
+  public boolean hasPath() {
+    return this.path != null;
+  }
+
+  public void setPath(Path path) {
+    this.path = path;
+  }
+
+  public Path getPath() {
+    return this.path;
   }
 
   @Override
@@ -113,7 +141,7 @@ public class AlterTableNode extends LogicalNode {
         alterTableNode.newTableName = newTableName;
         alterTableNode.columnName = columnName;
         alterTableNode.newColumnName=newColumnName;
-        alterTableNode.addNewColumn =(Column) addNewColumn.clone();
+        alterTableNode.column =(Column) column.clone();
         return alterTableNode;
     }*/
 

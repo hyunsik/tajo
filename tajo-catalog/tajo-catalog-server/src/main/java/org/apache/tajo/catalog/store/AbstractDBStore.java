@@ -29,9 +29,11 @@ import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.catalog.CatalogConstants;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.FunctionDesc;
+import org.apache.tajo.catalog.PartitionPredicateSchema;
 import org.apache.tajo.catalog.exception.*;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.catalog.proto.CatalogProtos.*;
+import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.exception.InternalException;
 import org.apache.tajo.exception.UnimplementedException;
@@ -40,10 +42,8 @@ import org.apache.tajo.util.FileUtil;
 import org.apache.tajo.util.Pair;
 
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 
 import static org.apache.tajo.catalog.proto.CatalogProtos.AlterTablespaceProto.AlterTablespaceCommand;
@@ -816,10 +816,16 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
           renameColumn(tableId, alterTableDescProto.getAlterColumnName());
           break;
         case ADD_COLUMN:
-          if (existColumn(tableId, alterTableDescProto.getAddColumn().getName())) {
-            throw new ColumnNameAlreadyExistException(alterTableDescProto.getAddColumn().getName());
+          if (existColumn(tableId, alterTableDescProto.getColumn().getName())) {
+            throw new ColumnNameAlreadyExistException(alterTableDescProto.getColumn().getName());
           }
-          addNewColumn(tableId, alterTableDescProto.getAddColumn());
+          addNewColumn(tableId, alterTableDescProto.getColumn());
+          break;
+        case ADD_COLUMN_PARTITION:
+          addColumnPartitionPredicate(alterTableDescProto.getPartition());
+          break;
+        case DROP_COLUMN_PARTITION:
+          dropColumnPartitionPredicate(alterTableDescProto.getPartition());
           break;
         default:
       }
@@ -970,6 +976,9 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
       CatalogUtil.closeQuietly(pstmt,resultSet);
     }
   }
+
+  private void dropColumnPartition (int tableId, CatalogProtos.PartitionMethodProto proto ) {}
+
 
   private int getDatabaseId(String databaseName) throws SQLException {
     String sql = String.format("SELECT DB_ID from %s WHERE DB_NAME = ?", TB_DATABASES);
@@ -1430,6 +1439,234 @@ public abstract class AbstractDBStore extends CatalogConstants implements Catalo
     } finally {
       CatalogUtil.closeQuietly(pstmt);
     }
+  }
+
+  public void addColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    Connection conn;
+    PreparedStatement pstmt = null;
+    ResultSet resultSet;
+
+    try {
+      String sql = "INSERT INTO " + TB_PARTITION_METHODS + " (TID, PARTITION_TYPE,  EXPRESSION, EXPRESSION_SCHEMA) " +
+          "VALUES (?,?,?,?)";
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(sql);
+      }
+
+      String databaseName = proto.getTableIdentifier().getDatabaseName();
+      String tableName = proto.getTableIdentifier().getTableName();
+
+      int databaseId = getDatabaseId(databaseName);
+      int tableId = getTableId(databaseId, databaseName, tableName);
+
+      conn = getConnection();
+      conn.setAutoCommit(false);
+
+      pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+      pstmt.setInt(1, tableId);
+      pstmt.setString(2, proto.getPartitionType().name());
+      pstmt.setString(3, proto.getExpression());
+      pstmt.setBytes(4, proto.getPartitionPredicateSchema().toByteArray());
+      pstmt.executeUpdate();
+
+      resultSet = pstmt.getGeneratedKeys();
+
+      int partitionMethodId = -1;
+      if (resultSet.next()) {
+        partitionMethodId = resultSet.getInt(1);
+      }
+      pstmt.close();
+
+      String sqlStore = "INSERT INTO " + TB_PARTITION_METHODS_STORE + " (TID, PM_ID, COL_NAME, %s, COMPOSITE_COL_COUNT) " + "VALUES (?,?,?,?,?)";
+
+      final PartitionPredicateSchemaProto schema = proto.getPartitionPredicateSchema();
+      final List<PartitionPredicateProto> predicateList = schema.getPredicatesList();
+
+      for (int i = 0; i < predicateList.size(); i++) {
+        String partitionValue = predicateList.get(i).getPartitionValue();
+        String columnNameByType = getColumnNameByType(predicateList.get(i).getDataType());
+        String tempSql = String.format(sqlStore, columnNameByType);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(tempSql);
+        }
+        pstmt = conn.prepareStatement(tempSql);
+        pstmt.setInt(1, tableId);
+        pstmt.setInt(2, partitionMethodId);
+        pstmt.setString(3, predicateList.get(i).getColumnName().toLowerCase());
+
+        if (columnNameByType.equals("COL_INT")) {
+          pstmt.setInt(4, Integer.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_FLOAT")) {
+          pstmt.setDouble(4, Double.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_TIME")) {
+          pstmt.setTime(4, Time.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_DATE")) {
+          pstmt.setDate(4, Date.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_TIMESTAMP")) {
+          pstmt.setTimestamp(4, Timestamp.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_BOOL")) {
+          pstmt.setBoolean(4, Boolean.valueOf(partitionValue));
+        } else {
+          pstmt.setString(4, predicateList.get(i).getPartitionValue());
+        }
+        pstmt.setInt(5, predicateList.size());
+        pstmt.executeUpdate();
+        pstmt.close();
+      }
+      conn.commit();
+    } catch (SQLException se) {
+      throw new CatalogException(se);
+    } finally {
+      CatalogUtil.closeQuietly(pstmt);
+    }
+  }
+
+  public void dropColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    Connection conn;
+    PreparedStatement pstmt = null;
+    ResultSet resultSet;
+
+    try {
+
+      final String sql = "SELECT PM_ID  FROM " + TB_PARTITION_METHODS_STORE + " where %s";
+
+      final String databaseName = proto.getTableIdentifier().getDatabaseName();
+      final String tableName = proto.getTableIdentifier().getTableName();
+      final int databaseId = getDatabaseId(databaseName);
+      final int tableId = getTableId(databaseId, databaseName, tableName);
+
+      final PartitionPredicateSchemaProto schema = proto.getPartitionPredicateSchema();
+      final List<PartitionPredicateProto> predicateList = schema.getPredicatesList();
+      final String whereClasue = buildWhereClause(predicateList);
+      final String sqlWithWhereClause = String.format(sql, whereClasue);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(sqlWithWhereClause);
+      }
+
+      conn = getConnection();
+      pstmt = conn.prepareStatement(sqlWithWhereClause);
+      int paramIndex = 1;
+
+      for (int i = 0; i < predicateList.size(); i++) {
+        String partitionValue = predicateList.get(i).getPartitionValue();
+        String columnNameByType = getColumnNameByType(predicateList.get(i).getDataType());
+
+        if (columnNameByType.equals("COL_INT")) {
+          pstmt.setInt(paramIndex, Integer.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_FLOAT")) {
+          pstmt.setDouble(paramIndex, Double.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_TIME")) {
+          pstmt.setTime(paramIndex, Time.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_DATE")) {
+          pstmt.setDate(paramIndex, Date.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_TIMESTAMP")) {
+          pstmt.setTimestamp(paramIndex, Timestamp.valueOf(partitionValue));
+        } else if (columnNameByType.equals("COL_BOOL")) {
+          pstmt.setBoolean(paramIndex, Boolean.valueOf(partitionValue));
+        } else {
+          pstmt.setString(paramIndex, predicateList.get(i).getPartitionValue());
+        }
+        paramIndex++;
+      }
+
+      pstmt.setInt(paramIndex, tableId);
+      pstmt.setInt(paramIndex + 1, predicateList.size());
+      resultSet = pstmt.executeQuery();
+
+      int partitionMethodId = -1;
+      if (resultSet.next()) {
+        partitionMethodId = resultSet.getInt("PM_ID");
+      }
+
+      resultSet.close();
+      pstmt.close();
+
+      String deleteSql = "DELETE FROM " + TB_PARTITION_METHODS + " where TID = ? AND PM_ID = ?";
+
+      pstmt = conn.prepareStatement(deleteSql);
+      pstmt.setInt(1, tableId);
+      pstmt.setInt(2, partitionMethodId);
+      pstmt.executeUpdate();
+
+    } catch (SQLException se) {
+      throw new CatalogException(se);
+    } finally {
+      CatalogUtil.closeQuietly(pstmt);
+    }
+  }
+
+  private String getColumnNameByType(final TajoDataTypes.DataType dataType ) {
+    switch (dataType.getType()) {
+      case INT1:
+      case INT2:
+      case INT4:
+      case INT8:
+      case UINT1:
+      case UINT2:
+      case UINT4:
+      case UINT8:
+        return "COL_INT";
+      case FLOAT4:
+      case FLOAT8:
+        return "COL_FLOAT";
+      case TIME:
+       return "COL_TIME";
+      case DATE:
+        return "COL_DATE";
+      case TIMESTAMP:
+        return "COL_TIMESTAMP";
+      case BOOLEAN:
+        return "COL_BOOL";
+      default:
+        return "COL_TEXT";
+    }
+  }
+
+  private String getOperator(final OpType type) {
+    switch (type) {
+      case EQUAL:
+        return "=";
+      case LEQ:
+        return "<=";
+      case LTH:
+        return "<";
+      case GEQ:
+        return ">=";
+      case GTH:
+        return ">";
+    }
+    return "=";
+  }
+
+
+  private String buildWhereClause(final List<PartitionPredicateProto> predicateList) {
+    final StringBuilder whereClasue = new StringBuilder();
+
+    whereClasue.append("(");
+    for (int i = 0; i < predicateList.size(); i++) {
+
+      String columnName = predicateList.get(i).getColumnName().toLowerCase();
+      OpType type = predicateList.get(i).getPartitionOpType();
+
+      whereClasue.append("(").
+          append("COL_NAME").append("=").append("'").append(columnName).append("'").
+          append(" AND ").
+          append(getColumnNameByType(predicateList.get(i).getDataType())).append(getOperator(type)).append("?").
+          append(")");
+      if (predicateList.size() > 1 && i == predicateList.size() - 1) {
+        whereClasue.append(" OR ");
+      }
+    }
+    whereClasue.append(")").
+        append(" AND ").
+        append("TID").append("=").append("?").
+        append(" AND ").
+        append("COMPOSITE_COL_COUNT").append("=").append("?").
+        append(" GROUP BY PM_ID");
+
+    return whereClasue.toString();
   }
 
   @Override

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.tajo.algebra.*;
 import org.apache.tajo.catalog.*;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
+import org.apache.tajo.catalog.partition.PartitionPredicateMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.NullDatum;
@@ -48,7 +49,6 @@ import org.apache.tajo.util.TUtil;
 
 import java.util.*;
 
-import static org.apache.tajo.algebra.CreateTable.PartitionType;
 import static org.apache.tajo.engine.planner.ExprNormalizer.ExprNormalizedResult;
 import static org.apache.tajo.engine.planner.LogicalPlan.BlockType;
 import static org.apache.tajo.engine.planner.LogicalPlanPreprocessor.PreprocessContext;
@@ -1493,7 +1493,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
   private PartitionMethodDesc getPartitionMethod(PlanContext context,
                                                  String tableName,
-                                                 CreateTable.PartitionMethodDescExpr expr) throws PlanningException {
+                                                 PartitionMethodDescExpr expr) throws PlanningException {
     PartitionMethodDesc partitionMethodDesc;
 
     if(expr.getPartitionType() == PartitionType.COLUMN) {
@@ -1576,17 +1576,83 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     return alter;
   }
 
+  private PartitionPredicateMethodDesc getPartition(PlanContext context,
+                                                    String tableName,
+                                                    PartitionMethodDescExpr expr) throws PlanningException {
+    PartitionPredicateMethodDesc partitionPredicateMethodDesc;
+
+    if (expr.getPartitionType() == PartitionType.COL_PRED) {
+      final ColumnPredicatePartition partition = (ColumnPredicatePartition) expr;
+      final PartitionPredicateSchema schema =  convertPredicatesToSchema(context, partition.getPartitionPredicates());
+      final String partitionExpression = Joiner.on(',').join(schema.getPartitionPredicates());
+      partitionPredicateMethodDesc = new PartitionPredicateMethodDesc(context.session.getCurrentDatabase(), tableName,
+          CatalogProtos.PartitionType.COL_PRED, partitionExpression, schema);
+    } else {
+      throw new PlanningException(String.format("Not supported PartitonType: %s", expr.getPartitionType()));
+    }
+    return partitionPredicateMethodDesc;
+  }
+
+  private PartitionPredicateSchema convertPredicatesToSchema(PlanContext context, BinaryOperator[] predicates) throws PlanningException {
+    final PartitionPredicateSchema schema = new PartitionPredicateSchema();
+    for (BinaryOperator predicate : predicates) {
+      schema.addPredicate(convertPredicate(context, predicate));
+    }
+    return schema;
+  }
+
+  private PartitionPredicate convertPredicate(PlanContext context, BinaryOperator predicate) throws PlanningException {
+    final QueryBlock block = context.queryBlock;
+    final LogicalPlan plan = context.plan;
+    final FieldEval columName =  (FieldEval)exprAnnotator.createEvalNode(plan, block, predicate.getLeft());
+    final ConstEval partionValue = (ConstEval) exprAnnotator.createEvalNode(plan, block, predicate.getRight());
+    return new PartitionPredicate(columName.getColumnName(), partionValue.getValue().asChars(), partionValue.getValueType(), convertOperatorType(predicate.getType()));
+  }
+
+  public static CatalogProtos.OpType convertOperatorType(OpType opType) {
+
+    switch (opType) {
+      case Equals:
+        return CatalogProtos.OpType.EQUAL;
+      case NotEquals:
+        return CatalogProtos.OpType.NOT_EQUAL;
+      case LessThan:
+        return CatalogProtos.OpType.LTH;
+      case LessThanOrEquals:
+        return CatalogProtos.OpType.LEQ;
+      case GreaterThan:
+        return CatalogProtos.OpType.GTH;
+      case GreaterThanOrEquals:
+        return CatalogProtos.OpType.GEQ;
+      default:
+    }
+    return null;
+  }
+
   @Override
-  public LogicalNode visitAlterTable(PlanContext context, Stack<Expr> stack, AlterTable alterTable) {
+  public LogicalNode visitAlterTable(PlanContext context, Stack<Expr> stack, AlterTable alterTable) throws PlanningException{
     AlterTableNode alterTableNode = context.queryBlock.getNodeFromExpr(alterTable);
     alterTableNode.setTableName(alterTable.getTableName());
     alterTableNode.setNewTableName(alterTable.getNewTableName());
     alterTableNode.setColumnName(alterTable.getColumnName());
     alterTableNode.setNewColumnName(alterTable.getNewColumnName());
 
-    if (null != alterTable.getAddNewColumn()) {
-      alterTableNode.setAddNewColumn(convertColumn(alterTable.getAddNewColumn()));
+    if (null != alterTable.getColumn()) {
+      alterTableNode.setColumn(convertColumn(alterTable.getColumn()));
     }
+
+    if (null != alterTable.getPartition()) {
+      final PartitionPredicateMethodDesc partitionMethodDesc = getPartition(context,alterTable.getTableName(),alterTable.getPartition());
+      if (null != alterTable.getPartitionProperties()) {  // Handle WITH Properties
+        partitionMethodDesc.setPartitionProperties(alterTable.getPartitionProperties());
+      }
+      alterTableNode.setPartition(partitionMethodDesc);
+    }
+
+    if (alterTable.getAlterTableOpType() == AlterTableOpType.ADD_COLUMN_PARTITION) {
+      alterTableNode.setPath(new Path(alterTable.getLocation()));
+    }
+
     alterTableNode.setAlterTableOpType(alterTable.getAlterTableOpType());
     return alterTableNode;
   }

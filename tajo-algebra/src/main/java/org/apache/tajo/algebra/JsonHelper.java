@@ -20,7 +20,6 @@ package org.apache.tajo.algebra;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import org.apache.tajo.algebra.CreateTable.PartitionMethodDescExpr;
 
 public class JsonHelper {
   private static JsonHelper instance;

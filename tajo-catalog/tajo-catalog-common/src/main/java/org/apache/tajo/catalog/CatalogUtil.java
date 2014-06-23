@@ -21,6 +21,7 @@ package org.apache.tajo.catalog;
 import org.apache.hadoop.fs.Path;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
+import org.apache.tajo.catalog.partition.PartitionPredicateMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.catalog.proto.CatalogProtos.ColumnProto;
 import org.apache.tajo.catalog.proto.CatalogProtos.SchemaProto;
@@ -760,8 +761,25 @@ public class CatalogUtil {
   public static AlterTableDesc addNewColumn(String tableName, Column column, AlterTableType alterTableType) {
     final AlterTableDesc alterTableDesc = new AlterTableDesc();
     alterTableDesc.setTableName(tableName);
-    alterTableDesc.setAddColumn(column);
+    alterTableDesc.setColumn(column);
     alterTableDesc.setAlterTableType(alterTableType);
     return alterTableDesc;
   }
+
+  public static AlterTableDesc addPartition(String tableName, PartitionPredicateMethodDesc partitionMethodDesc, AlterTableType alterTableType) {
+    final AlterTableDesc alterTableDesc = new AlterTableDesc();
+    alterTableDesc.setTableName(tableName);
+    alterTableDesc.setPartitionPredicateMethodDesc(partitionMethodDesc);
+    alterTableDesc.setAlterTableType(alterTableType);
+    return alterTableDesc;
+  }
+
+  public static AlterTableDesc dropPartition(String tableName,  PartitionPredicateMethodDesc partitionMethodDesc, AlterTableType alterTableType) {
+    final AlterTableDesc alterTableDesc = new AlterTableDesc();
+    alterTableDesc.setTableName(tableName);
+    alterTableDesc.setPartitionPredicateMethodDesc(partitionMethodDesc);
+    alterTableDesc.setAlterTableType(alterTableType);
+    return alterTableDesc;
+  }
+
 }

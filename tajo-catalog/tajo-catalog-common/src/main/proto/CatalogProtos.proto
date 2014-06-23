@@ -49,14 +49,25 @@ enum PartitionType {
   HASH = 1;
   LIST = 2;
   COLUMN = 3;
+  COL_PRED = 4;
 }
 
 enum AlterTableType {
   RENAME_TABLE = 0;
   RENAME_COLUMN = 1;
   ADD_COLUMN = 2;
+  ADD_COLUMN_PARTITION = 3;
+  DROP_COLUMN_PARTITION = 4;
 }
 
+enum OpType {
+  EQUAL = 0;
+  LTH = 1;
+  LEQ = 2;
+  GTH = 3;
+  GEQ = 4;
+  NOT_EQUAL = 6;
+}
 message ColumnProto {
   required string name = 1;
   required DataType dataType = 3;
@@ -64,6 +75,17 @@ message ColumnProto {
 
 message SchemaProto {
   repeated ColumnProto fields = 1;
+}
+
+message PartitionPredicateProto {
+  required string columnName = 1;
+  required DataType dataType = 2;
+  required string partitionValue = 3;
+  required OpType partitionOpType = 4;
+}
+
+message PartitionPredicateSchemaProto {
+  repeated PartitionPredicateProto predicates = 1;
 }
 
 message FragmentProto {
@@ -253,7 +275,10 @@ message PartitionMethodProto {
   required TableIdentifierProto tableIdentifier = 1;
   required PartitionType partitionType = 2;
   required string expression = 3;
-  required SchemaProto expressionSchema = 4;
+  optional SchemaProto expressionSchema = 4;
+  optional PartitionPredicateSchemaProto partitionPredicateSchema = 6;
+  optional KeyValueSetProto partitionProperties = 7;
+
 }
 
 message PartitionDescProto {
@@ -289,9 +314,10 @@ message AlterTablespaceProto {
 message AlterTableDescProto {
   required string tableName = 1;
   optional string newTableName = 2 ;
-  optional ColumnProto addColumn = 3;
+  optional ColumnProto column = 3;
   optional AlterColumnProto alterColumnName = 4;
   required AlterTableType alterTableType = 5;
+  optional PartitionMethodProto partition = 6;
 }
 
 message AlterColumnProto {

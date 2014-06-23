@@ -198,6 +198,20 @@ public class MySQLStore extends AbstractDBStore  {
         baseTableMaps.put(TB_PARTTIONS, true);
       }
 
+      // PARTITION_METHODS_STORE
+      if (!baseTableMaps.get(TB_PARTITION_METHODS_STORE)) {
+        String sql = readSchemaFile("partition_methods_store.sql");
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(sql);
+        }
+
+        stmt.executeUpdate(sql);
+        LOG.info("Table '" + TB_PARTITION_METHODS_STORE + "' is created.");
+        baseTableMaps.put(TB_PARTITION_METHODS_STORE, true);
+      }
+
+
       insertSchemaVersion();
 
     } catch (SQLException se) {
@@ -264,6 +278,7 @@ public class MySQLStore extends AbstractDBStore  {
       baseTableMaps.put(TB_INDEXES, false);
       baseTableMaps.put(TB_PARTITION_METHODS, false);
       baseTableMaps.put(TB_PARTTIONS, false);
+      baseTableMaps.put(TB_PARTITION_METHODS_STORE, false);
 
       if (res.wasNull())
         return false;

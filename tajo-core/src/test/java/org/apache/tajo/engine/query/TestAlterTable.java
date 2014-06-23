@@ -49,4 +49,18 @@ public class TestAlterTable extends QueryTestCaseBase {
     assertColumnExists(createdNames.get(0),"cool");
   }
 
+  @Test
+  public final void testAlterTableDropPartition() throws Exception {
+    List<String> createdNames = executeDDL("table1_ddl.sql", "table1.tbl", "DPART");
+    assertTableExists(createdNames.get(0));
+    executeDDL("alter_table_drop_partition_ddl.sql", null);
+  }
+
+  @Test
+  public final void testAlterTableAddPartition() throws Exception {
+    List<String> createdNames = executeDDL("table1_ddl.sql", "table1.tbl", "APART");
+    assertTableExists(createdNames.get(0));
+    executeDDL("alter_table_add_partition_ddl.sql", null);
+  }
+
 }

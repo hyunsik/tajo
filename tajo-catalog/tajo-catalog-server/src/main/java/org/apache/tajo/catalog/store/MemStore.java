@@ -238,15 +238,25 @@ public class MemStore implements CatalogStore {
       case ADD_COLUMN:
         schemaProto = tableDescProto.getSchema();
         CatalogProtos.SchemaProto newSchemaProto =
-            schemaProto.toBuilder().addFields(alterTableDescProto.getAddColumn()).build();
+            schemaProto.toBuilder().addFields(alterTableDescProto.getColumn()).build();
         newTableDescProto = tableDescProto.toBuilder().setSchema(newSchemaProto).build();
         database.put(tableName, newTableDescProto);
         break;
+      case ADD_COLUMN_PARTITION:
+        addColumnPartitionPredicate(alterTableDescProto.getPartition());
+        break;
+      case DROP_COLUMN_PARTITION:
+        dropColumnPartitionPredicate(alterTableDescProto.getPartition());
+        break;
       default:
-        //TODO
     }
   }
-
+  public void addColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    //TODO
+  }
+  public void dropColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    //TODO
+  }
   private int getIndexOfColumnToBeRenamed(List<CatalogProtos.ColumnProto> fieldList, String columnName) {
     int fieldCount = fieldList.size();
     for (int index = 0; index < fieldCount; index++) {
@@ -289,7 +299,7 @@ public class MemStore implements CatalogStore {
 
   @Override
   public void addPartitionMethod(CatalogProtos.PartitionMethodProto partitionMethodProto) throws CatalogException {
-    throw new RuntimeException("not supported!");
+    //throw new RuntimeException("not supported!");
   }
 
   @Override

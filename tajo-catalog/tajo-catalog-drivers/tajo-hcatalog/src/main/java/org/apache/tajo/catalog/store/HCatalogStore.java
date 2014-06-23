@@ -202,7 +202,7 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
           } else if (ColumnarSerDe.class.getName().equals(serde)) {
             options.put(StorageConstants.RCFILE_SERDE, StorageConstants.DEFAULT_TEXT_SERDE);
           }
-        } else if (storeType.equals(CatalogProtos.StoreType.SEQUENCEFILE) ) {
+        } else if (storeType.equals(CatalogProtos.StoreType.SEQUENCEFILE)) {
           options.put(StorageConstants.SEQUENCEFILE_DELIMITER, StringEscapeUtils.escapeJava(fieldDelimiter));
           options.put(StorageConstants.SEQUENCEFILE_NULL, StringEscapeUtils.escapeJava(nullFormat));
           String serde = properties.getProperty(serdeConstants.SERIALIZATION_LIB);
@@ -257,7 +257,7 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
         }
       }
     } finally {
-      if(client != null) client.release();
+      if (client != null) client.release();
     }
     TableMeta meta = new TableMeta(storeType, options);
 
@@ -291,7 +291,7 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
     } catch (MetaException e) {
       throw new CatalogException(e);
     } finally {
-      if(client != null) client.release();
+      if (client != null) client.release();
     }
   }
 
@@ -556,7 +556,7 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
     } catch (Exception e) {
       throw new CatalogException(e);
     } finally {
-      if(client != null) client.release();
+      if (client != null) client.release();
     }
   }
 
@@ -593,28 +593,40 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
 
     switch (alterTableDescProto.getAlterTableType()) {
       case RENAME_TABLE:
-        if (existTable(databaseName,alterTableDescProto.getNewTableName().toLowerCase())) {
+        if (existTable(databaseName, alterTableDescProto.getNewTableName().toLowerCase())) {
           throw new AlreadyExistsTableException(alterTableDescProto.getNewTableName());
         }
         renameTable(databaseName, tableName, alterTableDescProto.getNewTableName().toLowerCase());
         break;
       case RENAME_COLUMN:
-        if (existColumn(databaseName,tableName, alterTableDescProto.getAlterColumnName().getNewColumnName())) {
+        if (existColumn(databaseName, tableName, alterTableDescProto.getAlterColumnName().getNewColumnName())) {
           throw new ColumnNameAlreadyExistException(alterTableDescProto.getAlterColumnName().getNewColumnName());
         }
         renameColumn(databaseName, tableName, alterTableDescProto.getAlterColumnName());
         break;
       case ADD_COLUMN:
-        if (existColumn(databaseName,tableName, alterTableDescProto.getAddColumn().getName())) {
-          throw new ColumnNameAlreadyExistException(alterTableDescProto.getAddColumn().getName());
+        if (existColumn(databaseName, tableName, alterTableDescProto.getColumn().getName())) {
+          throw new ColumnNameAlreadyExistException(alterTableDescProto.getColumn().getName());
         }
-        addNewColumn(databaseName, tableName, alterTableDescProto.getAddColumn());
+        addNewColumn(databaseName, tableName, alterTableDescProto.getColumn());
+        break;
+      case ADD_COLUMN_PARTITION:
+        addColumnPartitionPredicate(alterTableDescProto.getPartition());
+        break;
+      case DROP_COLUMN_PARTITION:
+        dropColumnPartitionPredicate(alterTableDescProto.getPartition());
         break;
       default:
-        //TODO
     }
   }
 
+  public void addColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    //TODO
+  }
+
+  public void dropColumnPartitionPredicate(final CatalogProtos.PartitionMethodProto proto) throws CatalogException {
+    //TODO
+  }
 
   private void renameTable(String databaseName, String tableName, String newTableName) {
     HCatalogStoreClientPool.HCatalogStoreClient client = null;
@@ -801,7 +813,7 @@ public class HCatalogStore extends CatalogConstants implements CatalogStore {
     clientPool.close();
   }
 
-  private boolean existColumn(final String databaseName ,final String tableName , final String columnName) throws CatalogException {
+  private boolean existColumn(final String databaseName, final String tableName, final String columnName) throws CatalogException {
     boolean exist = false;
     HCatalogStoreClientPool.HCatalogStoreClient client = null;
 

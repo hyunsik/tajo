@@ -191,6 +191,19 @@ truncate_table_statement
   : TRUNCATE (TABLE)? table_name (COMMA table_name)*
   ;
 
+
+partition_key_value_list
+  : LEFT_PAREN comparison_predicate (COMMA comparison_predicate)* RIGHT_PAREN
+  ;
+
+partition_property_key_value
+  : key=Character_String_Literal EQUAL value=Character_String_Literal
+  ;
+
+partition_property_key_value_list
+  : LEFT_PAREN partition_property_key_value (COMMA partition_property_key_value)* RIGHT_PAREN
+  ;
+
 /*
 ===============================================================================
   11.21 <data types>
@@ -1455,4 +1468,6 @@ alter_table_statement
   : ALTER TABLE table_name RENAME TO table_name
   | ALTER TABLE table_name RENAME COLUMN column_name TO column_name
   | ALTER TABLE table_name ADD COLUMN field_element
+  | ALTER TABLE table_name (if_not_exists)? ADD COLUMN PARTITION partition_key_value_list (WITH  partition_property_key_value_list)? LOCATION path=Character_String_Literal
+  | ALTER TABLE table_name (if_exists)? DROP COLUMN PARTITION partition_key_value_list
   ;

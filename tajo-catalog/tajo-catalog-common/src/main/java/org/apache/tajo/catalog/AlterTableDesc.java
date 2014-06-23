@@ -21,6 +21,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import org.apache.tajo.catalog.json.CatalogGsonHelper;
+import org.apache.tajo.catalog.partition.PartitionPredicateMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.common.ProtoObject;
 import org.apache.tajo.json.GsonObject;
@@ -41,7 +42,9 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
   @Expose
   protected String newColumnName; //optional
   @Expose
-  protected Column addColumn = null; //optiona
+  protected Column column = null; //optional
+  @Expose
+  protected PartitionPredicateMethodDesc partitionPredicateMethodDesc; // optional
 
   public AlterTableDesc() {
     builder = CatalogProtos.AlterTableDescProto.newBuilder();
@@ -80,12 +83,12 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
     this.newColumnName = newColumnName;
   }
 
-  public Column getAddColumn() {
-    return addColumn;
+  public Column getColumn() {
+    return column;
   }
 
-  public void setAddColumn(Column addColumn) {
-    this.addColumn = addColumn;
+  public void setColumn(Column column) {
+    this.column = column;
   }
 
   public AlterTableType getAlterTableType() {
@@ -94,6 +97,14 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
 
   public void setAlterTableType(AlterTableType alterTableType) {
     this.alterTableType = alterTableType;
+  }
+
+   public PartitionPredicateMethodDesc getPartitionPredicateMethodDesc() {
+    return partitionPredicateMethodDesc;
+  }
+
+  public void setPartitionPredicateMethodDesc(PartitionPredicateMethodDesc partitionMethodDesc) {
+    this.partitionPredicateMethodDesc = partitionMethodDesc;
   }
 
   @Override
@@ -111,7 +122,8 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
     newAlter.tableName = tableName;
     newAlter.newTableName = newTableName;
     newAlter.columnName = newColumnName;
-    newAlter.addColumn = addColumn;
+    newAlter.column = column;
+    newAlter.partitionPredicateMethodDesc = partitionPredicateMethodDesc;
     return newAlter;
   }
 
@@ -137,10 +149,12 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
       alterColumnBuilder.setNewColumnName(this.newColumnName);
       builder.setAlterColumnName(alterColumnBuilder.build());
     }
-    if (null != this.addColumn) {
-      builder.setAddColumn(addColumn.getProto());
+    if (null != this.column) {
+      builder.setColumn(column.getProto());
     }
-
+    if (null != partitionPredicateMethodDesc) {
+      builder.setPartition(partitionPredicateMethodDesc.getProto());
+    }
     switch (alterTableType) {
       case RENAME_TABLE:
         builder.setAlterTableType(CatalogProtos.AlterTableType.RENAME_TABLE);
@@ -150,6 +164,12 @@ public class AlterTableDesc implements ProtoObject<CatalogProtos.AlterTableDescP
         break;
       case ADD_COLUMN:
         builder.setAlterTableType(CatalogProtos.AlterTableType.ADD_COLUMN);
+        break;
+      case ADD_COLUMN_PARTITION:
+        builder.setAlterTableType(CatalogProtos.AlterTableType.ADD_COLUMN_PARTITION);
+        break;
+      case DROP_COLUMN_PARTITION:
+        builder.setAlterTableType(CatalogProtos.AlterTableType.DROP_COLUMN_PARTITION);
         break;
       default:
     }

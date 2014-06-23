@@ -179,63 +179,6 @@ public class CreateTable extends Expr {
         ifNotExists == another.ifNotExists;
   }
 
-  public static enum PartitionType {
-    RANGE,
-    HASH,
-    LIST,
-    COLUMN
-  }
-
-  public static abstract class PartitionMethodDescExpr {
-    @Expose @SerializedName("PartitionType")
-    PartitionType type;
-
-    public PartitionMethodDescExpr(PartitionType type) {
-      this.type = type;
-    }
-
-    public PartitionType getPartitionType() {
-      return type;
-    }
-
-    static class JsonSerDer implements JsonSerializer<PartitionMethodDescExpr>,
-        JsonDeserializer<PartitionMethodDescExpr> {
-
-      @Override
-      public PartitionMethodDescExpr deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-          throws JsonParseException {
-        JsonObject jsonObject = json.getAsJsonObject();
-        PartitionType type = PartitionType.valueOf(jsonObject.get("PartitionType").getAsString());
-        switch (type) {
-          case RANGE:
-            return context.deserialize(json, RangePartition.class);
-          case HASH:
-            return context.deserialize(json, HashPartition.class);
-          case LIST:
-            return context.deserialize(json, ListPartition.class);
-          case COLUMN:
-            return context.deserialize(json, ColumnPartition.class);
-        }
-        return null;
-      }
-
-      @Override
-      public JsonElement serialize(PartitionMethodDescExpr src, Type typeOfSrc, JsonSerializationContext context) {
-        switch (src.getPartitionType()) {
-          case RANGE:
-            return context.serialize(src, RangePartition.class);
-          case HASH:
-            return context.serialize(src, HashPartition.class);
-          case LIST:
-            return context.serialize(src, ListPartition.class);
-          case COLUMN:
-            return context.serialize(src, ColumnPartition.class);
-          default:
-            return null;
-        }
-      }
-    }
-  }
 
   public static class RangePartition extends PartitionMethodDescExpr {
     @Expose @SerializedName("Columns")

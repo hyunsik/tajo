@@ -78,7 +78,6 @@ public interface CatalogStore extends Closeable {
 
   void dropPartitionMethod(String dbName, String tableName) throws CatalogException;
 
-
   /************************** PARTITIONS *****************************/
   void addPartitions(CatalogProtos.PartitionsProto partitionsProto) throws CatalogException;
 

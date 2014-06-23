@@ -586,13 +586,20 @@ public class GlobalEngine extends AbstractService {
         catalog.alterTable(CatalogUtil.renameColumn(qualifiedName, alterTable.getColumnName(), alterTable.getNewColumnName(), AlterTableType.RENAME_COLUMN));
         break;
       case ADD_COLUMN:
-        if (existColumnName(qualifiedName, alterTable.getAddNewColumn().getSimpleName())) {
-          throw new ColumnNameAlreadyExistException(alterTable.getAddNewColumn().getSimpleName());
+        if (existColumnName(qualifiedName, alterTable.getColumn().getSimpleName())) {
+          throw new ColumnNameAlreadyExistException(alterTable.getColumn().getSimpleName());
         }
-        catalog.alterTable(CatalogUtil.addNewColumn(qualifiedName, alterTable.getAddNewColumn(), AlterTableType.ADD_COLUMN));
+        catalog.alterTable(CatalogUtil.addNewColumn(qualifiedName, alterTable.getColumn(), AlterTableType.ADD_COLUMN));
+        break;
+      case ADD_COLUMN_PARTITION:
+        catalog.alterTable(CatalogUtil.addPartition(qualifiedName, alterTable.getPartition(), AlterTableType.ADD_COLUMN_PARTITION));
+        //alterTable.getPath();
+        //TODO Create directory in HDFS
+        break;
+      case DROP_COLUMN_PARTITION:
+        catalog.alterTable(CatalogUtil.dropPartition(qualifiedName, alterTable.getPartition(), AlterTableType.DROP_COLUMN_PARTITION));
         break;
       default:
-        //TODO
     }
   }
 

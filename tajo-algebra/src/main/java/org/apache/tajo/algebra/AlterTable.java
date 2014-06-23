@@ -24,6 +24,8 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import org.apache.tajo.util.TUtil;
 
+import java.util.Map;
+
 public class AlterTable extends Expr {
 
   @Expose @SerializedName("OldTableName")
@@ -35,9 +37,15 @@ public class AlterTable extends Expr {
   @Expose @SerializedName("NewColumnName")
   private String newColumnName;
   @Expose @SerializedName("NewColumnDef")
-  private ColumnDefinition addNewColumn;
+  private ColumnDefinition column;
   @Expose @SerializedName("AlterTableType")
   private AlterTableOpType alterTableOpType;
+  @Expose @SerializedName("Partition")
+  private PartitionMethodDescExpr partition;
+  @Expose @SerializedName("PartitionProperties")
+  private Map<String, String> partitionProperties;
+  @Expose @SerializedName("Location")
+  private String location;
 
   public AlterTable(final String tableName) {
     super(OpType.AlterTable);
@@ -77,12 +85,12 @@ public class AlterTable extends Expr {
     this.newColumnName = newColumnName;
   }
 
-  public ColumnDefinition getAddNewColumn() {
-    return addNewColumn;
+  public ColumnDefinition getColumn() {
+    return column;
   }
 
-  public void setAddNewColumn(ColumnDefinition addNewColumn) {
-    this.addNewColumn = addNewColumn;
+  public void setColumn(ColumnDefinition column) {
+    this.column = column;
   }
 
   public AlterTableOpType getAlterTableOpType() {
@@ -93,15 +101,44 @@ public class AlterTable extends Expr {
     this.alterTableOpType = alterTableOpType;
   }
 
+  public PartitionMethodDescExpr getPartition() {
+    return partition;
+  }
+
+  public void setPartition(PartitionMethodDescExpr partition) {
+    this.partition = partition;
+  }
+
+  public Map<String, String> getPartitionProperties() {
+    return partitionProperties;
+  }
+
+  public void setPartitionProperties(Map<String, String> partitionProperties) {
+    this.partitionProperties = partitionProperties;
+  }
+  public boolean hasLocation() {
+    return location != null;
+  }
+
+  public String getLocation() {
+    return this.location;
+  }
+
+  public void setLocation(String location) {
+    this.location = location;
+  }
+
   @Override
   public int hashCode() {
     return Objects.hashCode(tableName,
         null != newTableName ? Objects.hashCode(newTableName) : newTableName,
         null != columnName ? Objects.hashCode(columnName) : columnName,
         null != newColumnName ? Objects.hashCode(newColumnName) : newColumnName,
-        null != addNewColumn ? Objects.hashCode(addNewColumn) : addNewColumn,
-        null != alterTableOpType ? Objects.hashCode(alterTableOpType) : alterTableOpType);
-
+        null != column ? Objects.hashCode(column) : column,
+        null != alterTableOpType ? Objects.hashCode(alterTableOpType) : alterTableOpType,
+        null != partition ? Objects.hashCode(partition) : partition,
+        null != partitionProperties ? Objects.hashCode(partitionProperties) : partitionProperties,
+        null != location ? Objects.hashCode(location) : location);
   }
 
   @Override
@@ -111,9 +148,11 @@ public class AlterTable extends Expr {
         TUtil.checkEquals(newTableName, another.newTableName) &&
         TUtil.checkEquals(columnName, another.columnName) &&
         TUtil.checkEquals(newColumnName, another.newColumnName) &&
-        TUtil.checkEquals(addNewColumn, another.addNewColumn) &&
-        TUtil.checkEquals(alterTableOpType, another.alterTableOpType);
+        TUtil.checkEquals(column, another.column) &&
+        TUtil.checkEquals(alterTableOpType, another.alterTableOpType) &&
+        TUtil.checkEquals(partition, another.partition) &&
+        TUtil.checkEquals(partitionProperties, another.partitionProperties) &&
+        TUtil.checkEquals(location, another.location) ;
   }
-
 
 }

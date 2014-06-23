@@ -17,6 +17,32 @@
  */
 package org.apache.tajo.algebra;
 
-public enum AlterTableOpType {
-  RENAME_TABLE, RENAME_COLUMN, ADD_COLUMN, ADD_COLUMN_PARTITION, DROP_COLUMN_PARTITION
+
+import com.google.common.base.Objects;
+import org.apache.tajo.util.TUtil;
+
+public class ColumnPredicatePartition extends PartitionMethodDescExpr {
+
+  private BinaryOperator [] partitionPredicates;
+
+  public ColumnPredicatePartition(BinaryOperator[] columns) {
+    super(PartitionType.COL_PRED);
+    this.partitionPredicates = columns;
+  }
+
+  public BinaryOperator [] getPartitionPredicates() {
+    return partitionPredicates;
+  }
+
+  public int hashCode() {
+    return Objects.hashCode(partitionPredicates);
+  }
+
+  public boolean equals(Object object) {
+    if (object instanceof ColumnPredicatePartition) {
+      ColumnPredicatePartition another = (ColumnPredicatePartition) object;
+      return type == another.type && TUtil.checkEquals(partitionPredicates, another.partitionPredicates) ;
+    }
+    return false;
+  }
 }

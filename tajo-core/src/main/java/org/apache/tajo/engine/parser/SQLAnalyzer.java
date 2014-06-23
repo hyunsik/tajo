@@ -758,7 +758,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
   public Expr visitIn_predicate_value(SQLParser.In_predicate_valueContext ctx) {
     if (checkIfExist(ctx.in_value_list())) {
       int size = ctx.in_value_list().row_value_predicand().size();
-      Expr [] exprs = new Expr[size];
+      Expr[] exprs = new Expr[size];
       for (int i = 0; i < size; i++) {
         exprs[i] = visitRow_value_predicand(ctx.in_value_list().row_value_predicand(i));
       }
@@ -1121,7 +1121,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
 
       for (List_value_partitionContext listValuePartition : partitions) {
         int size = listValuePartition.in_value_list().row_value_predicand().size();
-        Expr [] exprs = new Expr[size];
+        Expr[] exprs = new Expr[size];
         for (int i = 0; i < size; i++) {
           exprs[i] = visitRow_value_predicand(listValuePartition.in_value_list().row_value_predicand(i));
         }
@@ -1131,7 +1131,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
       return new ListPartition(getColumnReferences(ctx.list_partitions().column_reference_list()), specifiers);
 
     } else if (checkIfExist(ctx.column_partitions())) { // For Column Partition (Hive Style)
-      return new CreateTable.ColumnPartition(getDefinitions(ctx.column_partitions().table_elements()), true);
+      return new ColumnPartition(getDefinitions(ctx.column_partitions().table_elements()), true);
     } else {
       throw new SQLSyntaxError("Invalid Partition Type: " + ctx.toStringTree());
     }
@@ -1525,7 +1525,7 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
   }
 
   @Override
-  public Expr visitAlter_table_statement(SQLParser.Alter_table_statementContext ctx) {
+  public Expr visitAlter_table_statement(final SQLParser.Alter_table_statementContext ctx) {
 
     final List<Table_nameContext> tables = ctx.table_name();
 
@@ -1546,37 +1546,57 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
       final String name = field_elementContext.name.getText();
       final DataTypeExpr typeDef = visitData_type(field_elementContext.field_type().data_type());
       final ColumnDefinition columnDefinition = new ColumnDefinition(name, typeDef);
-      alterTable.setAddNewColumn(columnDefinition);
+      alterTable.setColumn(columnDefinition);
     }
 
-    alterTable.setAlterTableOpType(determineAlterTableType(ctx));
+    if (checkIfExist(ctx.partition_key_value_list())) {
+      final ColumnPredicatePartition partition = getPartitionPredicates(ctx.partition_key_value_list());
+      alterTable.setPartition(partition);
+      if (checkIfExist(ctx.partition_property_key_value_list())) {
+        final Map<String, String> partitionProperties = getPartitionProperties(ctx.partition_property_key_value_list());
+        alterTable.setPartitionProperties(partitionProperties);
+      }
+    }
+
+    AlterTableOpType alterTableOpType = determineAlterTableType(ctx);
+    if (alterTableOpType == AlterTableOpType.ADD_COLUMN_PARTITION) {
+      String path = stripQuote(ctx.path.getText());
+      alterTable.setLocation(path);
+    }
+    alterTable.setAlterTableOpType(alterTableOpType);
 
     return alterTable;
   }
 
-  private AlterTableOpType determineAlterTableType(SQLParser.Alter_table_statementContext ctx) {
+  private AlterTableOpType determineAlterTableType(final SQLParser.Alter_table_statementContext ctx) {
 
-    final int RENAME_MASK = 00000001;
-    final int COLUMN_MASK = 00000010;
-    final int TO_MASK = 00000100;
-    final int ADD_MASK = 00001000;
-
-    int val = 00000000;
+    final int RENAME_POS = 1;
+    final int COLUMN_POS = 2;
+    final int TO_POS = 3;
+    final int ADD_POS = 4;
+    final int DROP_POS = 5 ;
+    final int PARTITION_POS = 6;
+    int val = 0;
 
     for (int idx = 1; idx < ctx.getChildCount(); idx++) {
-
       if (ctx.getChild(idx) instanceof TerminalNode) {
         if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == RENAME) {
-          val = val | RENAME_MASK;
+          val =  setBit(val,RENAME_POS);
         }
         if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == COLUMN) {
-          val = val | COLUMN_MASK;
+          val = setBit(val, COLUMN_POS);
         }
         if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == TO) {
-          val = val | TO_MASK;
+          val =  setBit(val,TO_POS);
         }
         if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == ADD) {
-          val = val | ADD_MASK;
+          val =  setBit(val,ADD_POS);
+        }
+        if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == DROP) {
+          val =  setBit(val,DROP_POS);
+        }
+        if (((TerminalNode) ctx.getChild(idx)).getSymbol().getType() == PARTITION) {
+          val =  setBit(val,PARTITION_POS);
         }
       }
     }
@@ -1586,14 +1606,103 @@ public class SQLAnalyzer extends SQLParserBaseVisitor<Expr> {
   private AlterTableOpType evaluateAlterTableOperationTye(final int value) {
 
     switch (value) {
-      case 65:
+      case 10:
         return AlterTableOpType.RENAME_TABLE;
-      case 73:
+      case 14:
         return AlterTableOpType.RENAME_COLUMN;
-      case 520:
+      case 20:
         return AlterTableOpType.ADD_COLUMN;
+      case 84:
+        return AlterTableOpType.ADD_COLUMN_PARTITION;
+      case 100:
+        return AlterTableOpType.DROP_COLUMN_PARTITION;
       default:
         return null;
     }
   }
+
+  private ColumnPredicatePartition getPartitionPredicates(final Partition_key_value_listContext ctx) {
+    final BinaryOperator columnValueType[] = new BinaryOperator[ctx.comparison_predicate().size()];
+    for (int i = 0; i < ctx.comparison_predicate().size(); i++) {
+      BinaryOperator partitionPredicate = visitComparison_predicate(ctx.comparison_predicate(i));
+      columnValueType[i] = partitionPredicate;
+    }
+    return new ColumnPredicatePartition(columnValueType);
+  }
+
+
+  private Map<String, String> getPartitionProperties(final Partition_property_key_value_listContext ctx) {
+    final Map<String, String> partitionProperties = new HashMap<String, String>();
+    for (int i = 0; i < ctx.partition_property_key_value().size(); i++) {
+      partitionProperties.put(stripQuote(ctx.partition_property_key_value(i).key.getText()), stripQuote(ctx.partition_property_key_value(i).value.getText()));
+    }
+    return partitionProperties;
+  }
+
+  public int setBit(int val , final int position) {
+    return val | (1 << position);
+  }
+
+  /*public String findType(final String string) {
+
+    final int length = string.length();
+    final int array[] = new int[6];
+    boolean flag = false;
+
+    for (int i = 0; i < length; i++) {
+      char c = string.charAt(i);
+      switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+          if (!flag) {
+            array[1] = array[1] + 1;
+          } else {
+            array[5] = array[5] + 1;
+          }
+          break;
+        case '-':
+          if (i == 4 || i == 7) {
+            array[3] = array[3] + 1;
+            flag = true;
+          }
+          break;
+        case '.':
+          array[2] = array[2] + 1;
+          flag = true;
+          break;
+        case '/':
+          if (i == 4 || i == 7) {
+            array[4] = array[4] + 1;
+            flag = true;
+          }
+          break;
+        default:
+          array[0] = array[0] + 1;
+      }
+    }
+
+    if (array[0] > 0) {
+      return "TEXT";
+    }
+    final int dateWithDash = array[1] + array[3] + array[5];
+    final int dateWithSlash = array[1] + array[4] + array[5];
+    if ((array[3] == 2 || array[4] == 2) && (dateWithDash == length || dateWithSlash == length)) {
+      return "DATE";
+    }
+    if (array[2] == 1 && (array[1] + array[2] + array[5]) == length) {
+      return null == Floats.tryParse(string) ? "FLOAT8" : "FLOAT4";
+    }
+    if (array[1] == length) {
+      return null == Ints.tryParse(string) ? "INT8" : "INT4";
+    }
+    return "TEXT";
+  }*/
 }

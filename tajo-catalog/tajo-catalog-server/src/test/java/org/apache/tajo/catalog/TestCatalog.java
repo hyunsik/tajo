@@ -19,12 +19,14 @@
 package org.apache.tajo.catalog;
 
 import com.google.common.collect.Sets;
+import org.apache.commons.compress.archivers.dump.DumpArchiveEntry;
 import org.apache.hadoop.fs.Path;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.catalog.exception.CatalogException;
 import org.apache.tajo.catalog.exception.NoSuchFunctionException;
 import org.apache.tajo.catalog.function.Function;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
+import org.apache.tajo.catalog.partition.PartitionPredicateMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.catalog.proto.CatalogProtos.FunctionType;
 import org.apache.tajo.catalog.proto.CatalogProtos.IndexMethod;
@@ -749,23 +751,36 @@ public class TestCatalog {
   public void testAlterTableName () throws Exception {
 
     //CREATE_TABLE
-    TableDesc tableRenameTestDesc = createMockupTable("default", "mycooltable") ;
+    TableDesc tableRenameTestDesc = createMockupTable(DEFAULT_DATABASE_NAME, "mycooltable") ;
     catalog.createTable(tableRenameTestDesc);
 
     //RENAME_TABLE
     catalog.alterTable(createMockAlterTableName());
-    assertTrue(catalog.existsTable("default", "mynewcooltable"));
+    assertTrue(catalog.existsTable(DEFAULT_DATABASE_NAME, "mynewcooltable"));
 
     //RENAME_COLUMN
     catalog.alterTable(createMockAlterTableRenameColumn());
-    TableDesc columnRenameDesc = catalog.getTableDesc("default","mynewcooltable");
+    TableDesc columnRenameDesc = catalog.getTableDesc(DEFAULT_DATABASE_NAME,"mynewcooltable");
     assertTrue(columnRenameDesc.getSchema().containsByName("ren"+FieldName1));
 
     //ADD_COLUMN
     catalog.alterTable(createMockAlterTableAddColumn());
-    TableDesc addColumnDesc = catalog.getTableDesc("default","mynewcooltable");
+    TableDesc addColumnDesc = catalog.getTableDesc(DEFAULT_DATABASE_NAME,"mynewcooltable");
     assertTrue(addColumnDesc.getSchema().containsByName("mynewcol"));
 
+    catalog.alterTable(createMockAlterTableAddPartition());
+
+  }
+
+  @Test
+  public void testTTT() throws Exception {
+    //CREATE_TABLE
+    TableDesc tableRenameTestDesc = createMockupTable(DEFAULT_DATABASE_NAME, "mycooltable") ;
+    //ADD_COLUMN_PARTITION
+    catalog.createTable(tableRenameTestDesc);
+    catalog.alterTable(createMockAlterTableAddPartition());
+    //DROP_COLUMN_PARTITION
+    catalog.alterTable(createMockAlterTableDropPartition());
   }
 
   private AlterTableDesc createMockAlterTableName(){
@@ -788,8 +803,44 @@ public class TestCatalog {
   private AlterTableDesc createMockAlterTableAddColumn(){
     AlterTableDesc alterTableDesc = new AlterTableDesc();
     alterTableDesc.setTableName("default.mynewcooltable");
-    alterTableDesc.setAddColumn(new Column("mynewcol", Type.TEXT));
+    alterTableDesc.setColumn(new Column("mynewcol", Type.TEXT));
     alterTableDesc.setAlterTableType(AlterTableType.ADD_COLUMN);
+    return alterTableDesc;
+  }
+
+  private AlterTableDesc createMockAlterTableAddPartition() {
+    AlterTableDesc alterTableDesc = new AlterTableDesc();
+    alterTableDesc.setTableName("default.mycooltable");
+
+    alterTableDesc.setAlterTableType(AlterTableType.ADD_COLUMN_PARTITION);
+
+    PartitionPredicateSchema predicateSchema =  new PartitionPredicateSchema();
+    PartitionPredicate predicate = new PartitionPredicate("id" , "1", CatalogUtil.newSimpleDataType(Type.INT4), CatalogProtos.OpType.EQUAL);
+    predicateSchema.addPredicate(predicate);
+
+    PartitionPredicateMethodDesc partitionDesc =
+        new PartitionPredicateMethodDesc(DEFAULT_DATABASE_NAME, "mycooltable",
+            CatalogProtos.PartitionType.COL_PRED, "id", predicateSchema);
+
+    alterTableDesc.setPartitionPredicateMethodDesc(partitionDesc);
+    return alterTableDesc;
+  }
+
+  private AlterTableDesc createMockAlterTableDropPartition() {
+    AlterTableDesc alterTableDesc = new AlterTableDesc();
+    alterTableDesc.setTableName("default.mycooltable");
+
+    alterTableDesc.setAlterTableType(AlterTableType.DROP_COLUMN_PARTITION);
+
+    PartitionPredicateSchema predicateSchema =  new PartitionPredicateSchema();
+    PartitionPredicate predicate = new PartitionPredicate("id" , "1", CatalogUtil.newSimpleDataType(Type.INT4), CatalogProtos.OpType.EQUAL);
+    predicateSchema.addPredicate(predicate);
+
+    PartitionPredicateMethodDesc partitionDesc =
+        new PartitionPredicateMethodDesc(DEFAULT_DATABASE_NAME, "mycooltable",
+            CatalogProtos.PartitionType.COL_PRED, "id", predicateSchema);
+
+    alterTableDesc.setPartitionPredicateMethodDesc(partitionDesc);
     return alterTableDesc;
   }
 

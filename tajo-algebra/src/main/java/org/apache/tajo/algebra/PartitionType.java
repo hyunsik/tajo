@@ -15,8 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.tajo.algebra;
 
-public enum AlterTableOpType {
-  RENAME_TABLE, RENAME_COLUMN, ADD_COLUMN, ADD_COLUMN_PARTITION, DROP_COLUMN_PARTITION
+
+public enum PartitionType {
+  RANGE,
+  HASH,
+  LIST,
+  COLUMN,
+  COL_PRED,
 }

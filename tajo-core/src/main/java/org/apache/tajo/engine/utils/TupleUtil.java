@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.Schema;
@@ -44,11 +46,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TupleUtil {
-
-  public static String rangeToQuery(Schema schema, TupleRange range, boolean last)
-      throws UnsupportedEncodingException {
-    return rangeToQuery(range, last, RowStoreUtil.createEncoder(schema));
-  }
+  private static final Log LOG = LogFactory.getLog(TupleUtil.class);
 
   public static String rangeToQuery(TupleRange range, boolean last, RowStoreEncoder encoder)
       throws UnsupportedEncodingException {
@@ -72,7 +70,42 @@ public class TupleUtil {
     return sb.toString();
   }
 
-  public static TupleRange columnStatToRange(SortSpec [] sortSpecs, Schema target, List<ColumnStats> colStats) {
+  /**
+   * if max value is null, set ranges[last]
+   * @param sortSpecs
+   * @param sortSchema
+   * @param colStats
+   * @param ranges
+   */
+  public static void setMaxRangeIfNull(SortSpec[] sortSpecs, Schema sortSchema,
+                                       List<ColumnStats> colStats, TupleRange[] ranges) {
+    Map<Column, ColumnStats> statMap = Maps.newHashMap();
+    for (ColumnStats stat : colStats) {
+      statMap.put(stat.getColumn(), stat);
+    }
+
+    int i = 0;
+    for (Column col : sortSchema.getColumns()) {
+      ColumnStats columnStat = statMap.get(col);
+      if (columnStat == null) {
+        continue;
+      }
+      if (columnStat.isMaxValueNull()) {
+        int rangeIndex = sortSpecs[i].isAscending() ? ranges.length - 1 : 0;
+        VTuple rangeTuple = sortSpecs[i].isAscending() ? (VTuple) ranges[rangeIndex].getEnd() :
+            (VTuple) ranges[rangeIndex].getStart();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Set null into range: " + col.getQualifiedName() + ", previous tuple is " + rangeTuple);
+        }
+        rangeTuple.put(i, NullDatum.get());
+        LOG.info("Set null into range: " + col.getQualifiedName() + ", current tuple is " + rangeTuple);
+      }
+      i++;
+    }
+  }
+
+  public static TupleRange columnStatToRange(SortSpec [] sortSpecs, Schema target, List<ColumnStats> colStats,
+                                             boolean checkNull) {
 
     Map<Column, ColumnStats> statSet = Maps.newHashMap();
     for (ColumnStats stat : colStats) {
@@ -98,16 +131,29 @@ public class TupleUtil {
         else
           startTuple.put(i, DatumFactory.createNullDatum());
 
-        if (statSet.get(col).getMaxValue() != null)
-          endTuple.put(i, statSet.get(col).getMaxValue());
-        else
-          endTuple.put(i, DatumFactory.createNullDatum());
+        if (checkNull) {
+          if (statSet.get(col).isMaxValueNull() || statSet.get(col).getMaxValue() == null)
+            endTuple.put(i, DatumFactory.createNullDatum());
+          else
+            endTuple.put(i, statSet.get(col).getMaxValue());
+        } else {
+          if (statSet.get(col).getMaxValue() != null)
+            endTuple.put(i, statSet.get(col).getMaxValue());
+          else
+            endTuple.put(i, DatumFactory.createNullDatum());
+        }
       } else {
-        if (statSet.get(col).getMaxValue() != null)
-          startTuple.put(i, statSet.get(col).getMaxValue());
-        else
-          startTuple.put(i, DatumFactory.createNullDatum());
-
+        if (checkNull) {
+          if (statSet.get(col).isMaxValueNull() || statSet.get(col).getMaxValue() == null)
+            startTuple.put(i, DatumFactory.createNullDatum());
+          else
+            startTuple.put(i, statSet.get(col).getMaxValue());
+        } else {
+          if (statSet.get(col).getMaxValue() != null)
+            startTuple.put(i, statSet.get(col).getMaxValue());
+          else
+            startTuple.put(i, DatumFactory.createNullDatum());
+        }
         if (statSet.get(col).getMinValue() != null)
           endTuple.put(i, statSet.get(col).getMinValue());
         else

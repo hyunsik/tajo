@@ -103,4 +103,17 @@ public class TestJoinOnPartitionedTables extends QueryTestCaseBase {
 
     executeString("DROP TABLE customer_parts PURGE").close();
   }
+
+  @Test
+  public void testComplexFilterPushDownPartition() throws Exception {
+    executeDDL("customer_ddl.sql", null);
+    ResultSet res = executeFile("insert_into_customer.sql");
+    res.close();
+
+    res = executeQuery();
+    assertResultSet(res);
+    res.close();
+
+    executeString("DROP TABLE customer_parts PURGE").close();
+  }
 }

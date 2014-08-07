@@ -79,9 +79,11 @@ public class NamedExprsManager {
   private BiMap<String, String> aliasedColumnMap = HashBiMap.create();
 
   private LogicalPlan plan;
+  private LogicalPlan.QueryBlock block;
 
-  public NamedExprsManager(LogicalPlan plan) {
+  public NamedExprsManager(LogicalPlan plan, LogicalPlan.QueryBlock block) {
     this.plan = plan;
+    this.block = block;
   }
 
   private int getNextId() {
@@ -154,6 +156,10 @@ public class NamedExprsManager {
    * It specifies the alias as an reference name.
    */
   public String addExpr(Expr expr, String alias) throws PlanningException {
+
+    if (OpType.isLiteralType(expr.getType())) {
+      return alias;
+    }
 
     // if this name already exists, just returns the name.
     if (nameToIdMap.containsKey(alias)) {

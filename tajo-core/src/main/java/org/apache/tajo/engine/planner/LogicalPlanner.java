@@ -346,8 +346,18 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       }
 
       if (matcher.isMatch(namedExpr.getExpr())) {
-        // dissect an expression into multiple parts (at most dissected into three parts)
-        normalizedExprList[i] = normalizer.normalize(context, namedExpr.getExpr());
+
+        if (!namedExpr.hasAlias() && OpType.isLiteralType(namedExpr.getExpr().getType())) {
+          String generatedName = context.plan.generateUniqueColumnName(namedExpr.getExpr());
+          ConstEval constEval = (ConstEval) exprAnnotator.createEvalNode(context, namedExpr.getExpr(),
+              NameResolvingMode.RELS_ONLY);
+          context.getQueryBlock().addConst(generatedName, constEval);
+          normalizedExprList[i] = new ExprNormalizedResult(context, false);
+          normalizedExprList[i].baseExpr = new ColumnReferenceExpr(generatedName);
+        } else {
+          // dissect an expression into multiple parts (at most dissected into three parts)
+          normalizedExprList[i] = normalizer.normalize(context, namedExpr.getExpr());
+        }
         targetIds.add(i);
       }
     }
@@ -412,14 +422,17 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     Target [] targets = new Target[referenceNames.length];
 
     for (int i = 0; i < referenceNames.length; i++) {
-      if (block.namedExprsMgr.isEvaluated(referenceNames[i])) {
-        targets[i] = block.namedExprsMgr.getTarget(referenceNames[i]);
+      String refName = referenceNames[i];
+      if (block.isConstReference(refName)) {
+        targets[i] = new Target(block.getConstByReference(refName), refName);
+      } else if (block.namedExprsMgr.isEvaluated(refName)) {
+        targets[i] = block.namedExprsMgr.getTarget(refName);
       } else {
-        NamedExpr namedExpr = block.namedExprsMgr.getNamedExpr(referenceNames[i]);
+        NamedExpr namedExpr = block.namedExprsMgr.getNamedExpr(refName);
         EvalNode evalNode = exprAnnotator.createEvalNode(context, namedExpr.getExpr(),
             NameResolvingMode.RELS_AND_SUBEXPRS);
-        block.namedExprsMgr.markAsEvaluated(referenceNames[i], evalNode);
-        targets[i] = new Target(evalNode, referenceNames[i]);
+        block.namedExprsMgr.markAsEvaluated(refName, evalNode);
+        targets[i] = new Target(evalNode, refName);
       }
     }
     return targets;

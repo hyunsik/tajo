@@ -30,7 +30,7 @@ import java.util.Stack;
  * In order to maximize the effectiveness of constant folding, ConstantPropagation should be performed prior to
  * constant folding.
  */
-@Prioritized(priority = 10)
+@Prioritized(priority = 15)
 public class ConstantPropagation extends SimpleEvalNodeVisitor<LogicalPlanner.PlanContext>
     implements EvalTreeOptimizationRule {
 

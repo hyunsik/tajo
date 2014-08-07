@@ -194,6 +194,35 @@ public class LogicalPlan {
       FunctionExpr function = (FunctionExpr) expr;
       prefix = function.getSignature();
       break;
+    case Literal:
+      LiteralValue literal = (LiteralValue) expr;
+      switch (literal.getValueType()) {
+      case Boolean:
+        prefix = "bool";
+        break;
+      case String:
+        prefix = "text";
+        break;
+      case Unsigned_Integer:
+      case Unsigned_Large_Integer:
+        prefix = "number";
+        break;
+      case Unsigned_Float:
+        prefix = "real";
+        break;
+      default:
+        throw new IllegalStateException(literal.getValueType() + " is not implemented");
+      }
+      break;
+    case DateLiteral:
+      prefix = "date";
+      break;
+    case TimeLiteral:
+      prefix = "time";
+      break;
+    case TimestampLiteral:
+      prefix = "timestamp";
+      break;
     default:
       prefix = expr.getType().name();
     }
@@ -406,7 +435,7 @@ public class LogicalPlan {
 
     public QueryBlock(String blockName) {
       this.blockName = blockName;
-      this.namedExprsMgr = new NamedExprsManager(LogicalPlan.this);
+      this.namedExprsMgr = new NamedExprsManager(LogicalPlan.this, this);
     }
 
     public String getName() {

@@ -25,7 +25,7 @@ import org.apache.tajo.engine.planner.LogicalPlanner;
 
 import java.util.Stack;
 
-@Prioritized(priority = 15)
+@Prioritized(priority = 10)
 public class ConstantFolding extends SimpleEvalNodeVisitor<LogicalPlanner.PlanContext>
     implements EvalTreeOptimizationRule {
 

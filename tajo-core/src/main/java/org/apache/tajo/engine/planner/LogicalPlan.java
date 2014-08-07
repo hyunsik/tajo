@@ -19,11 +19,13 @@
 package org.apache.tajo.engine.planner;
 
 import com.google.common.collect.Lists;
+import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.tajo.algebra.*;
 import org.apache.tajo.annotation.NotThreadSafe;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.Schema;
+import org.apache.tajo.engine.eval.ConstEval;
 import org.apache.tajo.engine.eval.EvalNode;
 import org.apache.tajo.engine.planner.graph.DirectedGraphCursor;
 import org.apache.tajo.engine.planner.graph.SimpleDirectedGraph;
@@ -379,6 +381,7 @@ public class LogicalPlan {
     private final Map<OpType, List<Expr>> operatorToExprMap = TUtil.newHashMap();
     private final List<RelationNode> relationList = TUtil.newList();
     private boolean hasWindowFunction = false;
+    private final Map<String, ConstEval> constReferencesMap = TUtil.newHashMap();
 
     /**
      * It's a map between nodetype and node. node types can be duplicated. So, latest node type is only kept.
@@ -472,6 +475,18 @@ public class LogicalPlan {
 
     public boolean hasTableExpression() {
       return this.canonicalNameToRelationMap.size() > 0;
+    }
+
+    public void addConst(String refName, ConstEval value) {
+      constReferencesMap.put(refName, value);
+    }
+
+    public boolean isConstReference(String refName) {
+      return constReferencesMap.containsKey(refName);
+    }
+
+    public ConstEval getConstByReference(String refName) {
+      return constReferencesMap.get(refName);
     }
 
     public void addColumnAlias(String original, String alias) {

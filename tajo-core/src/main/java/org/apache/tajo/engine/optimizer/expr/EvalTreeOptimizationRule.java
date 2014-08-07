@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,34 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.engine.eval;
+package org.apache.tajo.engine.optimizer.expr;
 
-import com.google.gson.annotations.Expose;
-import org.apache.tajo.engine.json.CoreGsonHelper;
-import org.apache.tajo.json.GsonObject;
+import org.apache.tajo.engine.eval.EvalNode;
+import org.apache.tajo.engine.eval.EvalTree;
+import org.apache.tajo.engine.planner.LogicalPlanner;
 
-public class EvalTree implements GsonObject {
-  @Expose public EvalNode root;
-
-  public EvalTree(EvalNode root) {
-    this.root = root;
-  }
-
-  public EvalNode getRoot() {
-    return this.root;
-  }
-
-  public void setRoot(EvalNode root) {
-    this.root = root;
-  }
-
-  @Override
-  public String toString() {
-    return root.toString();
-  }
-
-  @Override
-  public String toJson() {
-    return CoreGsonHelper.toJson(this, EvalTree.class);
-  }
+@Prioritized
+public interface EvalTreeOptimizationRule {
+  public EvalNode optimize(LogicalPlanner.PlanContext context, EvalNode tree);
 }

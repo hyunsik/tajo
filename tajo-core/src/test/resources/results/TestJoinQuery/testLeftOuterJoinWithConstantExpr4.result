@@ -1,0 +1,5 @@
+select
+  c_custkey,
+  orders.o_orderkey,
+  1 as key1
+from customer left outer join orders on c_custkey = o_orderkey and c_custkey = 1;

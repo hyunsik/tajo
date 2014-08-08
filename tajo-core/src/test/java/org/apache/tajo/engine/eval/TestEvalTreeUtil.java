@@ -32,7 +32,7 @@ import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.engine.function.GeneralFunction;
-import org.apache.tajo.engine.optimizer.expr.EvalTreeOptimizer;
+import org.apache.tajo.engine.optimizer.eval.EvalTreeOptimizer;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.planner.LogicalPlan;
 import org.apache.tajo.engine.planner.LogicalPlanner;

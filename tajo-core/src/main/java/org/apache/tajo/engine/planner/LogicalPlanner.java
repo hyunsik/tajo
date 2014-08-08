@@ -38,7 +38,7 @@ import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.NullDatum;
 import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.engine.exception.VerifyException;
-import org.apache.tajo.engine.optimizer.expr.EvalTreeOptimizer;
+import org.apache.tajo.engine.optimizer.eval.EvalTreeOptimizer;
 import org.apache.tajo.engine.planner.LogicalPlan.QueryBlock;
 import org.apache.tajo.engine.planner.logical.*;
 import org.apache.tajo.engine.planner.nameresolver.NameResolvingMode;
@@ -1027,7 +1027,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     // Create EvalNode for a search condition.
     EvalNode searchCondition = exprAnnotator.createEvalNode(context, selection.getQual(),
         NameResolvingMode.RELS_AND_SUBEXPRS);
-    EvalNode simplified = AlgebraicUtil.eliminateConstantExprs(searchCondition);
+    EvalNode simplified = context.evalOptimizer.optimize(context, searchCondition);
     // set selection condition
     selectionNode.setQual(simplified);
 
@@ -1080,7 +1080,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     EvalNode joinCondition = null;
     if (join.hasQual()) {
       EvalNode evalNode = exprAnnotator.createEvalNode(context, join.getQual(), NameResolvingMode.LEGACY);
-      joinCondition = AlgebraicUtil.eliminateConstantExprs(evalNode);
+      joinCondition = context.evalOptimizer.optimize(context, evalNode);
     }
 
     List<String> newlyEvaluatedExprs = getNewlyEvaluatedExprsForJoin(context, joinNode, stack);

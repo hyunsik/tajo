@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.engine.optimizer.expr;
+package org.apache.tajo.engine.optimizer.eval;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
@@ -38,7 +38,7 @@ public class EvalTreeOptimizer {
 
   public EvalTreeOptimizer() {
     Set<Class> functionClasses = ClassUtil.findClasses(EvalTreeOptimizationRule.class,
-        "org.apache.tajo.engine.optimizer.expr.rules");
+        EvalTreeOptimizationRule.class.getPackage().getName() + ".rules");
 
     for (Class eachRule : functionClasses) {
       if (!EvalTreeOptimizationRule.class.isAssignableFrom(eachRule)) {

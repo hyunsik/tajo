@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.engine.optimizer.expr.rules;
+package org.apache.tajo.engine.optimizer.eval.rules;
 
 import org.apache.tajo.engine.eval.*;
-import org.apache.tajo.engine.optimizer.expr.EvalTreeOptimizationRule;
-import org.apache.tajo.engine.optimizer.expr.Prioritized;
+import org.apache.tajo.engine.optimizer.eval.EvalTreeOptimizationRule;
+import org.apache.tajo.engine.optimizer.eval.Prioritized;
 import org.apache.tajo.engine.planner.LogicalPlanner;
 
 import java.util.Stack;

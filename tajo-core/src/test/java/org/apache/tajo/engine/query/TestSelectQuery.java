@@ -460,7 +460,7 @@ public class TestSelectQuery extends QueryTestCaseBase {
       while (res.next()) {
         String currentNowValue = res.getString(1);
         if (nowValue != null) {
-          assertTrue(nowValue.equals(currentNowValue));
+          assertTrue(nowValue + " is different to " + currentNowValue, nowValue.equals(currentNowValue));
         }
         nowValue = currentNowValue;
         numRecords++;

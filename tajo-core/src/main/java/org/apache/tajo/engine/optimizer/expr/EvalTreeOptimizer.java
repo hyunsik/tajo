@@ -37,11 +37,11 @@ public class EvalTreeOptimizer {
   private List<EvalTreeOptimizationRule> rules = Lists.newArrayList();
 
   public EvalTreeOptimizer() {
-    Set<Class> functionClasses = ClassUtil.findClasses(org.apache.tajo.catalog.function.Function.class,
+    Set<Class> functionClasses = ClassUtil.findClasses(EvalTreeOptimizationRule.class,
         "org.apache.tajo.engine.optimizer.expr.rules");
 
     for (Class eachRule : functionClasses) {
-      if (!eachRule.isAssignableFrom(EvalTreeOptimizationRule.class)) {
+      if (!EvalTreeOptimizationRule.class.isAssignableFrom(eachRule)) {
         continue;
       }
 

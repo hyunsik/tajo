@@ -179,8 +179,8 @@ public class TypeDeterminant extends SimpleAlgebraVisitor<LogicalPlanner.PlanCon
   }
 
   @Override
-  public DataType visitGeneralSetFunction(LogicalPlanner.PlanContext ctx, Stack<Expr> stack, GeneralSetFunctionExpr setFunction)
-      throws PlanningException {
+  public DataType visitGeneralSetFunction(LogicalPlanner.PlanContext ctx, Stack<Expr> stack,
+                                          GeneralSetFunctionExpr setFunction) throws PlanningException {
     stack.push(setFunction);
 
     Expr[] params = setFunction.getParams();

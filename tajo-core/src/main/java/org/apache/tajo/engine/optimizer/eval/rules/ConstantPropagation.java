@@ -27,7 +27,7 @@ import java.util.Stack;
 
 /**
  * It replaces all field references which actually point to constant values by constant values.
- * In order to maximize the effectiveness of constant folding, ConstantPropagation should be performed prior to
+ * In order to maximize the effectiveness of constant folding, ConstantPropagation should be performed after
  * constant folding.
  */
 @Prioritized(priority = 15)

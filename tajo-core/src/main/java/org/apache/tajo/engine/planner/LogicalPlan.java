@@ -19,7 +19,6 @@
 package org.apache.tajo.engine.planner;
 
 import com.google.common.collect.Lists;
-import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.tajo.algebra.*;
 import org.apache.tajo.annotation.NotThreadSafe;
@@ -435,7 +434,7 @@ public class LogicalPlan {
 
     public QueryBlock(String blockName) {
       this.blockName = blockName;
-      this.namedExprsMgr = new NamedExprsManager(LogicalPlan.this, this);
+      this.namedExprsMgr = new NamedExprsManager(LogicalPlan.this);
     }
 
     public String getName() {
@@ -506,7 +505,7 @@ public class LogicalPlan {
       return this.canonicalNameToRelationMap.size() > 0;
     }
 
-    public void addConst(String refName, ConstEval value) {
+    public void addConstReference(String refName, ConstEval value) {
       constReferencesMap.put(refName, value);
     }
 

@@ -79,11 +79,9 @@ public class NamedExprsManager {
   private BiMap<String, String> aliasedColumnMap = HashBiMap.create();
 
   private LogicalPlan plan;
-  private LogicalPlan.QueryBlock block;
 
-  public NamedExprsManager(LogicalPlan plan, LogicalPlan.QueryBlock block) {
+  public NamedExprsManager(LogicalPlan plan) {
     this.plan = plan;
-    this.block = block;
   }
 
   private int getNextId() {

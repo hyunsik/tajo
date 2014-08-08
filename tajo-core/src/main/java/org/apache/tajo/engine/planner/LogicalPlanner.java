@@ -351,7 +351,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
           String generatedName = context.plan.generateUniqueColumnName(namedExpr.getExpr());
           ConstEval constEval = (ConstEval) exprAnnotator.createEvalNode(context, namedExpr.getExpr(),
               NameResolvingMode.RELS_ONLY);
-          context.getQueryBlock().addConst(generatedName, constEval);
+          context.getQueryBlock().addConstReference(generatedName, constEval);
           normalizedExprList[i] = new ExprNormalizedResult(context, false);
           normalizedExprList[i].baseExpr = new ColumnReferenceExpr(generatedName);
         } else {
@@ -910,7 +910,6 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     groupingNode.setInSchema(child.getOutSchema());
 
     // Set grouping sets
-    //Column [] groupingColumns = new Column[aggregation.getGroupSet()[0].getGroupingSets().length];
     List<Column> groupingColumns = Lists.newArrayList();
     for (int i = 0; i < groupingKeyRefNames.length; i++) {
       String refName = groupingKeyRefNames[i];

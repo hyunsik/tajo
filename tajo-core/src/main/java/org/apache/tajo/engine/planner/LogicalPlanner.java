@@ -816,17 +816,20 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
     // Building sort keys
     Column column;
-    SortSpec [] annotatedSortSpecs = new SortSpec[sortKeyNum];
+    List<SortSpec> annotatedSortSpecs = Lists.newArrayList();
     for (int i = 0; i < sortKeyNum; i++) {
-      if (block.namedExprsMgr.isEvaluated(referNames[i])) {
-        column = block.namedExprsMgr.getTarget(referNames[i]).getNamedColumn();
+      String refName = referNames[i];
+      if (block.isConstReference(refName)) {
+        continue;
+      } else if (block.namedExprsMgr.isEvaluated(refName)) {
+        column = block.namedExprsMgr.getTarget(refName).getNamedColumn();
       } else {
         throw new IllegalStateException("Unexpected State: " + TUtil.arrayToString(sortSpecs));
       }
-      annotatedSortSpecs[i] = new SortSpec(column, sortSpecs[i].isAscending(), sortSpecs[i].isNullFirst());
+      annotatedSortSpecs.add(new SortSpec(column, sortSpecs[i].isAscending(), sortSpecs[i].isNullFirst()));
     }
 
-    sortNode.setSortSpecs(annotatedSortSpecs);
+    sortNode.setSortSpecs(annotatedSortSpecs.toArray(new SortSpec[annotatedSortSpecs.size()]));
     return sortNode;
   }
 
@@ -907,15 +910,21 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     groupingNode.setInSchema(child.getOutSchema());
 
     // Set grouping sets
-    Column [] groupingColumns = new Column[aggregation.getGroupSet()[0].getGroupingSets().length];
-    for (int i = 0; i < groupingColumns.length; i++) {
-      if (block.namedExprsMgr.isEvaluated(groupingKeyRefNames[i])) {
-        groupingColumns[i] = block.namedExprsMgr.getTarget(groupingKeyRefNames[i]).getNamedColumn();
+    //Column [] groupingColumns = new Column[aggregation.getGroupSet()[0].getGroupingSets().length];
+    List<Column> groupingColumns = Lists.newArrayList();
+    for (int i = 0; i < groupingKeyRefNames.length; i++) {
+      String refName = groupingKeyRefNames[i];
+      if (context.getQueryBlock().isConstReference(refName)) {
+        continue;
+      } else if (block.namedExprsMgr.isEvaluated(groupingKeyRefNames[i])) {
+        groupingColumns.add(block.namedExprsMgr.getTarget(groupingKeyRefNames[i]).getNamedColumn());
       } else {
         throw new PlanningException("Each grouping column expression must be a scalar expression.");
       }
     }
-    groupingNode.setGroupingColumns(groupingColumns);
+
+    int effectiveGroupingKeyNum = groupingColumns.size();
+    groupingNode.setGroupingColumns(groupingColumns.toArray(new Column[effectiveGroupingKeyNum]));
 
     ////////////////////////////////////////////////////////
     // Visit and Build Child Plan
@@ -943,7 +952,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     groupingNode.setDistinct(includeDistinctFunction);
     groupingNode.setAggFunctions(aggEvalNodes.toArray(new AggregationFunctionCallEval[aggEvalNodes.size()]));
 
-    Target [] targets = new Target[groupingKeyNum + aggEvalNames.size()];
+    Target [] targets = new Target[effectiveGroupingKeyNum + aggEvalNames.size()];
 
     // In target, grouping columns will be followed by aggregation evals.
     //
@@ -952,12 +961,12 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     //  grouping keys      aggregation evals
 
     // Build grouping keys
-    for (int i = 0; i < groupingKeyNum; i++) {
+    for (int i = 0; i < effectiveGroupingKeyNum; i++) {
       Target target = block.namedExprsMgr.getTarget(groupingNode.getGroupingColumns()[i].getQualifiedName());
       targets[i] = target;
     }
 
-    for (int i = 0, targetIdx = groupingKeyNum; i < aggEvalNodes.size(); i++, targetIdx++) {
+    for (int i = 0, targetIdx = effectiveGroupingKeyNum; i < aggEvalNodes.size(); i++, targetIdx++) {
       targets[targetIdx] = block.namedExprsMgr.getTarget(aggEvalNames.get(i));
     }
 

@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tajo.engine.eval.EvalNode;
-import org.apache.tajo.engine.eval.EvalTree;
 import org.apache.tajo.engine.planner.LogicalPlanner;
 import org.apache.tajo.util.ClassUtil;
 
@@ -32,7 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 public class EvalTreeOptimizer {
-  private static final Log LOG = LogFactory.getLog(EvalTree.class);
+  private static final Log LOG = LogFactory.getLog(EvalTreeOptimizer.class);
 
   private List<EvalTreeOptimizationRule> rules = Lists.newArrayList();
 

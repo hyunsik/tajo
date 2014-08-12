@@ -97,6 +97,22 @@ public class TestDateTimeFunctions extends ExprTestBase {
   }
 
   @Test
+  public void testToTimeStampWithoutTime() throws IOException {
+    TajoConf.setCurrentTimeZone(TimeZone.getTimeZone("CET"));
+
+    testSimpleEval("select to_timestamp('2011-11-11', 'YYYY-MM-DD');",
+        new String[]{"2011-11-11 00:00:00" + getUserTimeZoneDisplay()});
+    testSimpleEval("SELECT to_timestamp('2011-11-11', 'DD-MM-YYYY');",
+        new String[]{"0017-05-03 00:00:00" + getUserTimeZoneDisplay()});
+    testSimpleEval("SELECT timestamp '2001-09-28 01:00' + INTERVAL '23 hours'",
+        new String [] {"2001-09-29 00:00:00" + getUserTimeZoneDisplay()});
+    testSimpleEval("SELECT timestamp '2001-09-28 01:00' + INTERVAL '1 days'",
+        new String [] {"2001-09-29 01:00:00" + getUserTimeZoneDisplay()});
+    testSimpleEval("SELECT CAST('2011-01-01' AS TIMESTAMP);",
+        new String [] {"2011-01-01 00:00:00" + getUserTimeZoneDisplay()});
+  }
+
+  @Test
   public void testToChar() throws IOException {
     long expectedTimestamp = System.currentTimeMillis();
     DateTime expectedDateTime = new DateTime(expectedTimestamp);

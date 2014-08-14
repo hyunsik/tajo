@@ -59,6 +59,13 @@ public class TestTableSubQuery extends QueryTestCaseBase {
   }
 
   @Test
+  public final void testJoinSubQuerySameAliases1() throws Exception {
+    ResultSet res = executeQuery();
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
   public final void testGroupbySubqueryWithJson() throws Exception {
     ResultSet res = executeJsonQuery();
     assertResultSet(res);

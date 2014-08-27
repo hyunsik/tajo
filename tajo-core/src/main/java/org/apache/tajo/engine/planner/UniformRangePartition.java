@@ -571,7 +571,7 @@ public class UniformRangePartition extends RangePartitionAlgorithm {
             } else {
 
               if (isPureAscii[i]) {
-                lastBigInt = UnsignedLong.valueOf(new BigInteger(last.get(i).asByteArray())).bigIntegerValue();
+                lastBigInt = new BigInteger(last.get(i).asByteArray());
                 if (sortSpecs[i].isAscending()) {
                   end.put(i, DatumFactory.createText(lastBigInt.add(incs[i]).toByteArray()));
                 } else {

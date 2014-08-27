@@ -695,43 +695,109 @@ public class ProjectionPushDownRule extends
     return node;
   }
 
+  private LogicalNode visitGroupByForSet(Context context, LogicalPlan plan, LogicalPlan.QueryBlock block, GroupbyNode node,
+                                         Stack<LogicalNode> stack) throws PlanningException {
+    LogicalNode child = super.visitGroupBy(context, plan, block, node, stack);
+
+    node.setInSchema(child.getOutSchema());
+    node.setOutSchema(child.getOutSchema());
+    node.setGroupingColumns(child.getOutSchema().toArray());
+    node.setTargets(PlannerUtil.schemaToTargets(child.getOutSchema()));
+
+    // Getting grouping key names
+    LinkedHashSet<String> groupingKeyNames = resolveGroupingKeys(context, node);
+
+    List<Target> targets = Lists.newArrayList();
+    updateGroupingKeysAndTargets(context, node, groupingKeyNames, targets);
+
+    Target [] finalTargets = buildGroupByTarget(node, targets, null);
+    node.setTargets(finalTargets);
+
+    LogicalPlanner.verifyProjectedFields(block, node);
+
+    return node;
+  }
+
   public LogicalNode visitGroupBy(Context context, LogicalPlan plan, LogicalPlan.QueryBlock block, GroupbyNode node,
                              Stack<LogicalNode> stack) throws PlanningException {
     Context newContext = new Context(context);
 
-    // Getting grouping key names
-    final int groupingKeyNum = node.getGroupingColumns().length;
+    if (node.isUsedForSet()) { // SELECT DISTINCT COL1, .... FROM ...
+
+      return visitGroupByForSet(newContext, plan, block, node, stack);
+
+    } else { // SELECT ... FROM ... GROUP BY ...
+
+      // Getting grouping key names
+      final int groupingKeyNum = node.getGroupingColumns().length;
+      LinkedHashSet<String> groupingKeyNames = resolveGroupingKeys(newContext, node);
+
+      // Getting eval names
+      final String[] aggEvalNames;
+      if (node.hasAggFunctions()) {
+        final int evalNum = node.getAggFunctions().length;
+        aggEvalNames = new String[evalNum];
+        for (int evalIdx = 0, targetIdx = groupingKeyNum; targetIdx < node.getTargets().length; evalIdx++, targetIdx++) {
+
+          Target target = node.getTargets()[targetIdx];
+          EvalNode evalNode = node.getAggFunctions()[evalIdx];
+          aggEvalNames[evalIdx] = newContext.addExpr(new Target(evalNode, target.getCanonicalName()));
+        }
+      } else {
+        aggEvalNames = null;
+      }
+
+      // visit a child node
+      LogicalNode child = super.visitGroupBy(newContext, plan, block, node, stack);
+
+      node.setInSchema(child.getOutSchema());
+
+      List<Target> targets = Lists.newArrayList();
+      updateGroupingKeysAndTargets(context, node, groupingKeyNames, targets);
+
+      // Getting projected targets
+      if (node.hasAggFunctions() && aggEvalNames != null) {
+        AggregationFunctionCallEval[] aggEvals = new AggregationFunctionCallEval[aggEvalNames.length];
+        int i = 0;
+        for (Iterator<String> it = getFilteredReferences(aggEvalNames, TUtil.newList(aggEvalNames)); it.hasNext(); ) {
+
+          String referenceName = it.next();
+          Target target = context.targetListMgr.getTarget(referenceName);
+
+          if (LogicalPlanner.checkIfBeEvaluatedAtGroupBy(target.getEvalTree(), node)) {
+            aggEvals[i++] = target.getEvalTree();
+            context.targetListMgr.markAsEvaluated(target);
+          }
+        }
+        if (aggEvals.length > 0) {
+          node.setAggFunctions(aggEvals);
+        }
+      }
+      Target[] finalTargets = buildGroupByTarget(node, targets, aggEvalNames);
+      node.setTargets(finalTargets);
+
+      LogicalPlanner.verifyProjectedFields(block, node);
+      return node;
+    }
+  }
+
+  private LinkedHashSet<String> resolveGroupingKeys(Context context, GroupbyNode node) throws PlanningException {
     LinkedHashSet<String> groupingKeyNames = null;
-    if (groupingKeyNum > 0) {
+    if (!node.isEmptyGrouping()) {
       groupingKeyNames = Sets.newLinkedHashSet();
-      for (int i = 0; i < groupingKeyNum; i++) {
+      for (int i = 0; i < node.getGroupingColumns().length; i++) {
         FieldEval fieldEval = new FieldEval(node.getGroupingColumns()[i]);
-        groupingKeyNames.add(newContext.addExpr(fieldEval));
+        groupingKeyNames.add(context.addExpr(fieldEval));
       }
     }
 
-    // Getting eval names
+    return groupingKeyNames;
+  }
 
-    final String [] aggEvalNames;
-    if (node.hasAggFunctions()) {
-      final int evalNum = node.getAggFunctions().length;
-      aggEvalNames = new String[evalNum];
-      for (int evalIdx = 0, targetIdx = groupingKeyNum; targetIdx < node.getTargets().length; evalIdx++, targetIdx++) {
-        Target target = node.getTargets()[targetIdx];
-        EvalNode evalNode = node.getAggFunctions()[evalIdx];
-        aggEvalNames[evalIdx] = newContext.addExpr(new Target(evalNode, target.getCanonicalName()));
-      }
-    } else {
-      aggEvalNames = null;
-    }
+  private void updateGroupingKeysAndTargets(Context context, GroupbyNode node, LinkedHashSet<String> groupingKeyNames,
+                                            List<Target> targets) throws PlanningException {
 
-    // visit a child node
-    LogicalNode child = super.visitGroupBy(newContext, plan, block, node, stack);
-
-    node.setInSchema(child.getOutSchema());
-
-    List<Target> targets = Lists.newArrayList();
-    if (groupingKeyNum > 0 && groupingKeyNames != null) {
+    if (groupingKeyNames != null && groupingKeyNames != null) {
       // Restoring grouping key columns
       final List<Column> groupingColumns = new ArrayList<Column>();
       for (String groupingKey : groupingKeyNames) {
@@ -761,31 +827,6 @@ public class ProjectionPushDownRule extends
 
       node.setGroupingColumns(groupingColumns.toArray(new Column[groupingColumns.size()]));
     }
-
-    // Getting projected targets
-    if (node.hasAggFunctions() && aggEvalNames != null) {
-      AggregationFunctionCallEval [] aggEvals = new AggregationFunctionCallEval[aggEvalNames.length];
-      int i = 0;
-      for (Iterator<String> it = getFilteredReferences(aggEvalNames, TUtil.newList(aggEvalNames)); it.hasNext();) {
-
-        String referenceName = it.next();
-        Target target = context.targetListMgr.getTarget(referenceName);
-
-        if (LogicalPlanner.checkIfBeEvaluatedAtGroupBy(target.getEvalTree(), node)) {
-          aggEvals[i++] = target.getEvalTree();
-          context.targetListMgr.markAsEvaluated(target);
-        }
-      }
-      if (aggEvals.length > 0) {
-        node.setAggFunctions(aggEvals);
-      }
-    }
-    Target [] finalTargets = buildGroupByTarget(node, targets, aggEvalNames);
-    node.setTargets(finalTargets);
-
-    LogicalPlanner.verifyProjectedFields(block, node);
-
-    return node;
   }
 
   public static Target [] buildGroupByTarget(GroupbyNode groupbyNode, @Nullable List<Target> groupingKeyTargets,

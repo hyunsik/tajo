@@ -49,6 +49,14 @@ public class TestSortQuery extends QueryTestCaseBase {
   }
 
   @Test
+  public final void testSortWithDistinct1() throws Exception {
+    // select distinct l_linenumber, l_orderkey as sortkey from lineitem order by linenumber, sortkey;
+    ResultSet res = executeQuery();
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
   public final void testSortWithAlias1() throws Exception {
     // select l_linenumber, l_orderkey as sortkey from lineitem order by sortkey;
     ResultSet res = executeQuery();

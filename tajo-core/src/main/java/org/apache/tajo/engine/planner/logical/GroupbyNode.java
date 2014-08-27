@@ -31,6 +31,9 @@ public class GroupbyNode extends UnaryNode implements Projectable, Cloneable {
   @Expose private Column [] groupingColumns;
   /** Aggregation Functions */
   @Expose private AggregationFunctionCallEval [] aggrFunctions;
+
+  @Expose private boolean usedForSet = false;
+
   /**
    * It's a list of targets. The grouping columns should be followed by aggregation functions.
    * aggrFunctions keep actual aggregation functions, but it only contains field references.
@@ -56,6 +59,14 @@ public class GroupbyNode extends UnaryNode implements Projectable, Cloneable {
 
   public final boolean isDistinct() {
     return hasDistinct;
+  }
+
+  public boolean isUsedForSet() {
+    return usedForSet;
+  }
+
+  public void setUsedForSet() {
+    this.usedForSet = true;
   }
 
   public void setDistinct(boolean distinct) {

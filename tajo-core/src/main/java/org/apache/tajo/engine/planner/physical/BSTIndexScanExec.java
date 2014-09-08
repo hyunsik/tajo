@@ -28,6 +28,7 @@ import org.apache.tajo.engine.planner.logical.ScanNode;
 import org.apache.tajo.storage.*;
 import org.apache.tajo.storage.fragment.FileFragment;
 import org.apache.tajo.storage.index.bst.BSTIndex;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -40,6 +41,7 @@ public class BSTIndexScanExec extends PhysicalExec {
   private BSTIndex.BSTIndexReader reader;
   
   private Projector projector;
+  private BaseTupleBuilder builder;
   
   private Datum[] datum = null;
   
@@ -60,6 +62,7 @@ public class BSTIndexScanExec extends PhysicalExec {
         scanNode.getTableDesc().getMeta(), scanNode.getInSchema(), fragment, outSchema);
     this.fileScanner.init();
     this.projector = new Projector(context, inSchema, outSchema, scanNode.getTargets());
+    this.builder = new BaseTupleBuilder(outSchema);
 
     this.reader = new BSTIndex(sm.getFileSystem().getConf()).
         getIndexReader(fileName, keySchema, comparator);
@@ -103,16 +106,16 @@ public class BSTIndexScanExec extends PhysicalExec {
     Tuple outTuple = new VTuple(this.outSchema.size());
     if (!scanNode.hasQual()) {
       if ((tuple = fileScanner.next()) != null) {
-        projector.eval(tuple, outTuple);
-        return outTuple;
+        projector.eval(tuple, builder);
+        return builder.build();
       } else {
         return null;
       }
     } else {
        while(reader.isCurInMemory() && (tuple = fileScanner.next()) != null) {
          if (qual.eval(inSchema, tuple).isTrue()) {
-           projector.eval(tuple, outTuple);
-           return outTuple;
+           projector.eval(tuple, builder);
+           return builder.build();
          } else {
            fileScanner.seek(reader.next());
          }
@@ -134,6 +137,7 @@ public class BSTIndexScanExec extends PhysicalExec {
     scanNode = null;
     qual = null;
     projector = null;
+    builder.release();
   }
 
   @Override

@@ -29,6 +29,8 @@ import org.apache.tajo.storage.BaseTupleComparator;
 import org.apache.tajo.storage.FrameTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -45,7 +47,6 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
   private FrameTuple frameTuple;
   private Tuple leftTuple = null;
   private Tuple rightTuple = null;
-  private Tuple outTuple = null;
   private Tuple leftNext = null;
 
   private List<Tuple> leftTupleSlots;
@@ -60,6 +61,7 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
 
   // projection
   private Projector projector;
+  private BaseTupleBuilder builder;
 
   private int rightNumCols;
   private int leftNumCols;
@@ -92,10 +94,15 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
 
     // for join
     frameTuple = new FrameTuple();
-    outTuple = new VTuple(outSchema.size());
 
     leftNumCols = leftChild.getSchema().size();
     rightNumCols = rightChild.getSchema().size();
+  }
+
+  @Override
+  public void init() throws IOException {
+    super.init();
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   @Override
@@ -148,20 +155,20 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
             // output a tuple with the nulls padded leftTuple
             Tuple nullPaddedTuple = TupleUtil.createNullPaddedTuple(leftNumCols);
             frameTuple.set(nullPaddedTuple, rightTuple);
-            projector.eval(frameTuple, outTuple);
+            projector.eval(frameTuple, builder);
             // we simulate we found a match, which is exactly the null padded one
             rightTuple = rightChild.next();
-            return outTuple;
+            return builder.build();
           }
 
           if((leftTuple != null) && (rightTuple == null)){
             // output a tuple with the nulls padded leftTuple
             Tuple nullPaddedTuple = TupleUtil.createNullPaddedTuple(rightNumCols);
             frameTuple.set(leftTuple, nullPaddedTuple);
-            projector.eval(frameTuple, outTuple);
+            projector.eval(frameTuple, builder);
             // we simulate we found a match, which is exactly the null padded one
             leftTuple = leftChild.next();
-            return outTuple;
+            return builder.build();
           }
         } // if end
 
@@ -204,21 +211,21 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
             //output a tuple with the nulls padded leftTuple
             Tuple nullPaddedTuple = TupleUtil.createNullPaddedTuple(leftNumCols);
             frameTuple.set(nullPaddedTuple, rightTuple);
-            projector.eval(frameTuple, outTuple);
+            projector.eval(frameTuple, builder);
             // BEFORE RETURN, MOVE FORWARD
             rightTuple = rightChild.next();
             if(rightTuple == null) {
               end = true;
             }
 
-            return outTuple;
+            return builder.build();
 
           } else if (cmp < 0) {
             // before getting a new tuple from the left,  a rightnullpadded tuple should be built
             // output a tuple with the nulls padded rightTuple
             Tuple nullPaddedTuple = TupleUtil.createNullPaddedTuple(rightNumCols);
             frameTuple.set(leftTuple, nullPaddedTuple);
-            projector.eval(frameTuple, outTuple);
+            projector.eval(frameTuple, builder);
             // we simulate we found a match, which is exactly the null padded one
             // BEFORE RETURN, MOVE FORWARD
             leftTuple = leftChild.next();
@@ -226,7 +233,7 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
               end = true;
             }
 
-            return outTuple;
+            return builder.build();
 
           } // if (cmp < 0)
         } //while
@@ -294,8 +301,8 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
           posRightTupleSlots = posRightTupleSlots + 1;
           frameTuple.set(leftNext, aTuple);
           joinQual.eval(inSchema, frameTuple);
-          projector.eval(frameTuple, outTuple);
-          return outTuple;
+          projector.eval(frameTuple, builder);
+          return builder.build();
         } else {
           // right (inner) slots reached end and should be rewind if there are still tuples in the outer slots
           if(posLeftTupleSlots <= (leftTupleSlots.size()-1)) {
@@ -308,8 +315,8 @@ public class MergeFullOuterJoinExec extends BinaryPhysicalExec {
 
             frameTuple.set(leftNext, aTuple);
             joinQual.eval(inSchema, frameTuple);
-            projector.eval(frameTuple, outTuple);
-            return outTuple;
+            projector.eval(frameTuple, builder);
+            return builder.build();
           }
         }
       } // the second if end false

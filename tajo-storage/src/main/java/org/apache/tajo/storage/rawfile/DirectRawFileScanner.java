@@ -113,7 +113,7 @@ public class DirectRawFileScanner extends FileScanner implements SeekableScanner
   }
 
   public boolean next(OffHeapRowBlock rowblock) throws IOException {
-    return rowblock.copyFromChannel(channel, tableStats);
+    return rowblock.fetchFromChannel(channel, tableStats);
   }
 
   private boolean fetchNeeded = true;

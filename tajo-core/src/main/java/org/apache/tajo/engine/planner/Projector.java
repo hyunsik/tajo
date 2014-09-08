@@ -21,7 +21,9 @@ package org.apache.tajo.engine.planner;
 import org.apache.tajo.SessionVars;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.engine.eval.EvalNode;
+import org.apache.tajo.engine.utils.TupleBuilderUtil;
 import org.apache.tajo.storage.Tuple;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 public class Projector {
@@ -62,5 +64,9 @@ public class Projector {
     for (int i = 0; i < evals.length; i++) {
       out.put(i, evals[i].eval(inSchema, in));
     }
+  }
+
+  public void eval(Tuple in, TupleBuilder builder) {
+    TupleBuilderUtil.write(inSchema, in, builder, evals);
   }
 }

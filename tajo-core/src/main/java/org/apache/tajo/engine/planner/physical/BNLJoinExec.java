@@ -25,6 +25,7 @@ import org.apache.tajo.engine.planner.logical.JoinNode;
 import org.apache.tajo.storage.FrameTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -49,13 +50,13 @@ public class BNLJoinExec extends BinaryPhysicalExec {
   // temporal tuples and states for nested loop join
   private FrameTuple frameTuple;
   private Tuple leftTuple = null;
-  private Tuple outputTuple = null;
   private Tuple rightNext = null;
 
   private final int TUPLE_SLOT_SIZE = 10000;
 
   // projection
   private Projector projector;
+  private BaseTupleBuilder builder;
 
   public BNLJoinExec(final TaskAttemptContext context, final JoinNode plan,
                      final PhysicalExec leftExec, PhysicalExec rightExec) {
@@ -83,7 +84,12 @@ public class BNLJoinExec extends BinaryPhysicalExec {
 
     // for join
     frameTuple = new FrameTuple();
-    outputTuple = new VTuple(outSchema.size());
+  }
+
+  @Override
+  public void init() throws IOException {
+    super.init();
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   @Override
@@ -193,12 +199,12 @@ public class BNLJoinExec extends BinaryPhysicalExec {
       frameTuple.set(leftTuple, rightIterator.next());
       if (hasJoinQual) {
         if (joinQual.eval(inSchema, frameTuple).isTrue()) {
-          projector.eval(frameTuple, outputTuple);
-          return outputTuple;
+          projector.eval(frameTuple, builder);
+          return builder.build();
         }
       } else {
-        projector.eval(frameTuple, outputTuple);
-        return outputTuple;
+        projector.eval(frameTuple, builder);
+        return builder.build();
       }
     }
   }
@@ -226,5 +232,6 @@ public class BNLJoinExec extends BinaryPhysicalExec {
     plan = null;
     joinQual = null;
     projector = null;
+    builder.release();
   }
 }

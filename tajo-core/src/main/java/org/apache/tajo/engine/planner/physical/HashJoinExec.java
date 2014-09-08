@@ -28,6 +28,8 @@ import org.apache.tajo.catalog.SchemaUtil;
 import org.apache.tajo.storage.FrameTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -57,6 +59,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
 
   // projection
   protected final Projector projector;
+  protected BaseTupleBuilder builder;
 
   public HashJoinExec(TaskAttemptContext context, JoinNode plan, PhysicalExec leftExec,
       PhysicalExec rightExec) {
@@ -88,6 +91,13 @@ public class HashJoinExec extends BinaryPhysicalExec {
     frameTuple = new FrameTuple();
     outTuple = new VTuple(outSchema.size());
     leftKeyTuple = new VTuple(leftKeyList.length);
+  }
+
+  @Override
+  public void init() throws IOException {
+    super.init();
+
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   @Override
@@ -136,7 +146,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
       rightTuple = iterator.next();
       frameTuple.set(leftTuple, rightTuple); // evaluate a join condition on both tuples
       if (joinQual.eval(inSchema, frameTuple).isTrue()) { // if both tuples are joinable
-        projector.eval(frameTuple, outTuple);
+        projector.eval(frameTuple, builder);
         found = true;
       }
 
@@ -149,7 +159,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
       }
     }
 
-    return new VTuple(outTuple);
+    return builder.build();
   }
 
   protected void loadRightToHashTable() throws IOException {
@@ -199,6 +209,8 @@ public class HashJoinExec extends BinaryPhysicalExec {
     iterator = null;
     plan = null;
     joinQual = null;
+
+    builder.release();
   }
 
   public JoinNode getPlan() {

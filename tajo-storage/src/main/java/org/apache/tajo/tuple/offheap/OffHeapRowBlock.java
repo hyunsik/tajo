@@ -120,6 +120,10 @@ public class OffHeapRowBlock extends OffHeapMemory implements Deallocatable {
     return memorySize - position - builder.offset();
   }
 
+  public void setMaxRowNum(int max) {
+    this.maxRowNum = max;
+  }
+
   public int maxRowNum() {
     return maxRowNum;
   }
@@ -131,7 +135,7 @@ public class OffHeapRowBlock extends OffHeapMemory implements Deallocatable {
     this.rowNum = rowNum;
   }
 
-  public boolean copyFromChannel(FileChannel channel, TableStats stats) throws IOException {
+  public boolean fetchFromChannel(FileChannel channel, TableStats stats) throws IOException {
     if (channel.position() < channel.size()) {
       clear();
 

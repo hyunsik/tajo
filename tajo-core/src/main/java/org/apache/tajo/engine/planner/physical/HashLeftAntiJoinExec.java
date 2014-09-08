@@ -82,8 +82,8 @@ public class HashLeftAntiJoinExec extends HashJoinExec {
       } else {
         // if not found, it returns a tuple.
         frameTuple.set(leftTuple, rightNullTuple);
-        projector.eval(frameTuple, outTuple);
-        return outTuple;
+        projector.eval(frameTuple, builder);
+        return builder.build();
       }
 
       // Reach here only when a hash bucket is found. Then, it checks all tuples in the found bucket.
@@ -99,11 +99,11 @@ public class HashLeftAntiJoinExec extends HashJoinExec {
 
       if (notFound) { // if there is no matched tuple
         frameTuple.set(leftTuple, rightNullTuple);
-        projector.eval(frameTuple, outTuple);
+        projector.eval(frameTuple, builder);
         break;
       }
     }
 
-    return outTuple;
+    return builder.build();
   }
 }

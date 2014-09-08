@@ -97,7 +97,7 @@ public class HashLeftSemiJoinExec extends HashJoinExec {
         frameTuple.set(leftTuple, rightTuple);
         if (joinQual.eval(inSchema, frameTuple).isTrue()) { // if the matched one is found
           notFound = false;
-          projector.eval(frameTuple, outTuple);
+          projector.eval(frameTuple, builder);
         }
       }
 
@@ -106,6 +106,6 @@ public class HashLeftSemiJoinExec extends HashJoinExec {
       }
     }
 
-    return outTuple;
+    return builder.build();
   }
 }

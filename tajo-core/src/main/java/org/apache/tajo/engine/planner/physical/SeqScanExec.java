@@ -41,6 +41,8 @@ import org.apache.tajo.engine.utils.TupleUtil;
 import org.apache.tajo.storage.*;
 import org.apache.tajo.storage.fragment.FileFragment;
 import org.apache.tajo.storage.fragment.FragmentConvertor;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -60,6 +62,7 @@ public class SeqScanExec extends PhysicalExec {
   private CatalogProtos.FragmentProto [] fragments;
 
   private Projector projector;
+  private BaseTupleBuilder builder;
 
   private TableStats inputStats;
 
@@ -94,6 +97,8 @@ public class SeqScanExec extends PhysicalExec {
         && plan.getTableDesc().getPartitionMethod().getPartitionType() == CatalogProtos.PartitionType.COLUMN) {
       rewriteColumnPartitionedTableSchema();
     }
+
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   /**
@@ -148,6 +153,7 @@ public class SeqScanExec extends PhysicalExec {
     }
   }
 
+  @Override
   public void init() throws IOException {
     Schema projected;
 
@@ -198,7 +204,6 @@ public class SeqScanExec extends PhysicalExec {
     } else {
       initScanner(projected);
     }
-
     super.init();
   }
 
@@ -262,16 +267,14 @@ public class SeqScanExec extends PhysicalExec {
     }
 
     Tuple tuple;
-    Tuple outTuple = new VTuple(outColumnNum);
 
     if (!plan.hasQual()) {
       if ((tuple = scanner.next()) != null) {
         if (cacheRead) {
           return tuple;
         }
-        projector.eval(tuple, outTuple);
-        outTuple.setOffset(tuple.getOffset());
-        return outTuple;
+        projector.eval(tuple, builder);
+        return builder.build();
       } else {
         return null;
       }
@@ -281,8 +284,8 @@ public class SeqScanExec extends PhysicalExec {
           return tuple;
         }
         if (qual.eval(inSchema, tuple).isTrue()) {
-          projector.eval(tuple, outTuple);
-          return outTuple;
+          projector.eval(tuple, builder);
+          return builder.build();
         }
       }
       return null;
@@ -311,6 +314,7 @@ public class SeqScanExec extends PhysicalExec {
     plan = null;
     qual = null;
     projector = null;
+    builder.release();
   }
 
   public String getTableName() {

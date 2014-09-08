@@ -28,6 +28,8 @@ import org.apache.tajo.storage.BaseTupleComparator;
 import org.apache.tajo.storage.FrameTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -44,7 +46,6 @@ public class MergeJoinExec extends BinaryPhysicalExec {
   private FrameTuple frameTuple;
   private Tuple outerTuple = null;
   private Tuple innerTuple = null;
-  private Tuple outTuple = null;
   private Tuple outerNext = null;
 
   private List<Tuple> outerTupleSlots;
@@ -61,6 +62,7 @@ public class MergeJoinExec extends BinaryPhysicalExec {
 
   // projection
   private Projector projector;
+  private BaseTupleBuilder builder;
 
   public MergeJoinExec(TaskAttemptContext context, JoinNode plan, PhysicalExec outer,
       PhysicalExec inner, SortSpec[] outerSortKey, SortSpec[] innerSortKey) {
@@ -88,7 +90,13 @@ public class MergeJoinExec extends BinaryPhysicalExec {
 
     // for join
     frameTuple = new FrameTuple();
-    outTuple = new VTuple(outSchema.size());
+  }
+
+  @Override
+  public void init() throws IOException {
+    super.init();
+
+    this.builder = new BaseTupleBuilder(outSchema);
   }
 
   @Override
@@ -167,8 +175,8 @@ public class MergeJoinExec extends BinaryPhysicalExec {
       frameTuple.set(outerNext, innerIterator.next());
 
       if (joinQual.eval(inSchema, frameTuple).isTrue()) {
-        projector.eval(frameTuple, outTuple);
-        return outTuple;
+        projector.eval(frameTuple, builder);
+        return builder.build();
       }
     }
   }
@@ -194,5 +202,6 @@ public class MergeJoinExec extends BinaryPhysicalExec {
     innerIterator = null;
     joinQual = null;
     projector = null;
+    builder.release();
   }
 }

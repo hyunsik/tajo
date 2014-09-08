@@ -33,6 +33,9 @@ import java.nio.ByteBuffer;
 
 import static org.apache.tajo.common.TajoDataTypes.DataType;
 
+/**
+ * Immutable Tuple
+ */
 public class HeapTuple implements Tuple {
   private static final Unsafe UNSAFE = UnsafeUtil.unsafe;
   private static final long BASE_OFFSET = Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -47,7 +50,7 @@ public class HeapTuple implements Tuple {
 
   @Override
   public int size() {
-    return data.length;
+    return types.length;
   }
 
   public ByteBuffer nioBuffer() {
@@ -115,6 +118,8 @@ public class HeapTuple implements Tuple {
     switch (types[fieldId].getType()) {
     case BOOLEAN:
       return DatumFactory.createBool(getBool(fieldId));
+    case CHAR:
+      return DatumFactory.createChar(getBytes(fieldId));
     case INT1:
     case INT2:
       return DatumFactory.createInt2(getInt2(fieldId));
@@ -138,6 +143,8 @@ public class HeapTuple implements Tuple {
       return getInterval(fieldId);
     case INET4:
       return DatumFactory.createInet4(getInt4(fieldId));
+    case BLOB:
+      return DatumFactory.createBlob(getBytes(fieldId));
     case PROTOBUF:
       return getProtobufDatum(fieldId);
     default:
@@ -246,7 +253,7 @@ public class HeapTuple implements Tuple {
 
   @Override
   public Tuple clone() throws CloneNotSupportedException {
-    throw new UnsupportedException("clone");
+    return this;
   }
 
   @Override

@@ -40,13 +40,15 @@ import java.util.*;
 
 
 public class HashLeftOuterJoinExec extends BinaryPhysicalExec {
+  private static final Log LOG = LogFactory.getLog(HashLeftOuterJoinExec.class);
+
   // from logical plan
   protected JoinNode plan;
   protected EvalNode joinQual;   // ex) a.id = b.id
+
   protected EvalNode joinFilter; // ex) a > 10
 
   protected List<Column[]> joinKeyPairs;
-
   // temporal tuples and states for nested loop join
   protected boolean first = true;
   protected FrameTuple frameTuple;
@@ -54,19 +56,18 @@ public class HashLeftOuterJoinExec extends BinaryPhysicalExec {
   protected Map<Tuple, List<Tuple>> tupleSlots;
   protected Iterator<Tuple> iterator = null;
   protected Tuple leftTuple;
+
   protected Tuple leftKeyTuple;
-
   protected int [] leftKeyList;
-  protected int [] rightKeyList;
 
+  protected int [] rightKeyList;
   protected boolean finished = false;
+
   protected boolean shouldGetLeftTuple = true;
 
   // projection
   protected Projector projector;
-
   private int rightNumCols;
-  private static final Log LOG = LogFactory.getLog(HashLeftOuterJoinExec.class);
 
   public HashLeftOuterJoinExec(TaskAttemptContext context, JoinNode plan, PhysicalExec leftChild,
                                PhysicalExec rightChild) {

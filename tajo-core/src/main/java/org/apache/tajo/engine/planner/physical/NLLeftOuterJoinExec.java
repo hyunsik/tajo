@@ -25,6 +25,7 @@ import org.apache.tajo.engine.utils.TupleUtil;
 import org.apache.tajo.storage.FrameTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -39,10 +40,10 @@ public class NLLeftOuterJoinExec extends BinaryPhysicalExec {
   private FrameTuple frameTuple;
   private Tuple leftTuple = null;
   private Tuple rightTuple = null;
-  private Tuple outTuple = null;
 
   // projection
   private final Projector projector;
+  private BaseTupleBuilder builder;
 
   private boolean foundAtLeastOneMatch;
   private int rightNumCols;
@@ -62,10 +63,15 @@ public class NLLeftOuterJoinExec extends BinaryPhysicalExec {
     // for join
     needNextRightTuple = true;
     frameTuple = new FrameTuple();
-    outTuple = new VTuple(outSchema.size());
 
     foundAtLeastOneMatch = false;
     rightNumCols = rightChild.getSchema().size();
+  }
+
+  public void init() throws IOException {
+    super.init();
+
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   public JoinNode getPlan() {
@@ -91,12 +97,12 @@ public class NLLeftOuterJoinExec extends BinaryPhysicalExec {
           //output a tuple with the nulls padded rightTuple
           Tuple nullPaddedTuple = TupleUtil.createNullPaddedTuple(rightNumCols);
           frameTuple.set(leftTuple, nullPaddedTuple);
-          projector.eval(frameTuple, outTuple);
+          projector.eval(frameTuple, builder);
           // we simulate we found a match, which is exactly the null padded one
           foundAtLeastOneMatch = true;
           needNextRightTuple = true;
           rightChild.rescan();
-          return outTuple;
+          return builder.build();
         } else {
           needNextRightTuple = true;
           rightChild.rescan();
@@ -105,13 +111,17 @@ public class NLLeftOuterJoinExec extends BinaryPhysicalExec {
       }
 
       frameTuple.set(leftTuple, rightTuple);
-      ;
+
       if (joinQual.eval(inSchema, frameTuple).isTrue()) {
-        projector.eval(frameTuple, outTuple);
+        projector.eval(frameTuple, builder);
         foundAtLeastOneMatch = true;
-        return outTuple;
+        return builder.build();
       }
     }
+  }
+
+  public void close() {
+    builder.release();
   }
 
   @Override

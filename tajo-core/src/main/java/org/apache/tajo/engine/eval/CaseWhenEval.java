@@ -216,7 +216,7 @@ public class CaseWhenEval extends EvalNode implements GsonObject {
     }
 
     public boolean checkIfCondition(Schema schema, Tuple tuple) {
-      return condition.eval(schema, tuple).isTrue();
+      return condition.isMatched(schema, tuple);
     }
 
     public Datum eval(Schema schema, Tuple tuple) {

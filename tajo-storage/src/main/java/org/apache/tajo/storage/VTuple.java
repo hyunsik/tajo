@@ -194,7 +194,14 @@ public class VTuple implements Tuple, Cloneable {
     VTuple tuple = (VTuple) super.clone();
 
     tuple.values = new Datum[size()];
-    System.arraycopy(values, 0, tuple.values, 0, size()); //shallow copy
+    System.arraycopy(values, 0, tuple.values, 0, size()); // shallow copy
+    return tuple;
+  }
+
+  @Override
+  public Tuple copyTo() {
+    VTuple tuple = new VTuple(size());
+    System.arraycopy(values, 0, tuple.values, 0, size());
     return tuple;
   }
 

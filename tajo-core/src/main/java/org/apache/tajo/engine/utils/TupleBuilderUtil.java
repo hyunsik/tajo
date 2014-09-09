@@ -28,11 +28,19 @@ import org.apache.tajo.tuple.TupleBuilder;
 
 public class TupleBuilderUtil {
 
-  public static void write(Schema inSchema, Tuple input, TupleBuilder builder, EvalNode [] evals) {
+  public static void evaluate(Schema inSchema, Tuple input, TupleBuilder builder, EvalNode[] evals) {
     builder.startRow();
     for (int i = 0; i < evals.length; i++) {
       Datum result = evals[i].eval(inSchema, input);
       writeEvalResult(builder, result.type(), result);
+    }
+    builder.endRow();
+  }
+
+  public static void evaluateNative(Schema inSchema, Tuple input, TupleBuilder builder, EvalNode[] evals) {
+    builder.startRow();
+    for (int i = 0; i < evals.length; i++) {
+      evals[i].eval(inSchema, input, builder);
     }
     builder.endRow();
   }
@@ -70,6 +78,9 @@ public class TupleBuilderUtil {
     case DATE:
       builder.putDate(datum.asInt4());
       break;
+    case INTERVAL:
+      builder.putInterval((org.apache.tajo.datum.IntervalDatum) datum);
+    case CHAR:
     case TEXT:
       builder.putText(datum.asTextBytes());
       break;
@@ -85,6 +96,5 @@ public class TupleBuilderUtil {
     default:
       throw new UnsupportedException("Unknown Type: " + type.name());
     }
-
   }
 }

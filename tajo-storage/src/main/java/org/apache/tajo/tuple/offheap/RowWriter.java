@@ -43,6 +43,8 @@ public interface RowWriter {
 
   public void putBool(boolean val);
 
+  public void putBool(byte val);
+
   public void putInt2(short val);
 
   public void putInt4(int val);
@@ -61,9 +63,9 @@ public interface RowWriter {
 
   public void putTimestamp(long val);
 
-  public void putTime(long val);
-
   public void putDate(int val);
+
+  public void putTime(long val);
 
   public void putInterval(IntervalDatum val);
 

@@ -55,19 +55,19 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
   }
 
   public static class CompilationContext {
-    private final EvalCodeGenerator evalCompiler;
+    private final EvalNodeCompiler evalCompiler;
     private final TupleComparerCompiler comparerCompiler;
     private Map<Pair<Schema,EvalNode>, EvalNode> compiledEvals;
     private Map<Pair<Schema,BaseTupleComparator>, TupleComparator> compiledComparators;
 
     public CompilationContext(TajoClassLoader classLoader) {
-      this.evalCompiler = new EvalCodeGenerator(classLoader);
+      this.evalCompiler = new EvalNodeCompiler(classLoader);
       this.comparerCompiler = new TupleComparerCompiler(classLoader);
       this.compiledEvals = Maps.newHashMap();
       this.compiledComparators = Maps.newHashMap();
     }
 
-    public EvalCodeGenerator getEvalCompiler() {
+    public EvalNodeCompiler getEvalCompiler() {
       return evalCompiler;
     }
 

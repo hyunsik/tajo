@@ -283,7 +283,7 @@ public class SeqScanExec extends PhysicalExec {
         if (cacheRead) {
           return tuple;
         }
-        if (qual.eval(inSchema, tuple).isTrue()) {
+        if (qual.isMatched(inSchema, tuple)) {
           projector.eval(tuple, builder);
           return builder.build();
         }

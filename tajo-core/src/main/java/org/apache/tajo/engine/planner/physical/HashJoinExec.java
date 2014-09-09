@@ -145,7 +145,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
       // getting a next right tuple on in-memory hash table.
       rightTuple = iterator.next();
       frameTuple.set(leftTuple, rightTuple); // evaluate a join condition on both tuples
-      if (joinQual.eval(inSchema, frameTuple).isTrue()) { // if both tuples are joinable
+      if (joinQual.isMatched(inSchema, frameTuple)) { // if both tuples are joinable
         projector.eval(frameTuple, builder);
         found = true;
       }

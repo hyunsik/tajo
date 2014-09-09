@@ -32,6 +32,7 @@ import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.datum.*;
 import org.apache.tajo.engine.codegen.EvalCodeGenerator;
+import org.apache.tajo.engine.codegen.EvalNodeCompiler;
 import org.apache.tajo.engine.codegen.TajoClassLoader;
 import org.apache.tajo.engine.json.CoreGsonHelper;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
@@ -40,11 +41,13 @@ import org.apache.tajo.engine.plan.EvalTreeProtoSerializer;
 import org.apache.tajo.engine.plan.proto.PlanProto;
 import org.apache.tajo.engine.planner.*;
 import org.apache.tajo.engine.query.QueryContext;
-import org.apache.tajo.catalog.SchemaUtil;
+import org.apache.tajo.engine.utils.TupleBuilderUtil;
 import org.apache.tajo.master.TajoMaster;
 import org.apache.tajo.storage.LazyTuple;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
 import org.apache.tajo.util.BytesUtils;
 import org.apache.tajo.util.CommonTestingUtil;
 import org.apache.tajo.util.KeyValueSet;
@@ -247,21 +250,27 @@ public class ExprTestBase {
     try {
       targets = getRawTargets(context, query, condition);
 
-      EvalCodeGenerator codegen = null;
+      EvalNodeCompiler compiler = null;
       if (context.getBool(SessionVars.CODEGEN)) {
-        codegen = new EvalCodeGenerator(classLoader);
+        compiler = new EvalNodeCompiler(classLoader);
       }
 
-      Tuple outTuple = new VTuple(targets.length);
+      Schema outSchema = PlannerUtil.targetToSchema(targets);
+      TupleBuilder builder = new BaseTupleBuilder(outSchema);
+      builder.startRow();
       for (int i = 0; i < targets.length; i++) {
         EvalNode eval = targets[i].getEvalTree();
 
         if (context.getBool(SessionVars.CODEGEN)) {
-          eval = codegen.compile(inputSchema, eval);
+          eval = compiler.compile(inputSchema, eval);
+          eval.eval(inputSchema, vtuple, builder);
+        } else {
+          Datum result = eval.eval(inputSchema, vtuple);
+          TupleBuilderUtil.writeEvalResult(builder, result.type(), result);;
         }
-
-        outTuple.put(i, eval.eval(inputSchema, vtuple));
       }
+      builder.endRow();
+      Tuple outTuple = builder.build();
 
       try {
         classLoader.clean();

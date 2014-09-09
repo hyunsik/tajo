@@ -167,6 +167,11 @@ public class MetaDataTuple implements Tuple {
   }
 
   @Override
+  public Tuple copyTo() {
+    throw new UnsupportedException("copyTo");
+  }
+
+  @Override
   public Datum[] getValues(){
     throw new UnsupportedException("getValues");
   }

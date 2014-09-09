@@ -260,6 +260,13 @@ public class LazyTuple implements Tuple, Cloneable {
   }
 
   @Override
+  public Tuple copyTo() {
+    VTuple vtuple = new VTuple(size());
+    vtuple.values = getValues();
+    return vtuple;
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (obj instanceof Tuple) {
       Tuple other = (Tuple) obj;

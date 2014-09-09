@@ -92,7 +92,7 @@ public class NLJoinExec extends BinaryPhysicalExec {
 
       frameTuple.set(outerTuple, innerTuple);
       if (joinQual != null) {
-        if (joinQual.eval(inSchema, frameTuple).isTrue()) {
+        if (joinQual.isMatched(inSchema, frameTuple)) {
           projector.eval(frameTuple, builder);
           return builder.build();
         }

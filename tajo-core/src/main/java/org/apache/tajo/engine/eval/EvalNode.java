@@ -26,6 +26,7 @@ import org.apache.tajo.engine.json.CoreGsonHelper;
 import org.apache.tajo.json.GsonObject;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.tuple.TupleBuilder;
+import org.apache.tajo.tuple.offheap.RowWriter;
 
 /**
  * An annotated expression which includes actual data domains.
@@ -60,7 +61,11 @@ public abstract class EvalNode implements Cloneable, GsonObject {
 	
 	public abstract <T extends Datum> T eval(Schema schema, Tuple tuple);
 
-  public void eval(Schema schema, Tuple tuple, TupleBuilder builder) {
+  public void eval(Schema schema, Tuple tuple, RowWriter builder) {
+  }
+
+  public boolean isMatched(Schema schema, Tuple tuple) {
+    return eval(schema, tuple).isTrue();
   }
 
   @Deprecated

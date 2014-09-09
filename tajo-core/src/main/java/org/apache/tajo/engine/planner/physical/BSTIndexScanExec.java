@@ -113,7 +113,7 @@ public class BSTIndexScanExec extends PhysicalExec {
       }
     } else {
        while(reader.isCurInMemory() && (tuple = fileScanner.next()) != null) {
-         if (qual.eval(inSchema, tuple).isTrue()) {
+         if (qual.isMatched(inSchema, tuple)) {
            projector.eval(tuple, builder);
            return builder.build();
          } else {

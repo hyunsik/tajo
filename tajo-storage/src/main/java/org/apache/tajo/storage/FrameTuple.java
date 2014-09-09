@@ -199,6 +199,14 @@ public class FrameTuple implements Tuple, Cloneable {
   }
 
   @Override
+  public Tuple copyTo() {
+    VTuple tuple = new VTuple(size());
+    System.arraycopy(left.getValues(), 0, tuple.values, 0, leftSize); // shallow copy
+    System.arraycopy(right.getValues(), leftSize, tuple.values, 0, right.size()); // shallow copy
+    return tuple;
+  }
+
+  @Override
   public Datum[] getValues(){
     throw new UnsupportedException();
   }

@@ -26,7 +26,6 @@ import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.statistics.TableStats;
 import org.apache.tajo.storage.Scanner;
 import org.apache.tajo.storage.Tuple;
-import org.apache.tajo.storage.VTuple;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -40,9 +39,9 @@ class PairWiseMerger implements Scanner {
   private Scanner leftScan;
   private Scanner rightScan;
 
-  private VTuple outTuple;
-  private VTuple leftTuple;
-  private VTuple rightTuple;
+  private Tuple outTuple;
+  private Tuple leftTuple;
+  private Tuple rightTuple;
 
   private final Schema schema;
   private final Comparator<Tuple> comparator;
@@ -90,14 +89,14 @@ class PairWiseMerger implements Scanner {
   private void prepareTuplesForFirstComparison() throws IOException {
     Tuple lt = leftScan.next();
     if (lt != null) {
-      leftTuple = new VTuple(lt);
+      leftTuple = lt.copyTo();
     } else {
       leftTuple = null; // TODO - missed free
     }
 
     Tuple rt = rightScan.next();
     if (rt != null) {
-      rightTuple = new VTuple(rt);
+      rightTuple = rt.copyTo();
     } else {
       rightTuple = null; // TODO - missed free
     }
@@ -107,22 +106,22 @@ class PairWiseMerger implements Scanner {
 
     if (leftTuple != null && rightTuple != null) {
       if (comparator.compare(leftTuple, rightTuple) < 0) {
-        outTuple = new VTuple(leftTuple);
+        outTuple = leftTuple.copyTo();
 
         Tuple lt = leftScan.next();
         if (lt != null) {
-          leftTuple = new VTuple(lt);
+          leftTuple = lt.copyTo();
         } else {
           leftTuple = null; // TODO - missed free
         }
       } else {
-        outTuple = new VTuple(rightTuple);
+        outTuple = rightTuple.copyTo();
 
         Tuple rt = rightScan.next();
         if (rt != null) {
-          rightTuple = new VTuple(rt);
+          rightTuple = rt.copyTo();
         } else {
-          rightTuple = null; // TODO - missed free
+          rightTuple = null;
         }
       }
       return outTuple;
@@ -130,29 +129,29 @@ class PairWiseMerger implements Scanner {
 
     if (leftTuple == null) {
       if (rightTuple != null) {
-        outTuple = new VTuple(rightTuple);
+        outTuple = rightTuple.copyTo();
       } else {
         outTuple = null;
       }
 
       Tuple rt = rightScan.next();
       if (rt != null) {
-        rightTuple = new VTuple(rt);
+        rightTuple = rt.copyTo();
       } else {
-        rightTuple = null; // TODO - missed free
+        rightTuple = null;
       }
     } else {
       if (leftTuple != null) {
-        outTuple = new VTuple(leftTuple);
+        outTuple = leftTuple.copyTo();
       } else {
         outTuple = null;
       }
 
       Tuple lt = leftScan.next();
       if (lt != null) {
-        leftTuple = new VTuple(lt);
+        leftTuple = lt.copyTo();
       } else {
-        leftTuple = null; // TODO - missed free
+        leftTuple = null;
       }
     }
     return outTuple;

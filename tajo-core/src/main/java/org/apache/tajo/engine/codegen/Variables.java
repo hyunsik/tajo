@@ -1,4 +1,4 @@
-/**
+/***
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,35 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.engine.planner.physical;
+package org.apache.tajo.engine.codegen;
 
+import com.google.common.collect.Maps;
 import org.apache.tajo.engine.eval.EvalNode;
-import org.apache.tajo.engine.planner.logical.HavingNode;
-import org.apache.tajo.storage.Tuple;
-import org.apache.tajo.worker.TaskAttemptContext;
+import org.apache.tajo.org.objectweb.asm.ClassWriter;
 
-import java.io.IOException;
+import java.util.Map;
 
-public class HavingExec extends UnaryPhysicalExec  {
-  private final EvalNode qual;
-
-  public HavingExec(TaskAttemptContext context,
-                    HavingNode plan,
-                    PhysicalExec child) {
-    super(context, plan.getInSchema(), plan.getOutSchema(), child);
-
-    this.qual = plan.getQual();
-  }
-
-  @Override
-  public Tuple next() throws IOException {
-    Tuple tuple;
-    while ((tuple = child.next()) != null) {
-      if (qual.isMatched(inSchema, tuple)) {
-        return tuple;
-      }
-    }
-
-    return null;
-  }
+public class Variables {
+  int seqId = 0;
+  Map<EvalNode, String> symbols = Maps.newHashMap();
 }

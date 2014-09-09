@@ -256,6 +256,10 @@ public class HeapTuple implements Tuple {
     return this;
   }
 
+  public Tuple copyTo() {
+    return this;
+  }
+
   @Override
   public Datum[] getValues() {
     Datum [] datums = new Datum[size()];

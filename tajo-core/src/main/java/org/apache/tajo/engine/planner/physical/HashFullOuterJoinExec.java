@@ -92,7 +92,7 @@ public class HashFullOuterJoinExec extends BinaryPhysicalExec {
     }
 
     // for projection
-    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets());
+    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets(), false);
 
     // for join
     frameTuple = new FrameTuple();
@@ -186,7 +186,7 @@ public class HashFullOuterJoinExec extends BinaryPhysicalExec {
       rightTuple = iterator.next();
       frameTuple.set(leftTuple, rightTuple); // evaluate a join condition on both tuples
 
-      if (joinQual.eval(inSchema, frameTuple).isTrue()) { // if both tuples are joinable
+      if (joinQual.isMatched(inSchema, frameTuple)) { // if both tuples are joinable
         projector.eval(frameTuple, outTuple);
         found = true;
         getKeyLeftTuple(leftTuple, leftKeyTuple);

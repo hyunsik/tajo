@@ -34,8 +34,14 @@ public class Projector {
   // for projection
   private final int targetNum;
   private final EvalNode[] evals;
+  private final boolean useJITInSession;
+  private final boolean useJITInOperator;
 
   public Projector(TaskAttemptContext context, Schema inSchema, Schema outSchema, Target [] targets) {
+    this(context, inSchema, outSchema, targets, true);
+  }
+
+  public Projector(TaskAttemptContext context, Schema inSchema, Schema outSchema, Target [] targets, boolean useJIT) {
     this.context = context;
     this.inSchema = inSchema;
     if (targets == null) {
@@ -47,7 +53,10 @@ public class Projector {
     this.targetNum = this.targets.length;
     evals = new EvalNode[targetNum];
 
-    if (context.getQueryContext().getBool(SessionVars.CODEGEN)) {
+    useJITInOperator = useJIT;
+    useJITInSession = context.getQueryContext().getBool(SessionVars.CODEGEN);
+
+    if (useJITInOperator && useJITInSession) {
       EvalNode eval;
       for (int i = 0; i < targetNum; i++) {
         eval = this.targets[i].getEvalTree();
@@ -60,6 +69,7 @@ public class Projector {
     }
   }
 
+  @Deprecated
   public void eval(Tuple in, Tuple out) {
     for (int i = 0; i < evals.length; i++) {
       out.put(i, evals[i].eval(inSchema, in));
@@ -67,6 +77,10 @@ public class Projector {
   }
 
   public void eval(Tuple in, TupleBuilder builder) {
-    TupleBuilderUtil.write(inSchema, in, builder, evals);
+//    if (useJITInOperator && useJITInSession) {
+//      TupleBuilderUtil.evaluateNative(inSchema, in, builder, evals);
+//    } else {
+      TupleBuilderUtil.evaluate(inSchema, in, builder, evals);
+    //}
   }
 }

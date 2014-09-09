@@ -110,7 +110,7 @@ public class HashLeftOuterJoinExec extends BinaryPhysicalExec {
     }
 
     // for projection
-    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets());
+    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets(), false);
 
     // for join
     frameTuple = new FrameTuple();
@@ -175,8 +175,8 @@ public class HashLeftOuterJoinExec extends BinaryPhysicalExec {
       frameTuple.set(leftTuple, rightTuple); // evaluate a join condition on both tuples
 
       // if there is no join filter, it is always true.
-      boolean satisfiedWithFilter = joinFilter == null ? true : joinFilter.eval(inSchema, frameTuple).isTrue();
-      boolean satisfiedWithJoinCondition = joinQual.eval(inSchema, frameTuple).isTrue();
+      boolean satisfiedWithFilter = joinFilter == null ? true : joinFilter.isMatched(inSchema, frameTuple);
+      boolean satisfiedWithJoinCondition = joinQual.isMatched(inSchema, frameTuple);
 
       // if a composited tuple satisfies with both join filter and join condition
       if (satisfiedWithFilter && satisfiedWithJoinCondition) {

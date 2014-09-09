@@ -45,7 +45,7 @@ public class SelectionExec extends UnaryPhysicalExec  {
   public Tuple next() throws IOException {
     Tuple tuple;
     while ((tuple = child.next()) != null) {
-      if (qual.eval(inSchema, tuple).isTrue()) {
+      if (qual.isMatched(inSchema, tuple)) {
         return tuple;
       }
     }

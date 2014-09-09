@@ -208,7 +208,7 @@ public class TupleUtil {
       Tuple tuple;
       while (iterator.hasNext()) {
         tuple = iterator.next();
-        if (qual.eval(schema, tuple).isTrue()) {
+        if (qual.isMatched(schema, tuple)) {
           results.add(tuple);
         }
       }

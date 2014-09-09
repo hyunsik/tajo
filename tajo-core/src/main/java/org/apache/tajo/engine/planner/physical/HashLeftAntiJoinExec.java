@@ -92,7 +92,7 @@ public class HashLeftAntiJoinExec extends HashJoinExec {
       while (notFound && iterator.hasNext()) {
         rightTuple = iterator.next();
         frameTuple.set(leftTuple, rightTuple);
-        if (joinQual.eval(inSchema, frameTuple).isTrue()) { // if the matched one is found
+        if (joinQual.isMatched(inSchema, frameTuple)) { // if the matched one is found
           notFound = false;
         }
       }

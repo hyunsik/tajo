@@ -174,7 +174,7 @@ public class MergeJoinExec extends BinaryPhysicalExec {
 
       frameTuple.set(outerNext, innerIterator.next());
 
-      if (joinQual.eval(inSchema, frameTuple).isTrue()) {
+      if (joinQual.isMatched(inSchema, frameTuple)) {
         projector.eval(frameTuple, builder);
         return builder.build();
       }

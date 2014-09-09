@@ -75,5 +75,7 @@ public interface Tuple extends Cloneable {
 
   public Tuple clone() throws CloneNotSupportedException;
 
+  public Tuple copyTo();
+
   public Datum[] getValues();
 }

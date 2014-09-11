@@ -20,6 +20,7 @@ package org.apache.tajo.engine.codegen;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.sun.org.apache.bcel.internal.generic.ICONST;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.*;
@@ -188,6 +189,7 @@ class TajoGeneratorAdapter {
   }
 
   public void emitIsNullOfTuple(Integer fieldIndex) {
+    Preconditions.checkArgument(fieldIndex > -1, "Field index out Of range: " + fieldIndex);
     if (fieldIndex != null) {
       push(fieldIndex);
     }
@@ -207,6 +209,7 @@ class TajoGeneratorAdapter {
   }
 
   public void emitGetValueOfTuple(TajoDataTypes.DataType dataType, int fieldIndex) {
+    Preconditions.checkArgument(fieldIndex > -1, "Field index out Of range: " + fieldIndex);
     push(fieldIndex);
 
     TajoDataTypes.Type type = dataType.getType();
@@ -376,7 +379,6 @@ class TajoGeneratorAdapter {
     switch (dataType.getType()) {
     case NULL_TYPE:
     case BOOLEAN:
-    case CHAR:
     case INT1:
     case INT2:
     case INT4:
@@ -395,6 +397,7 @@ class TajoGeneratorAdapter {
     case FLOAT8:
       methodvisitor.visitVarInsn(Opcodes.DLOAD, idx);
       break;
+    case CHAR:
     case TEXT:
     case INTERVAL:
     case PROTOBUF:
@@ -1100,7 +1103,6 @@ class TajoGeneratorAdapter {
     switch (type.getType()) {
     case NULL_TYPE:
     case BOOLEAN:
-    case CHAR:
     case INT1:
     case INT2:
     case INT4:
@@ -1120,7 +1122,9 @@ class TajoGeneratorAdapter {
       methodvisitor.visitVarInsn(Opcodes.DSTORE, varId);
       break;
     case INTERVAL:
+    case CHAR:
     case TEXT:
+    case PROTOBUF:
       methodvisitor.visitVarInsn(Opcodes.ASTORE, varId);
       break;
     default:

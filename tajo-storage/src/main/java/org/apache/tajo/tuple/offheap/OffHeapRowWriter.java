@@ -110,11 +110,13 @@ public abstract class OffHeapRowWriter implements RowWriter {
   }
 
   public void skipField() {
-    fieldOffsets[curFieldIdx++] = OffHeapRowBlock.NULL_FIELD_OFFSET;
+    fieldOffsets[curFieldIdx] = OffHeapRowBlock.NULL_FIELD_OFFSET;
+    curFieldIdx++;
   }
 
   private void forwardField() {
-    fieldOffsets[curFieldIdx++] = curOffset;
+    fieldOffsets[curFieldIdx] = curOffset;
+    curFieldIdx++;
   }
 
   public void putBool(boolean val) {

@@ -331,23 +331,22 @@ public class EvalCodeGenerator extends SimpleEvalNodeVisitor<EvalCodeGenContext>
       }
 
       context.methodvisitor.visitVarInsn(Opcodes.ALOAD, 2);
-      context.emitIsNullOfTuple(fieldIdx);
-
-      context.push(true);
+      context.emitIsNullOfTuple(fieldIdx); // It will push 1 if null, and it will push 0 if not null.
 
       Label ifNull = new Label();
       Label afterAll = new Label();
-      context.methodvisitor.visitJumpInsn(Opcodes.IF_ICMPEQ, ifNull);
+      // IFNE means if the first item in stack is not 0.
+      context.methodvisitor.visitJumpInsn(Opcodes.IFNE, ifNull);
 
       context.methodvisitor.visitVarInsn(Opcodes.ALOAD, 2);
       context.emitGetValueOfTuple(columnRef.getDataType(), fieldIdx);
-
       context.pushNullFlag(true); // not null
       context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterAll);
 
       context.methodvisitor.visitLabel(ifNull);
       context.pushDummyValue(field.getValueType());
       context.pushNullFlag(false);
+      context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterAll);
 
       context.methodvisitor.visitLabel(afterAll);
     }

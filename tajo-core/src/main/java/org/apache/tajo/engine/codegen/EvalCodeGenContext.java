@@ -52,12 +52,11 @@ public class EvalCodeGenContext extends TajoGeneratorAdapter {
     generatorAdapter = new GeneratorAdapter(this.methodvisitor, access, methodDesc, methodDesc);
   }
 
-  public void emitReturn() {
+  public void emitReturnAsDatum() {
     convertToDatum(evalNode.getValueType(), true);
     methodvisitor.visitInsn(Opcodes.ARETURN);
     methodvisitor.visitMaxs(0, 0);
     methodvisitor.visitEnd();
-    classWriter.visitEnd();
   }
 
   public void emitInvokeTupleBuilder() {
@@ -65,13 +64,11 @@ public class EvalCodeGenContext extends TajoGeneratorAdapter {
     methodvisitor.visitInsn(Opcodes.RETURN);
     methodvisitor.visitMaxs(0, 0);
     methodvisitor.visitEnd();
-    classWriter.visitEnd();
   }
 
   public void emitReturnAsBool() {
     returnAsBool();
     methodvisitor.visitMaxs(0, 0);
     methodvisitor.visitEnd();
-    classWriter.visitEnd();
   }
 }

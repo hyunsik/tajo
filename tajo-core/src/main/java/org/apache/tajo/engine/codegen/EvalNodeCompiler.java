@@ -51,7 +51,6 @@ public class EvalNodeCompiler {
     Variables variables = new Variables();
     emitMemberFields(variables, classWriter, eval);
     emitClassDefinition(owner, classWriter);
-    classWriter.visitEnd();
     emitConstructor(owner, classWriter, schema, variables);
 
     generateEvalFunc(owner, classWriter, schema, eval, variables);
@@ -60,6 +59,8 @@ public class EvalNodeCompiler {
     if (eval.getValueType().getType() == TajoDataTypes.Type.BOOLEAN) {
       generateIsMatchedFunc(owner, classWriter, schema, eval, variables);
     }
+
+    classWriter.visitEnd();
 
     Class aClass = classLoader.defineClass(className, classWriter.toByteArray());
 
@@ -101,7 +102,7 @@ public class EvalNodeCompiler {
     EvalCodeGenContext evalContext = new EvalCodeGenContext(className,
         schema, classWriter, "eval", evalDesc, eval, vars);
     EvalCodeGenerator.visit(evalContext, eval);
-    evalContext.emitReturn();
+    evalContext.emitReturnAsDatum();
   }
 
   private void generateIsMatchedFunc(String className, ClassWriter classWriter, Schema schema, EvalNode eval, Variables vars) {

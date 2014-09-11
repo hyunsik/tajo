@@ -698,7 +698,7 @@ public class RawFile {
           }
 
           case INET4 :
-            buffer.put(t.getBytes(i));
+            buffer.putInt(t.getInt4(i));
             break;
 
           default:

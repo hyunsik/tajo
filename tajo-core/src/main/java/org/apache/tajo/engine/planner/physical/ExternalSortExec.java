@@ -196,6 +196,7 @@ public class ExternalSortExec extends SortExec {
     int chunkId = 0;
     long runStartTime = System.currentTimeMillis();
     while ((tuple = child.next()) != null) { // partition sort start
+      // TODO - we can just copy the contents of HeapTuple to OffHeapRowBlock if we ensure Tuple is always HeapTuple.
       RowStoreUtil.convert(tuple, tupleBlock.getWriter());
 
       if (tupleBlock.usedMem() > sortBufferBytesNum) {

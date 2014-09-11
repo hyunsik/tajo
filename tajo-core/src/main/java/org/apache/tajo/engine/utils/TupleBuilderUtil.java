@@ -25,6 +25,7 @@ import org.apache.tajo.engine.eval.EvalNode;
 import org.apache.tajo.exception.UnsupportedException;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.tuple.TupleBuilder;
+import org.apache.tajo.tuple.offheap.RowWriter;
 
 public class TupleBuilderUtil {
 
@@ -45,7 +46,7 @@ public class TupleBuilderUtil {
     builder.endRow();
   }
 
-  public static void writeEvalResult(TupleBuilder builder, TajoDataTypes.Type type, Datum datum) {
+  public static void writeEvalResult(RowWriter builder, TajoDataTypes.Type type, Datum datum) {
     switch (type) {
     case NULL_TYPE:
       builder.skipField();
@@ -80,6 +81,7 @@ public class TupleBuilderUtil {
       break;
     case INTERVAL:
       builder.putInterval((org.apache.tajo.datum.IntervalDatum) datum);
+      break;
     case CHAR:
     case TEXT:
       builder.putText(datum.asTextBytes());

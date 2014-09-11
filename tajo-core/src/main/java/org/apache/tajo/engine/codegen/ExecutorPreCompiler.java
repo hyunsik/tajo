@@ -111,7 +111,7 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
         // If any compilation error occurs, it works in a fallback mode. This mode just uses EvalNode objects
         // instead of a compiled EvalNode.
         context.compiledComparators.put(key, comparator);
-        LOG.warn(t);
+        LOG.warn(t.getMessage());
       }
     }
   }
@@ -171,7 +171,9 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
                                   GroupbyNode node, Stack<LogicalNode> stack) throws PlanningException {
     super.visitGroupBy(context, plan, block, node, stack);
 
-    compileProjectableNode(context, node.getInSchema(), node);
+    // Groupby executors do not use Projector.
+    //
+    //compileProjectableNode(context, node.getInSchema(), node);
 
     return node;
   }

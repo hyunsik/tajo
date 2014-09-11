@@ -23,6 +23,7 @@ import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes.DataType;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.json.CoreGsonHelper;
+import org.apache.tajo.engine.utils.TupleBuilderUtil;
 import org.apache.tajo.json.GsonObject;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.tuple.TupleBuilder;
@@ -62,6 +63,8 @@ public abstract class EvalNode implements Cloneable, GsonObject {
 	public abstract <T extends Datum> T eval(Schema schema, Tuple tuple);
 
   public void eval(Schema schema, Tuple tuple, RowWriter builder) {
+    Datum result = eval(schema, tuple);
+    TupleBuilderUtil.writeEvalResult(builder, result.type(), result);
   }
 
   public boolean isMatched(Schema schema, Tuple tuple) {

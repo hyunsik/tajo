@@ -112,7 +112,7 @@ public class TajoContainerProxy extends ContainerProxy {
               .build();
 
       tajoWorkerRpcClient.executeExecutionBlock(null, request, NullCallback.get());
-    } catch (Exception e) {
+    } catch (Throwable e) {
       LOG.error(e.getMessage(), e);
     } finally {
       RpcConnectionPool.getPool(context.getConf()).releaseConnection(tajoWorkerRpc);

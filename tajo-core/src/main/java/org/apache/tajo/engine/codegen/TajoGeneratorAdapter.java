@@ -188,10 +188,10 @@ class TajoGeneratorAdapter {
     emitIsNullOfTuple(null);
   }
 
-  public void emitIsNullOfTuple(Integer fieldIndex) {
-    Preconditions.checkArgument(fieldIndex > -1, "Field index out Of range: " + fieldIndex);
+  public void emitIsNullOfTuple(@Nullable Integer fieldIndex) {
     if (fieldIndex != null) {
       push(fieldIndex);
+      Preconditions.checkArgument(fieldIndex > -1, "Field index out Of range: " + fieldIndex);
     }
 
     invokeInterface(Tuple.class, "isNull", boolean.class, new Class[]{int.class});
@@ -204,6 +204,7 @@ class TajoGeneratorAdapter {
   public void emitIsNotNullOfTuple(@Nullable Integer fieldIndex) {
     if (fieldIndex != null) {
       push(fieldIndex);
+      Preconditions.checkArgument(fieldIndex > -1, "Field index out Of range: " + fieldIndex);
     }
     invokeInterface(Tuple.class, "isNotNull", boolean.class, new Class [] {int.class});
   }

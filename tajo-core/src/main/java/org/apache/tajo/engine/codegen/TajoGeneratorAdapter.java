@@ -805,6 +805,9 @@ class TajoGeneratorAdapter {
     int value = store(type);
     aload(BUILDER);
     load(type, value);
+    if (type.getType() == PROTOBUF) {
+      methodvisitor.visitTypeInsn(Opcodes.CHECKCAST, TajoGeneratorAdapter.getInternalName(ProtobufDatum.class));
+    }
     invokeInterface(RowWriter.class, method, void.class, paramTypes);
     methodvisitor.visitJumpInsn(Opcodes.GOTO, afterAll);
 

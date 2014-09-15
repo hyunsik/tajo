@@ -144,7 +144,7 @@ public class BaseTupleComparator extends TupleComparator implements ProtoObject<
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(sortKeyIds);
+    return Objects.hashCode(sortSpecs);
   }
 
   @Override

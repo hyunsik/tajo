@@ -59,13 +59,6 @@ public class EvalCodeGenContext extends TajoGeneratorAdapter {
     methodvisitor.visitEnd();
   }
 
-  public void emitInvokeTupleBuilder() {
-    writeToTupleBuilder(evalNode.getValueType());
-    methodvisitor.visitInsn(Opcodes.RETURN);
-    methodvisitor.visitMaxs(0, 0);
-    methodvisitor.visitEnd();
-  }
-
   public void emitReturnAsBool() {
     returnAsBool();
     methodvisitor.visitMaxs(0, 0);

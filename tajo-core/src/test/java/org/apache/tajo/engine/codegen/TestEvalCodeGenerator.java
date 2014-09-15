@@ -110,6 +110,46 @@ public class TestEvalCodeGenerator extends ExprTestBase {
     textSchema.addColumn("col2", TajoDataTypes.Type.TEXT);
 
     testEval(textSchema, "table1", "aaa,bbb", "select col1 < col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 <= col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 > col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 >= col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 = col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 != col2 from table1", new String [] {"t"});
+
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 < col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 <= col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 > col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 >= col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 = col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "bbb,aaa", "select col1 != col2 from table1", new String [] {"t"});
+
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 < col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 <= col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 > col2 from table1", new String [] {"f"});
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 >= col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 = col2 from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,aaa", "select col1 != col2 from table1", new String [] {"f"});
+
+    testEval(textSchema, "table1", ",aaa", "select (col1 < col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",aaa", "select (col1 <= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",aaa", "select (col1 > col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",aaa", "select (col1 >= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",aaa", "select (col1 = col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",aaa", "select (col1 != col2) is null from table1", new String [] {"t"});
+
+    testEval(textSchema, "table1", "aaa,", "select (col1 < col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,", "select (col1 <= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,", "select (col1 > col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,", "select (col1 >= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,", "select (col1 = col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", "aaa,", "select (col1 != col2) is null from table1", new String [] {"t"});
+
+    testEval(textSchema, "table1", ",", "select (col1 < col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",", "select (col1 <= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",", "select (col1 > col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",", "select (col1 >= col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",", "select (col1 = col2) is null from table1", new String [] {"t"});
+    testEval(textSchema, "table1", ",", "select (col1 != col2) is null from table1", new String [] {"t"});
   }
 
   @Test

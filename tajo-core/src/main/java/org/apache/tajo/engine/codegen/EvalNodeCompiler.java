@@ -18,15 +18,19 @@
 
 package org.apache.tajo.engine.codegen;
 
+import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.IntervalDatum;
 import org.apache.tajo.engine.eval.*;
 import org.apache.tajo.org.objectweb.asm.ClassWriter;
+import org.apache.tajo.org.objectweb.asm.Label;
 import org.apache.tajo.org.objectweb.asm.MethodVisitor;
 import org.apache.tajo.org.objectweb.asm.Opcodes;
 import org.apache.tajo.storage.Tuple;
+import org.apache.tajo.tuple.offheap.HeapTuple;
+import org.apache.tajo.tuple.offheap.OffHeapRowWriter;
 import org.apache.tajo.tuple.offheap.RowWriter;
 
 import java.lang.reflect.Constructor;
@@ -54,10 +58,10 @@ public class EvalNodeCompiler {
     emitConstructor(owner, classWriter, schema, variables);
 
     generateEvalFunc(owner, classWriter, schema, eval, variables);
-    //generateEvalFuncNative(owner, classWriter, schema, eval, variables);
+    generateEvalFuncNative(owner, classWriter, schema, eval, variables);
 
     if (eval.getValueType().getType() == TajoDataTypes.Type.BOOLEAN) {
-      //generateIsMatchedFunc(owner, classWriter, schema, eval, variables);
+      generateIsMatchedFunc(owner, classWriter, schema, eval, variables);
     }
 
     classWriter.visitEnd();
@@ -89,8 +93,49 @@ public class EvalNodeCompiler {
 
     EvalCodeGenContext evalContext = new EvalCodeGenContext(className,
         schema, classWriter, "eval", evalDesc, eval, vars);
-    EvalCodeGenerator.visit(evalContext, eval);
-    evalContext.emitInvokeTupleBuilder();
+
+    if (EvalCodeGenerator.isTextField(eval)) {
+      copyTextOrBytes(evalContext, (FieldEval) eval);
+    } else {
+      EvalCodeGenerator.visit(evalContext, eval);
+      evalContext.writeToTupleBuilder(eval.getValueType());
+    }
+
+    evalContext.methodvisitor.visitInsn(Opcodes.RETURN);
+    evalContext.methodvisitor.visitMaxs(0, 0);
+    evalContext.methodvisitor.visitEnd();
+  }
+
+  private void copyTextOrBytes(EvalCodeGenContext context, FieldEval field) {
+    Column columnRef = field.getColumnRef();
+    int fieldIdx;
+    if (columnRef.hasQualifier()) {
+      fieldIdx = context.schema.getColumnId(columnRef.getQualifiedName());
+    } else {
+      fieldIdx = context.schema.getColumnIdByName(columnRef.getSimpleName());
+    }
+
+    context.methodvisitor.visitVarInsn(Opcodes.ALOAD, 2);
+    context.emitIsNullOfTuple(fieldIdx); // It will push 1 if null, and it will push 0 if not null.
+
+    Label ifNull = new Label();
+    Label afterAll = new Label();
+    // IFNE means if the first item in stack is not 0.
+    context.methodvisitor.visitJumpInsn(Opcodes.IFNE, ifNull);
+
+    context.aload(EvalCodeGenContext.BUILDER);
+    context.methodvisitor.visitTypeInsn(Opcodes.CHECKCAST, TajoGeneratorAdapter.getInternalName(OffHeapRowWriter.class));
+    context.aload(EvalCodeGenContext.TUPLE);
+    context.methodvisitor.visitTypeInsn(Opcodes.CHECKCAST, TajoGeneratorAdapter.getInternalName(HeapTuple.class));
+    context.push(fieldIdx);
+    context.invokeVirtual(OffHeapRowWriter.class, "copyTextFrom", void.class, new Class [] {HeapTuple.class, int.class});
+    context.gotoLabel(afterAll);
+
+    context.methodvisitor.visitLabel(ifNull);
+    context.aload(EvalCodeGenContext.BUILDER); // RowWriter
+    context.invokeInterface(RowWriter.class, "skipField", void.class, new Class[]{});
+
+    context.methodvisitor.visitLabel(afterAll);
   }
 
   private void generateEvalFunc(String className, ClassWriter classWriter, Schema schema, EvalNode eval,

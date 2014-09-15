@@ -199,7 +199,9 @@ public class ExprTestBase {
                                 int [] targetIds ) {
     LazyTuple lazyTuple =
         new LazyTuple(inputSchema, BytesUtils.splitPreserveAllTokens(line.getBytes(), delimiter, targetIds),0);
-    VTuple vtuple = new VTuple(inputSchema.size());
+
+    BaseTupleBuilder builder = new BaseTupleBuilder(inputSchema);
+    builder.startRow();
     for (int i = 0; i < inputSchema.size(); i++) {
 
       // If null value occurs, null datum is manually inserted to an input tuple.
@@ -211,16 +213,17 @@ public class ExprTestBase {
       nullDatum |= datum.isNull();
 
       if (nullDatum) {
-        vtuple.put(i, NullDatum.get());
+        builder.skipField();
       } else {
-        vtuple.put(i, lazyTuple.get(i));
+        TupleBuilderUtil.writeEvalResult(builder, inputSchema.getColumn(i).getDataType().getType(), lazyTuple.get(i));
       }
     }
+    builder.endRow();
 
-    return vtuple;
+    return builder.build();
   }
 
-  public void testEval(OverridableConf overideConf, Schema schema, String tableName, String csvTuple, String query,
+  public void testEval(OverridableConf overideConf, Schema schema, String tableName, String csvFormatLine, String query,
                        String [] expected, char delimiter, boolean condition) throws IOException {
     QueryContext context;
     if (overideConf == null) {
@@ -230,8 +233,7 @@ public class ExprTestBase {
       context.putAll(overideConf);
     }
 
-    LazyTuple lazyTuple;
-    VTuple vtuple  = null;
+    Tuple inTuple  = null;
     String qualifiedTableName =
         CatalogUtil.buildFQName(DEFAULT_DATABASE_NAME,
             tableName != null ? CatalogUtil.normalizeIdentifier(tableName) : null);
@@ -245,6 +247,7 @@ public class ExprTestBase {
         targetIdx[i] = i;
       }
 
+      inTuple = buildInputTuple(context, inputSchema, csvFormatLine, delimiter, targetIdx);
 
       cat.createTable(new TableDesc(qualifiedTableName, inputSchema,
           CatalogProtos.StoreType.CSV, new KeyValueSet(), CommonTestingUtil.getTestDir()));
@@ -270,9 +273,9 @@ public class ExprTestBase {
 
         if (context.getBool(SessionVars.CODEGEN)) {
           eval = compiler.compile(inputSchema, eval);
-          eval.eval(inputSchema, vtuple, builder);
+          eval.eval(inputSchema, inTuple, builder);
         } else {
-          Datum result = eval.eval(inputSchema, vtuple);
+          Datum result = eval.eval(inputSchema, inTuple);
           TupleBuilderUtil.writeEvalResult(builder, result.type(), result);;
         }
       }

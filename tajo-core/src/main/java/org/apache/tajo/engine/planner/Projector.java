@@ -77,10 +77,10 @@ public class Projector {
   }
 
   public void eval(Tuple in, TupleBuilder builder) {
-//    if (useJITInOperator && useJITInSession) {
+    if (useJITInOperator && useJITInSession) {
       TupleBuilderUtil.evaluateNative(inSchema, in, builder, evals);
-//    } else {
-//      TupleBuilderUtil.evaluate(inSchema, in, builder, evals);
-//    }
+    } else {
+      TupleBuilderUtil.evaluate(inSchema, in, builder, evals);
+    }
   }
 }

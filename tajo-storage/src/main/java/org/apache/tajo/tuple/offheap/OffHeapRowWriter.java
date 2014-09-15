@@ -206,6 +206,22 @@ public abstract class OffHeapRowWriter implements RowWriter {
     curOffset += bytesLen;
   }
 
+  public void copyTextFrom(HeapTuple tuple, int fieldIdx) {
+    long srcFieldOffset = tuple.checkNullAndGetOffset(fieldIdx);
+    int strLen = OffHeapMemory.UNSAFE.getInt(tuple.data, Unsafe.ARRAY_BOOLEAN_BASE_OFFSET + srcFieldOffset);
+    srcFieldOffset += SizeOf.SIZE_OF_INT;
+
+    ensureSize(SizeOf.SIZE_OF_INT + strLen);
+    forwardField();
+
+    OffHeapMemory.UNSAFE.putInt(recordStartAddr() + curOffset, strLen);
+    curOffset += SizeOf.SIZE_OF_INT;
+
+    OffHeapMemory.UNSAFE.copyMemory(tuple.data, Unsafe.ARRAY_BOOLEAN_BASE_OFFSET + srcFieldOffset, null,
+        recordStartAddr() + curOffset, strLen);
+    curOffset += strLen;
+  }
+
   public void putBlob(byte[] val) {
     int bytesLen = val.length;
 

@@ -18,6 +18,7 @@
 
 package org.apache.tajo.engine.codegen;
 
+import com.sun.org.apache.bcel.internal.generic.IFNE;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.FunctionDesc;
@@ -441,10 +442,21 @@ public class EvalCodeGenerator extends SimpleEvalNodeVisitor<EvalCodeGenContext>
     return evalNode;
   }
 
-  private static boolean isTextField(EvalNode evalNode) {
+  public static boolean isTextField(EvalNode evalNode) {
     TajoDataTypes.Type type = evalNode.getValueType().getType();
     boolean textType = (type == TajoDataTypes.Type.TEXT || type == TajoDataTypes.Type.CHAR);
     return textType && evalNode.getType() == EvalType.FIELD;
+  }
+
+  public void emitComparisonValueToBoolean(EvalCodeGenContext context, BinaryEval eval, Label ifNotMatched) {
+    if (eval.getType() == EvalType.EQUAL) {
+      context.methodvisitor.visitJumpInsn(Opcodes.IFNE, ifNotMatched);
+    } else if (eval.getType() == EvalType.NOT_EQUAL) {
+      context.methodvisitor.visitJumpInsn(Opcodes.IFEQ, ifNotMatched);
+    } else {
+      context.push(0);
+      context.ifCmp(CatalogUtil.newSimpleDataType(TajoDataTypes.Type.INT4), eval.getType(), ifNotMatched);
+    }
   }
 
   public void emitComparisonBothTextFields(EvalCodeGenContext context, BinaryEval eval) {
@@ -488,8 +500,7 @@ public class EvalCodeGenerator extends SimpleEvalNodeVisitor<EvalCodeGenContext>
     context.invokeStatic(HeapTupleBytesComparator.class, "compare", int.class,
         new Class [] {HeapTuple.class, int.class, HeapTuple.class, int.class});
 
-    context.push(1);
-    context.ifCmp(CatalogUtil.newSimpleDataType(TajoDataTypes.Type.INT4), eval.getType(), ifNotMatched);
+    emitComparisonValueToBoolean(context, eval, ifNotMatched);
 
     context.pushBooleanOfThreeValuedLogic(true);
     context.pushNullFlag(true);

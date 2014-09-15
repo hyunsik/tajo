@@ -109,9 +109,20 @@ public abstract class OffHeapRowWriter implements RowWriter {
     forward(curOffset);
   }
 
+  public int currentField() {
+    return curFieldIdx;
+  }
+
   public void skipField() {
     fieldOffsets[curFieldIdx] = OffHeapRowBlock.NULL_FIELD_OFFSET;
     curFieldIdx++;
+  }
+
+  public void skipField(int num) {
+    for (int i = curFieldIdx; i < num && i < dataTypes.length; i++) {
+      fieldOffsets[curFieldIdx] = OffHeapRowBlock.NULL_FIELD_OFFSET;
+      curFieldIdx++;
+    }
   }
 
   private void forwardField() {
@@ -123,7 +134,7 @@ public abstract class OffHeapRowWriter implements RowWriter {
     ensureSize(SizeOf.SIZE_OF_BOOL);
     forwardField();
 
-    OffHeapMemory.UNSAFE.putByte(recordStartAddr() + curOffset, (byte) (val ? 0x01 : 0x00));
+    OffHeapMemory.UNSAFE.putByte(recordStartAddr() + curOffset, (byte) (val ? 0x01 : 0x02));
 
     curOffset += SizeOf.SIZE_OF_BOOL;
   }

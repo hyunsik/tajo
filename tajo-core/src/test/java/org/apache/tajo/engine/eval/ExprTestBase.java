@@ -195,6 +195,31 @@ public class ExprTestBase {
         query, expected, delimiter, condition);
   }
 
+  private Tuple buildInputTuple(QueryContext context, Schema inputSchema, String line, char delimiter,
+                                int [] targetIds ) {
+    LazyTuple lazyTuple =
+        new LazyTuple(inputSchema, BytesUtils.splitPreserveAllTokens(line.getBytes(), delimiter, targetIds),0);
+    VTuple vtuple = new VTuple(inputSchema.size());
+    for (int i = 0; i < inputSchema.size(); i++) {
+
+      // If null value occurs, null datum is manually inserted to an input tuple.
+      boolean nullDatum;
+      Datum datum = lazyTuple.get(i);
+      nullDatum = (datum instanceof TextDatum || datum instanceof CharDatum);
+      nullDatum = nullDatum && datum.asChars().equals("") ||
+          datum.asChars().equals(context.get(SessionVars.NULL_CHAR));
+      nullDatum |= datum.isNull();
+
+      if (nullDatum) {
+        vtuple.put(i, NullDatum.get());
+      } else {
+        vtuple.put(i, lazyTuple.get(i));
+      }
+    }
+
+    return vtuple;
+  }
+
   public void testEval(OverridableConf overideConf, Schema schema, String tableName, String csvTuple, String query,
                        String [] expected, char delimiter, boolean condition) throws IOException {
     QueryContext context;
@@ -220,25 +245,7 @@ public class ExprTestBase {
         targetIdx[i] = i;
       }
 
-      lazyTuple =
-          new LazyTuple(inputSchema, BytesUtils.splitPreserveAllTokens(csvTuple.getBytes(), delimiter, targetIdx),0);
-      vtuple = new VTuple(inputSchema.size());
-      for (int i = 0; i < inputSchema.size(); i++) {
 
-        // If null value occurs, null datum is manually inserted to an input tuple.
-        boolean nullDatum;
-        Datum datum = lazyTuple.get(i);
-        nullDatum = (datum instanceof TextDatum || datum instanceof CharDatum);
-        nullDatum = nullDatum && datum.asChars().equals("") ||
-            datum.asChars().equals(context.get(SessionVars.NULL_CHAR));
-        nullDatum |= datum.isNull();
-
-        if (nullDatum) {
-          vtuple.put(i, NullDatum.get());
-        } else {
-          vtuple.put(i, lazyTuple.get(i));
-        }
-      }
       cat.createTable(new TableDesc(qualifiedTableName, inputSchema,
           CatalogProtos.StoreType.CSV, new KeyValueSet(), CommonTestingUtil.getTestDir()));
     }

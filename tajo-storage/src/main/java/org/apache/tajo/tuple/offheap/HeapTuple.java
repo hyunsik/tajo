@@ -40,7 +40,7 @@ public class HeapTuple implements Tuple {
   private static final Unsafe UNSAFE = UnsafeUtil.unsafe;
   private static final long BASE_OFFSET = Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
-  private final byte [] data;
+  final byte [] data;
   private final DataType [] types;
 
   public HeapTuple(final byte [] bytes, final DataType [] types) {
@@ -61,7 +61,7 @@ public class HeapTuple implements Tuple {
     return UNSAFE.getInt(data, BASE_OFFSET + SizeOf.SIZE_OF_INT + (fieldId * SizeOf.SIZE_OF_INT));
   }
 
-  private int checkNullAndGetOffset(int fieldId) {
+  int checkNullAndGetOffset(int fieldId) {
     int offset = getFieldOffset(fieldId);
     if (offset == OffHeapRowBlock.NULL_FIELD_OFFSET) {
       throw new RuntimeException("Invalid Field Access: " + fieldId);

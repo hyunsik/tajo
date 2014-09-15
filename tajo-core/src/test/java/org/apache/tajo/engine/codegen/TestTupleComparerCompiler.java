@@ -28,6 +28,7 @@ import org.apache.tajo.storage.BaseTupleComparator;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.TupleComparator;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.tuple.offheap.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -120,17 +121,27 @@ public class TestTupleComparerCompiler {
     SortSpec [][] sortSpecs = createSortSpecs("col0");
     TupleComparator [] comps = createComparators(sortSpecs, false);
 
-    Tuple t1 = new VTuple(schema.size());
-    t1.put(0, DatumFactory.createBool(true));
+    BaseTupleBuilder builder = new BaseTupleBuilder(schema);
 
-    Tuple t2 = new VTuple(schema.size());
-    t2.put(0, DatumFactory.createBool(true));
+    builder.startRow();
+    builder.putBool(true);
+    builder.endRow();
+    Tuple t1 = builder.build();
 
-    Tuple t3 = new VTuple(schema.size());
-    t3.put(0, DatumFactory.createBool(false));
+    builder.startRow();
+    builder.putBool(true);
+    builder.endRow();
+    Tuple t2 = builder.build();
 
-    Tuple t4 = new VTuple(schema.size());
-    t4.put(0, NullDatum.get());
+    builder.startRow();
+    builder.putBool(false);
+    builder.endRow();
+    Tuple t3 = builder.build();
+
+    builder.startRow();
+    builder.skipField();
+    builder.endRow();
+    Tuple t4 = builder.build();
 
     assertCompareAll(comps, sortSpecs, t1, t2, t3, t4, t4);
   }
@@ -267,17 +278,29 @@ public class TestTupleComparerCompiler {
     SortSpec [][] sortSpecs = createSortSpecs("col6");
     TupleComparator [] comps = createComparators(sortSpecs, false);
 
-    Tuple t1 = new VTuple(schema.size());
-    t1.put(6, DatumFactory.createText("tajo"));
+    BaseTupleBuilder builder = new BaseTupleBuilder(schema);
 
-    Tuple t2 = new VTuple(schema.size());
-    t2.put(6, DatumFactory.createText("tajo"));
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("tajo");
+    builder.endRow();
+    Tuple t1 = builder.build();
 
-    Tuple t3 = new VTuple(schema.size());
-    t3.put(6, DatumFactory.createText("tazo"));
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("tajo");
+    builder.endRow();
+    Tuple t2 = builder.build();
 
-    Tuple t4 = new VTuple(schema.size());
-    t4.put(6, NullDatum.get());
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("tazo");
+    builder.endRow();
+    Tuple t3 = builder.build();
+
+    builder.startRow();
+    builder.endRow();
+    Tuple t4 = builder.build();
 
     assertCompareAll(comps, sortSpecs, t1, t2, t3, t4, t4);
   }
@@ -290,21 +313,29 @@ public class TestTupleComparerCompiler {
     BaseTupleComparator compImpl = new BaseTupleComparator(schema, sortSpecs);
     TupleComparator comp = compiler.compile(compImpl, false);
 
-    Tuple t1 = new VTuple(schema.size());
-    t1.put(5, NullDatum.get());
-    t1.put(6, DatumFactory.createText("ARGENTINA"));
+    BaseTupleBuilder builder = new BaseTupleBuilder(schema);
 
-    Tuple t2 = new VTuple(schema.size());
-    t2.put(5, NullDatum.get());
-    t2.put(6, DatumFactory.createText("ARGENTINA"));
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("ARGENTINA");
+    builder.endRow();
+    Tuple t1 = builder.build();
 
-    Tuple t3 = new VTuple(schema.size());
-    t3.put(5, NullDatum.get());
-    t3.put(6, DatumFactory.createText("CANADA"));
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("ARGENTINA");
+    builder.endRow();
+    Tuple t2 = builder.build();
 
-    Tuple t4 = new VTuple(schema.size());
-    t4.put(5, NullDatum.get());
-    t4.put(6, NullDatum.get());
+    builder.startRow();
+    builder.skipField(6);
+    builder.putText("CANADA");
+    builder.endRow();
+    Tuple t3 = builder.build();
+
+    builder.startRow();
+    builder.endRow();
+    Tuple t4 = builder.build();
 
     assertCompare(comp, sortSpecs, t1, t2, t3, t4, t4);
   }

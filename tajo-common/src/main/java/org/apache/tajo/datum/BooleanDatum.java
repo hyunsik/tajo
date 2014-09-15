@@ -170,9 +170,9 @@ public class BooleanDatum extends Datum {
       if (val && !datum.asBool()) {
         return -1;
       } else if (val && datum.asBool()) {
-        return 1;
-      } else {
         return 0;
+      } else {
+        return 1;
       }
     default:
       throw new InvalidOperationException(datum.type());

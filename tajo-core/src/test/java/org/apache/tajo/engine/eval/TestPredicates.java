@@ -112,7 +112,6 @@ public class TestPredicates extends ExprTestBase {
   @Test
   public void testComparisonEqual() throws IOException {
 
-
     Schema schema = new Schema();
     schema.addColumn("col0", TajoDataTypes.Type.INT1);
     schema.addColumn("col1", TajoDataTypes.Type.INT2);

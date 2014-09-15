@@ -18,6 +18,7 @@
 
 package org.apache.tajo.engine.codegen;
 
+import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Column;
 import org.apache.tajo.catalog.FunctionDesc;
 import org.apache.tajo.catalog.Schema;
@@ -31,10 +32,14 @@ import org.apache.tajo.org.objectweb.asm.Opcodes;
 import org.apache.tajo.org.objectweb.asm.Type;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.offheap.HeapTuple;
+import org.apache.tajo.tuple.offheap.HeapTupleBytesComparator;
+import org.apache.tajo.util.UnsafeComparer;
 
 import java.util.Stack;
 
 import static org.apache.tajo.common.TajoDataTypes.DataType;
+import static org.apache.tajo.engine.codegen.TajoGeneratorAdapter.TUPLE;
 import static org.apache.tajo.engine.codegen.TajoGeneratorAdapter.getDescription;
 import static org.apache.tajo.engine.eval.FunctionEval.ParamType;
 
@@ -436,6 +441,113 @@ public class EvalCodeGenerator extends SimpleEvalNodeVisitor<EvalCodeGenContext>
     return evalNode;
   }
 
+  private static boolean isTextField(EvalNode evalNode) {
+    TajoDataTypes.Type type = evalNode.getValueType().getType();
+    boolean textType = (type == TajoDataTypes.Type.TEXT || type == TajoDataTypes.Type.CHAR);
+    return textType && evalNode.getType() == EvalType.FIELD;
+  }
+
+  public void emitComparisonBothTextFields(EvalCodeGenContext context, BinaryEval eval) {
+    FieldEval lhsField = eval.getLeftExpr();
+    Column lhsColumn = lhsField.getColumnRef();
+    int lhsFieldIdx;
+    if (lhsColumn.hasQualifier()) {
+      lhsFieldIdx = context.schema.getColumnId(lhsColumn.getQualifiedName());
+    } else {
+      lhsFieldIdx = context.schema.getColumnIdByName(lhsColumn.getSimpleName());
+    }
+
+    FieldEval rhsField = eval.getRightExpr();
+    Column rhsColumn = rhsField.getColumnRef();
+    int rhsFieldIdx;
+    if (rhsColumn.hasQualifier()) {
+      rhsFieldIdx = context.schema.getColumnId(rhsColumn.getQualifiedName());
+    } else {
+      rhsFieldIdx = context.schema.getColumnIdByName(rhsColumn.getSimpleName());
+    }
+
+    Label ifNull = new Label();
+    Label ifNotMatched = new Label();
+    Label afterEnd = new Label();
+
+    context.methodvisitor.visitVarInsn(Opcodes.ALOAD, TUPLE);
+    context.emitIsNullOfTuple(lhsFieldIdx); // It will push 1 if null, and it will push 0 if not null.
+    context.methodvisitor.visitVarInsn(Opcodes.ALOAD, TUPLE);
+    context.emitIsNullOfTuple(rhsFieldIdx); // It will push 1 if null, and it will push 0 if not null.
+
+    context.methodvisitor.visitInsn(Opcodes.IOR);
+    context.methodvisitor.visitJumpInsn(Opcodes.IFNE, ifNull);
+
+    // parameters for HeapTupleBytesComparator::compare
+    context.methodvisitor.visitVarInsn(Opcodes.ALOAD, TUPLE);
+    context.methodvisitor.visitTypeInsn(Opcodes.CHECKCAST, TajoGeneratorAdapter.getInternalName(HeapTuple.class));
+    context.push(lhsFieldIdx);
+    context.methodvisitor.visitVarInsn(Opcodes.ALOAD, TUPLE);
+    context.methodvisitor.visitTypeInsn(Opcodes.CHECKCAST, TajoGeneratorAdapter.getInternalName(HeapTuple.class));
+    context.push(rhsFieldIdx);
+    context.invokeStatic(HeapTupleBytesComparator.class, "compare", int.class,
+        new Class [] {HeapTuple.class, int.class, HeapTuple.class, int.class});
+
+    context.push(1);
+    context.ifCmp(CatalogUtil.newSimpleDataType(TajoDataTypes.Type.INT4), eval.getType(), ifNotMatched);
+
+    context.pushBooleanOfThreeValuedLogic(true);
+    context.pushNullFlag(true);
+    context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
+
+    context.methodvisitor.visitLabel(ifNotMatched);
+    context.pushBooleanOfThreeValuedLogic(false);
+    context.pushNullFlag(true);
+    context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
+
+    context.methodvisitor.visitLabel(ifNull);
+    context.pushNullOfThreeValuedLogic();
+    context.pushNullFlag(false);
+
+    context.methodvisitor.visitLabel(afterEnd);
+  }
+
+  public void emitComparisonOfBothBytes(EvalCodeGenContext context, BinaryEval evalNode, Stack<EvalNode> stack) {
+    DataType lhsType = evalNode.getLeftExpr().getValueType();
+    DataType rhsType = evalNode.getRightExpr().getValueType();
+
+    stack.push(evalNode);
+    visit(context, evalNode.getLeftExpr(), stack);                    // < lhs, l_null
+    final int LHS_NULLFLAG = context.istore();
+    int LHS = context.store(evalNode.getLeftExpr().getValueType());   // <
+
+    visit(context, evalNode.getRightExpr(), stack);                   // < rhs, r_nullflag
+    final int RHS_NULLFLAG = context.istore();
+    final int RHS = context.store(evalNode.getRightExpr().getValueType());           // <
+    stack.pop();
+
+    Label ifNull = new Label();
+    Label ifNotMatched = new Label();
+    Label afterEnd = new Label();
+
+    context.emitNullityCheck(ifNull, LHS_NULLFLAG, RHS_NULLFLAG);
+
+    context.load(lhsType, LHS);             // < lhs
+    context.load(rhsType, RHS);            // < lhs, rhs
+
+    context.ifCmp(evalNode.getLeftExpr().getValueType(), evalNode.getType(), ifNotMatched);
+
+    context.pushBooleanOfThreeValuedLogic(true);
+    context.pushNullFlag(true);
+    context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
+
+    context.methodvisitor.visitLabel(ifNotMatched);
+    context.pushBooleanOfThreeValuedLogic(false);
+    context.pushNullFlag(true);
+    context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
+
+    context.methodvisitor.visitLabel(ifNull);
+    context.pushNullOfThreeValuedLogic();
+    context.pushNullFlag(false);
+
+    context.methodvisitor.visitLabel(afterEnd);
+  }
+
   public EvalNode visitComparisonEval(EvalCodeGenContext context, BinaryEval evalNode, Stack<EvalNode> stack)
       throws CompilationError {
 
@@ -446,41 +558,12 @@ public class EvalCodeGenerator extends SimpleEvalNodeVisitor<EvalCodeGenContext>
       context.pushNullOfThreeValuedLogic();
       context.pushNullFlag(false);
     } else {
-      stack.push(evalNode);
-      visit(context, evalNode.getLeftExpr(), stack);                    // < lhs, l_null
-      final int LHS_NULLFLAG = context.istore();
-      int LHS = context.store(evalNode.getLeftExpr().getValueType());   // <
 
-      visit(context, evalNode.getRightExpr(), stack);                   // < rhs, r_nullflag
-      final int RHS_NULLFLAG = context.istore();
-      final int RHS = context.store(evalNode.getRightExpr().getValueType());           // <
-      stack.pop();
-
-      Label ifNull = new Label();
-      Label ifNotMatched = new Label();
-      Label afterEnd = new Label();
-
-      context.emitNullityCheck(ifNull, LHS_NULLFLAG, RHS_NULLFLAG);
-
-      context.load(evalNode.getLeftExpr().getValueType(), LHS);             // < lhs
-      context.load(evalNode.getRightExpr().getValueType(), RHS);            // < lhs, rhs
-
-      context.ifCmp(evalNode.getLeftExpr().getValueType(), evalNode.getType(), ifNotMatched);
-
-      context.pushBooleanOfThreeValuedLogic(true);
-      context.pushNullFlag(true);
-      context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
-
-      context.methodvisitor.visitLabel(ifNotMatched);
-      context.pushBooleanOfThreeValuedLogic(false);
-      context.pushNullFlag(true);
-      context.methodvisitor.visitJumpInsn(Opcodes.GOTO, afterEnd);
-
-      context.methodvisitor.visitLabel(ifNull);
-      context.pushNullOfThreeValuedLogic();
-      context.pushNullFlag(false);
-
-      context.methodvisitor.visitLabel(afterEnd);
+      if (isTextField(evalNode.getLeftExpr()) && isTextField(evalNode.getRightExpr())) {
+        emitComparisonBothTextFields(context, evalNode);
+      } else {
+        emitComparisonOfBothBytes(context, evalNode, stack);
+      }
     }
 
     return evalNode;

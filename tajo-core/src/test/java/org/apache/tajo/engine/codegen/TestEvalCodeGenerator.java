@@ -104,6 +104,15 @@ public class TestEvalCodeGenerator extends ExprTestBase {
   }
 
   @Test
+  public void testTextComparison() throws IOException {
+    Schema textSchema = new Schema();
+    textSchema.addColumn("col1", TajoDataTypes.Type.TEXT);
+    textSchema.addColumn("col2", TajoDataTypes.Type.TEXT);
+
+    testEval(textSchema, "table1", "aaa,bbb", "select col1 < col2 from table1", new String [] {"t"});
+  }
+
+  @Test
   public void testComparison() throws IOException {
     Schema inetSchema = new Schema();
     inetSchema.addColumn("addr1", TajoDataTypes.Type.INET4);

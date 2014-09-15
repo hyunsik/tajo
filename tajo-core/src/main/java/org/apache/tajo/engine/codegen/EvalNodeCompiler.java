@@ -54,10 +54,10 @@ public class EvalNodeCompiler {
     emitConstructor(owner, classWriter, schema, variables);
 
     generateEvalFunc(owner, classWriter, schema, eval, variables);
-    generateEvalFuncNative(owner, classWriter, schema, eval, variables);
+    //generateEvalFuncNative(owner, classWriter, schema, eval, variables);
 
     if (eval.getValueType().getType() == TajoDataTypes.Type.BOOLEAN) {
-      generateIsMatchedFunc(owner, classWriter, schema, eval, variables);
+      //generateIsMatchedFunc(owner, classWriter, schema, eval, variables);
     }
 
     classWriter.visitEnd();
@@ -77,7 +77,7 @@ public class EvalNodeCompiler {
   }
 
   public void emitClassDefinition(String className, ClassWriter classWriter) {
-    classWriter.visit(Opcodes.V1_6, Opcodes.ACC_PUBLIC, className, null,
+    classWriter.visit(Opcodes.V1_5, Opcodes.ACC_PUBLIC, className, null,
         TajoGeneratorAdapter.getInternalName(EvalNode.class), null);
   }
 

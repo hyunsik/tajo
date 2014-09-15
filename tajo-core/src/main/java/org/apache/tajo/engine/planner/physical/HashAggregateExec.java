@@ -18,10 +18,13 @@
 
 package org.apache.tajo.engine.planner.physical;
 
+import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.function.FunctionContext;
 import org.apache.tajo.engine.planner.logical.GroupbyNode;
+import org.apache.tajo.engine.utils.TupleBuilderUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -34,7 +37,6 @@ import java.util.Map.Entry;
  * This is the hash-based GroupBy Operator.
  */
 public class HashAggregateExec extends AggregationExec {
-  private Tuple tuple = null;
   private Map<Tuple, FunctionContext[]> hashTable;
   private boolean computed = false;
   private Iterator<Entry<Tuple, FunctionContext []>> iterator = null;
@@ -42,7 +44,6 @@ public class HashAggregateExec extends AggregationExec {
   public HashAggregateExec(TaskAttemptContext ctx, GroupbyNode plan, PhysicalExec subOp) throws IOException {
     super(ctx, plan, subOp);
     hashTable = new HashMap<Tuple, FunctionContext []>(100000);
-    this.tuple = new VTuple(plan.getOutSchema().size());
   }
 
   private void compute() throws IOException {
@@ -81,6 +82,8 @@ public class HashAggregateExec extends AggregationExec {
     }
   }
 
+  BaseTupleBuilder builder = new BaseTupleBuilder(outSchema);
+
   @Override
   public Tuple next() throws IOException {
     if(!computed) {
@@ -97,14 +100,18 @@ public class HashAggregateExec extends AggregationExec {
       contexts =  entry.getValue();
 
       int tupleIdx = 0;
+      builder.startRow();
       for (; tupleIdx < groupingKeyNum; tupleIdx++) {
-        tuple.put(tupleIdx, keyTuple.get(tupleIdx));
+        Datum d = keyTuple.get(tupleIdx);
+        TupleBuilderUtil.writeEvalResult(builder, d.type(), d);
       }
       for (int funcIdx = 0; funcIdx < aggFunctionsNum; funcIdx++, tupleIdx++) {
-        tuple.put(tupleIdx, aggFunctions[funcIdx].terminate(contexts[funcIdx]));
+        Datum d = aggFunctions[funcIdx].terminate(contexts[funcIdx]);
+        TupleBuilderUtil.writeEvalResult(builder, d.type(), d);
       }
+      builder.endRow();
 
-      return tuple;
+      return builder.build();
     } else {
       return null;
     }

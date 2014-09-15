@@ -87,34 +87,73 @@ class PairWiseMerger implements Scanner {
   }
 
   private void prepareTuplesForFirstComparison() throws IOException {
-    leftTuple = leftScan.next();
-    rightTuple = rightScan.next();
+    Tuple lt = leftScan.next();
+    if (lt != null) {
+      leftTuple = lt.copyTo();
+    } else {
+      leftTuple = null; // TODO - missed free
+    }
+
+    Tuple rt = rightScan.next();
+    if (rt != null) {
+      rightTuple = rt.copyTo();
+    } else {
+      rightTuple = null; // TODO - missed free
+    }
   }
 
   public Tuple next() throws IOException {
-
     if (leftTuple != null && rightTuple != null) {
       if (comparator.compare(leftTuple, rightTuple) < 0) {
-        outTuple = leftTuple;
+        outTuple = leftTuple.copyTo();
 
-        leftTuple = leftScan.next();
+        Tuple lt = leftScan.next();
+        if (lt != null) {
+          leftTuple = lt.copyTo();
+        } else {
+          leftTuple = null; // TODO - missed free
+        }
       } else {
-        outTuple = rightTuple;
+        outTuple = rightTuple.copyTo();
 
-        rightTuple = rightScan.next();
+        Tuple rt = rightScan.next();
+        if (rt != null) {
+          rightTuple = rt.copyTo();
+        } else {
+          rightTuple = null;
+        }
       }
       return outTuple;
     }
 
     if (leftTuple == null) {
-      outTuple = rightTuple;
+      if (rightTuple != null) {
+        outTuple = rightTuple.copyTo();
+      } else {
+        outTuple = null;
+      }
 
-      rightTuple = rightScan.next();
+      Tuple rt = rightScan.next();
+      if (rt != null) {
+        rightTuple = rt.copyTo();
+      } else {
+        rightTuple = null;
+      }
     } else {
-      outTuple = leftTuple;
+      if (leftTuple != null) {
+        outTuple = leftTuple.copyTo();
+      } else {
+        outTuple = null;
+      }
 
-      leftTuple = leftScan.next();
+      Tuple lt = leftScan.next();
+      if (lt != null) {
+        leftTuple = lt.copyTo();
+      } else {
+        leftTuple = null;
+      }
     }
+
     return outTuple;
   }
 

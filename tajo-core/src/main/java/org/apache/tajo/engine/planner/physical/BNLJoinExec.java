@@ -80,7 +80,7 @@ public class BNLJoinExec extends BinaryPhysicalExec {
       plan.setTargets(PlannerUtil.schemaToTargets(outSchema));
     }
 
-    projector = new Projector(context, inSchema, outSchema, plan.getTargets());
+    projector = new Projector(context, inSchema, outSchema, plan.getTargets(), false);
 
     // for join
     frameTuple = new FrameTuple();
@@ -95,7 +95,7 @@ public class BNLJoinExec extends BinaryPhysicalExec {
   @Override
   protected void compile() {
     if (hasJoinQual) {
-      joinQual = context.getPrecompiledEval(inSchema, joinQual);
+      //joinQual = context.getPrecompiledEval(inSchema, joinQual);
     }
   }
 

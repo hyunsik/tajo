@@ -476,7 +476,7 @@ public class CSVFile {
           if (cells[fieldIdx] == null) {
             builder.skipField();
           } else {
-            deserializer.write(builder, schema.getColumn(fieldIdx), cells[fieldIdx], 0, cells[fieldIdx].length, NullDatum.get().asTextBytes());
+            deserializer.write(builder, schema.getColumn(fieldIdx), cells[fieldIdx], 0, cells[fieldIdx].length, nullChars);
           }
         }
         for (; fieldIdx < schema.size(); fieldIdx++) {

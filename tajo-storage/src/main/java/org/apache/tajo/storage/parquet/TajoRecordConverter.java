@@ -23,6 +23,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.nio.ByteBuffer;
 
+import org.apache.tajo.storage.RowStoreUtil;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import parquet.io.api.GroupConverter;
 import parquet.io.api.Converter;
 import parquet.io.api.PrimitiveConverter;
@@ -54,6 +56,7 @@ public class TajoRecordConverter extends GroupConverter {
   private final Converter[] converters;
 
   private Tuple currentTuple;
+  private BaseTupleBuilder builder;
 
   /**
    * Creates a new TajoRecordConverter.
@@ -69,6 +72,8 @@ public class TajoRecordConverter extends GroupConverter {
     this.tajoReadSchema = tajoReadSchema;
     this.projectionMap = projectionMap;
     this.tupleSize = tajoReadSchema.size();
+    this.currentTuple = new VTuple(tupleSize);
+    this.builder = new BaseTupleBuilder(tajoReadSchema);
 
     // The projectionMap.length does not match parquetSchema.getFieldCount()
     // when the projection contains NULL_TYPE columns. We will skip over the
@@ -151,7 +156,7 @@ public class TajoRecordConverter extends GroupConverter {
    */
   @Override
   public void start() {
-    currentTuple = new VTuple(tupleSize);
+    currentTuple.clear();
   }
 
   /**
@@ -175,7 +180,8 @@ public class TajoRecordConverter extends GroupConverter {
    * @return The current record.
    */
   public Tuple getCurrentRecord() {
-    return currentTuple;
+    RowStoreUtil.convert(currentTuple, builder);
+    return builder.build();
   }
 
   static abstract class ParentValueContainer {

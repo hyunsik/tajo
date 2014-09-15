@@ -280,7 +280,7 @@ public class TestStorages {
           || storeType == StoreType.PARQUET
           || storeType == StoreType.SEQUENCEFILE
           || storeType == StoreType.AVRO) {
-        assertTrue(tuple.get(0) == null);
+        assertTrue(tuple.get(0).isNull());
       }
       assertTrue(tupleCnt + 2 == tuple.get(1).asInt8());
       assertTrue(tupleCnt + 3 == tuple.get(2).asFloat4());

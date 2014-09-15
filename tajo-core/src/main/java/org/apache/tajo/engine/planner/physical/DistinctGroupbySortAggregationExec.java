@@ -24,8 +24,10 @@ import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.datum.NullDatum;
 import org.apache.tajo.engine.planner.logical.DistinctGroupbyNode;
 import org.apache.tajo.engine.planner.logical.GroupbyNode;
+import org.apache.tajo.storage.RowStoreUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -42,6 +44,9 @@ public class DistinctGroupbySortAggregationExec extends PhysicalExec {
 
   private int[] resultColumnIdIndexes;
 
+  Tuple mergedTuple;
+  BaseTupleBuilder builder;
+
   public DistinctGroupbySortAggregationExec(final TaskAttemptContext context, DistinctGroupbyNode plan,
                                             SortAggregateExec[] aggregateExecs) throws IOException {
     super(context, plan.getInSchema(), plan.getOutSchema());
@@ -51,6 +56,9 @@ public class DistinctGroupbySortAggregationExec extends PhysicalExec {
 
     currentTuples = new Tuple[groupbyNodeNum];
     outColumnNum = outSchema.size();
+
+    mergedTuple = new VTuple(outColumnNum);
+    builder = new BaseTupleBuilder(outSchema);
 
     int allGroupbyOutColNum = 0;
     for (GroupbyNode eachGroupby: plan.getGroupByNodes()) {
@@ -111,8 +119,6 @@ public class DistinctGroupbySortAggregationExec extends PhysicalExec {
       return null;
     }
 
-    Tuple mergedTuple = new VTuple(outColumnNum);
-
     int mergeTupleIndex = 0;
     for (int i = 0; i < currentTuples.length; i++) {
       int tupleSize = currentTuples[i].size();
@@ -123,7 +129,8 @@ public class DistinctGroupbySortAggregationExec extends PhysicalExec {
         mergeTupleIndex++;
       }
     }
-    return mergedTuple;
+    RowStoreUtil.convert(mergedTuple, builder);
+    return builder.build();
   }
 
   private Tuple getEmptyTuple() {

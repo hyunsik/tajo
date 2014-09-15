@@ -126,6 +126,10 @@ public class ExecutionBlockSharedResource {
     }
   }
 
+  public TupleComparator compileUnSafeComparator(Schema schema, BaseTupleComparator comp) {
+    return compilationContext.getComparatorCompiler().compile(comp, true);
+  }
+
   public TupleComparator compileComparator(Schema schema, BaseTupleComparator comp) {
     return compilationContext.getComparatorCompiler().compile(comp, false);
   }
@@ -138,7 +142,7 @@ public class ExecutionBlockSharedResource {
       } else {
         try {
           LOG.warn(comp + " does not exist. Compiling it immediately");
-          return compileComparator(schema, comp);
+          return compileUnSafeComparator(schema, comp);
         } catch (Throwable t) {
           LOG.warn(t);
           return comp;

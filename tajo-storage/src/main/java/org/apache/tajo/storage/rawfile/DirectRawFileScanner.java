@@ -136,7 +136,7 @@ public class DirectRawFileScanner extends FileScanner implements SeekableScanner
 
       if (!fetchNeeded) {
         recordCount++;
-        return unSafeTuple.toHeapTuple();
+        return unSafeTuple;
       }
     }
   }

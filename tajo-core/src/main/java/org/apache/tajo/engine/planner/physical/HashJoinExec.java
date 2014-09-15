@@ -26,6 +26,7 @@ import org.apache.tajo.engine.planner.Projector;
 import org.apache.tajo.engine.planner.logical.JoinNode;
 import org.apache.tajo.catalog.SchemaUtil;
 import org.apache.tajo.storage.FrameTuple;
+import org.apache.tajo.storage.RowStoreUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
 import org.apache.tajo.tuple.BaseTupleBuilder;
@@ -85,7 +86,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
     }
 
     // for projection
-    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets());
+    this.projector = new Projector(context, inSchema, outSchema, plan.getTargets(), false);
 
     // for join
     frameTuple = new FrameTuple();
@@ -102,7 +103,7 @@ public class HashJoinExec extends BinaryPhysicalExec {
 
   @Override
   protected void compile() {
-    joinQual = context.getPrecompiledEval(inSchema, joinQual);
+    //joinQual = context.getPrecompiledEval(inSchema, joinQual);
   }
 
   protected void getKeyLeftTuple(final Tuple outerTuple, Tuple keyTuple) {

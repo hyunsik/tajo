@@ -28,8 +28,10 @@ import org.apache.tajo.engine.function.FunctionContext;
 import org.apache.tajo.engine.planner.logical.WindowAggNode;
 import org.apache.tajo.engine.planner.logical.WindowSpec;
 import org.apache.tajo.storage.BaseTupleComparator;
+import org.apache.tajo.storage.RowStoreUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -67,6 +69,8 @@ public class WindowAggExec extends UnaryPhysicalExec {
   private boolean [] endCurrentRowFlags;
 
   private boolean endCurrentRow = false;
+
+  private BaseTupleBuilder builder;
 
   // operator state
   enum WindowState {
@@ -168,6 +172,8 @@ public class WindowAggExec extends UnaryPhysicalExec {
     }
 
     outputColumnNum = nonFunctionColumnNum + functionNum;
+
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   private void transition(WindowState state) {
@@ -215,7 +221,8 @@ public class WindowAggExec extends UnaryPhysicalExec {
 
       if (state == WindowState.RETRIEVING_FROM_WINDOW) {
         if (tupleInFrameIterator.hasNext()) {
-          return tupleInFrameIterator.next();
+          RowStoreUtil.convert(tupleInFrameIterator.next(), builder);
+          return builder.build();
         } else {
           finalizeWindow();
         }

@@ -27,8 +27,11 @@ import org.apache.tajo.engine.eval.AggregationFunctionCallEval;
 import org.apache.tajo.engine.function.FunctionContext;
 import org.apache.tajo.engine.planner.logical.DistinctGroupbyNode;
 import org.apache.tajo.engine.planner.logical.GroupbyNode;
+import org.apache.tajo.engine.utils.TupleBuilderUtil;
+import org.apache.tajo.storage.RowStoreUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.tuple.BaseTupleBuilder;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -50,6 +53,8 @@ public class DistinctGroupbyHashAggregationExec extends PhysicalExec {
   private float progress;
 
   private int[] resultColumnIdIndexes;
+
+  private BaseTupleBuilder builder;
 
   public DistinctGroupbyHashAggregationExec(TaskAttemptContext context, DistinctGroupbyNode plan, PhysicalExec subOp)
       throws IOException {
@@ -101,6 +106,8 @@ public class DistinctGroupbyHashAggregationExec extends PhysicalExec {
     for(int i = 0; i < resultColumnIds.length; i++) {
       resultColumnIdIndexes[resultColumnIds[i]] = i;
     }
+
+    builder = new BaseTupleBuilder(outSchema);
   }
 
   List<Tuple> currentAggregatedTuples = null;
@@ -120,7 +127,8 @@ public class DistinctGroupbyHashAggregationExec extends PhysicalExec {
     }
 
     if (currentAggregatedTuples != null && currentAggregatedTupleIndex < currentAggregatedTupleSize) {
-      return currentAggregatedTuples.get(currentAggregatedTupleIndex++);
+      RowStoreUtil.convert(currentAggregatedTuples.get(currentAggregatedTupleIndex++), builder);
+      return builder.build();
     }
 
     Tuple distinctGroupingKey = null;
@@ -165,11 +173,10 @@ public class DistinctGroupbyHashAggregationExec extends PhysicalExec {
       // If DistinctGroupbyHashAggregationExec does not have any rows,
       // it should return NullDatum.
       if (totalNumRows == 0 && groupbyNodeNum == 0) {
-        Tuple tuple = new VTuple(outputColumnNum);
-        for (int i = 0; i < tuple.size(); i++) {
-          tuple.put(i, DatumFactory.createNullDatum());
-        }
-        return tuple;
+        //Tuple tuple = new VTuple(outputColumnNum);
+        builder.startRow();
+        builder.endRow();
+        return builder.build();
       } else {
         return null;
       }
@@ -265,9 +272,9 @@ public class DistinctGroupbyHashAggregationExec extends PhysicalExec {
     }
 
     fetchedRows++;
-    Tuple tuple = currentAggregatedTuples.get(currentAggregatedTupleIndex++);
+    RowStoreUtil.convert(currentAggregatedTuples.get(currentAggregatedTupleIndex++), builder);
 
-    return tuple;
+    return builder.build();
   }
 
   private void loadChildHashTable() throws IOException {

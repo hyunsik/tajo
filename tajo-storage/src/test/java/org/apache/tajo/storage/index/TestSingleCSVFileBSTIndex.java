@@ -152,7 +152,7 @@ public class TestSingleCSVFileBSTIndex {
         continue;
       }
       fileScanner.seek(offsets);
-      tuple = fileScanner.next();
+      tuple = new VTuple(fileScanner.next());
       assertTrue("[seek check " + (i + 1) + " ]",
           (i + 1) == (tuple.get(0).asInt4()));
       assertTrue("[seek check " + (i + 1) + " ]",

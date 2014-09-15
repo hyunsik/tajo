@@ -467,21 +467,20 @@ public class CSVFile {
           }
         }
 
-        long offset = -1;
-        if(!isCompress()){
-          offset = fileOffsets.get(currentIdx);
-        }
-
         byte[][] cells = BytesUtils.splitPreserveAllTokens(buffer.getData(), startOffsets.get(currentIdx),
             rowLengthList.get(currentIdx), delimiter, targetColumnIndexes);
 
+        int fieldIdx = 0;
         builder.startRow();
-        for (int i = 0; i < schema.size(); i++) {
-          if (cells[i] == null) {
+        for (; fieldIdx < cells.length && fieldIdx < schema.size(); fieldIdx++) {
+          if (cells[fieldIdx] == null) {
             builder.skipField();
           } else {
-            deserializer.write(builder, schema.getColumn(i), cells[i], 0, cells[i].length, NullDatum.get().asTextBytes());
+            deserializer.write(builder, schema.getColumn(fieldIdx), cells[fieldIdx], 0, cells[fieldIdx].length, NullDatum.get().asTextBytes());
           }
+        }
+        for (; fieldIdx < schema.size(); fieldIdx++) {
+          builder.skipField();
         }
         builder.endRow();
 

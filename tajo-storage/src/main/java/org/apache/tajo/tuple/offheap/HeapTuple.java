@@ -91,22 +91,22 @@ public class HeapTuple implements Tuple {
 
   @Override
   public void put(int fieldId, Datum value) {
-    throw new UnsupportedException("UnSafeTuple does not support put(int, Datum).");
+    throw new UnsupportedException("HeapTuple does not support put(int, Datum).");
   }
 
   @Override
   public void put(int fieldId, Datum[] values) {
-    throw new UnsupportedException("UnSafeTuple does not support put(int, Datum []).");
+    throw new UnsupportedException("HeapTuple does not support put(int, Datum []).");
   }
 
   @Override
   public void put(int fieldId, Tuple tuple) {
-    throw new UnsupportedException("UnSafeTuple does not support put(int, Tuple).");
+    throw new UnsupportedException("HeapTuple does not support put(int, Tuple).");
   }
 
   @Override
   public void put(Datum[] values) {
-    throw new UnsupportedException("UnSafeTuple does not support put(Datum []).");
+    throw new UnsupportedException("HeapTuple does not support put(Datum []).");
   }
 
   @Override

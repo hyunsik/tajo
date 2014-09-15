@@ -163,7 +163,7 @@ public class ExternalSortExec extends SortExec {
     int rowNum = sortBuffer.rows();
 
     long sortStart = System.currentTimeMillis();
-    List<Tuple> tupleList = OffHeapRowBlockUtils.sort(sortBuffer, getComparator());
+    List<Tuple> tupleList = OffHeapRowBlockUtils.sort(sortBuffer, getUnSafeComparator());
     long sortEnd = System.currentTimeMillis();
 
     long chunkWriteStart = System.currentTimeMillis();
@@ -228,7 +228,7 @@ public class ExternalSortExec extends SortExec {
     }
 
     if (tupleBlock.rows() >= 0) { // if there are at least one or more input tuples
-      sortedTuples = OffHeapRowBlockUtils.sort(tupleBlock, getComparator());
+      sortedTuples = OffHeapRowBlockUtils.sort(tupleBlock, getUnSafeComparator());
     }
 
     // get total loaded (or stored) bytes and total row numbers

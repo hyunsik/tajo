@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.Comparator;
 
 public abstract class SortExec extends UnaryPhysicalExec {
-  private final Comparator<Tuple> comparator;
+  private final Comparator<Tuple> unsafeComparator;
   private final SortSpec [] sortSpecs;
 
   public SortExec(TaskAttemptContext context, Schema inSchema,
@@ -39,9 +39,9 @@ public abstract class SortExec extends UnaryPhysicalExec {
 
     BaseTupleComparator comp = new BaseTupleComparator(inSchema, sortSpecs);
     if (context.getQueryContext().getBool(SessionVars.CODEGEN)) {
-      this.comparator = context.getSharedResource().getCompiledComparator(inSchema, comp);
+      this.unsafeComparator = context.getSharedResource().getUnSafeComparator(inSchema, comp);
     } else {
-      this.comparator = comp;
+      this.unsafeComparator = comp;
     }
   }
 
@@ -49,8 +49,12 @@ public abstract class SortExec extends UnaryPhysicalExec {
     return sortSpecs;
   }
 
+  public Comparator<Tuple> getUnSafeComparator() {
+    return unsafeComparator;
+  }
+
   public Comparator<Tuple> getComparator() {
-    return comparator;
+    return unsafeComparator;
   }
 
   @Override

@@ -27,10 +27,18 @@ import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.io.compress.*;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableMeta;
+import org.apache.tajo.common.TajoDataTypes;
+import org.apache.tajo.datum.Datum;
+import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.exception.UnsupportedException;
 import org.apache.tajo.storage.LazyTuple;
+import org.apache.tajo.storage.TextSerializerDeserializer;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.compress.CodecPool;
 import org.apache.tajo.storage.fragment.FileFragment;
+import org.apache.tajo.tuple.BaseTupleBuilder;
+import org.apache.tajo.tuple.TupleBuilder;
+import org.apache.tajo.tuple.offheap.RowWriter;
 import org.apache.tajo.util.BytesUtils;
 
 import java.io.DataInputStream;
@@ -295,12 +303,86 @@ public class CSVFileScanner extends FileScannerV2 {
       }
 
       byte[][] cells = BytesUtils.splitPreserveAllTokens(tuples[currentIdx++], delimiter, targetColumnIndexes);
-      return new LazyTuple(schema, cells, offset);
+
+      builder.startRow();
+      for (int i = 0; i < schema.size(); i++) {
+        if (cells[i] == null) {
+          builder.skipField();
+        } else {
+          Datum d = deserializer.deserialize(targets[i], cells[i], 0, cells[i].length, NullDatum.get().asTextBytes());
+          if (d.isNull()) {
+            builder.skipField();
+          } else {
+            writeEvalResult(builder, d.type(), d);
+          }
+        }
+      }
+      builder.endRow();
+
+      // new LazyTuple(schema, cells, offset);
+      return builder.build();
     } catch (Throwable t) {
       LOG.error(t.getMessage(), t);
     }
     return null;
   }
+
+  public static void writeEvalResult(RowWriter builder, TajoDataTypes.Type type, Datum datum) {
+    switch (type) {
+    case NULL_TYPE:
+      builder.skipField();
+      break;
+    case BOOLEAN:
+      builder.putBool(datum.asBool());
+      break;
+    case INT1:
+    case INT2:
+      builder.putInt2(datum.asInt2());
+      break;
+    case INT4:
+      builder.putInt4(datum.asInt4());
+      break;
+    case INT8:
+      builder.putInt8(datum.asInt8());
+      break;
+    case FLOAT4:
+      builder.putFloat4(datum.asFloat4());
+      break;
+    case FLOAT8:
+      builder.putFloat8(datum.asFloat8());
+      break;
+    case TIMESTAMP:
+      builder.putTimestamp(datum.asInt8());
+      break;
+    case TIME:
+      builder.putTime(datum.asInt8());
+      break;
+    case DATE:
+      builder.putDate(datum.asInt4());
+      break;
+    case INTERVAL:
+      builder.putInterval((org.apache.tajo.datum.IntervalDatum) datum);
+      break;
+    case CHAR:
+    case TEXT:
+      builder.putText(datum.asTextBytes());
+      break;
+    case BLOB:
+      builder.putBlob(datum.asByteArray());
+      break;
+    case INET4:
+      builder.putInet4(datum.asInt4());
+      break;
+    case PROTOBUF:
+      builder.putProtoDatum((org.apache.tajo.datum.ProtobufDatum) datum);
+      break;
+    default:
+      throw new UnsupportedException("Unknown Type: " + type.name());
+    }
+  }
+
+  BaseTupleBuilder builder = new BaseTupleBuilder(schema);
+  TextSerializerDeserializer deserializer = new TextSerializerDeserializer();
 
   private boolean isCompress() {
     return codec != null;

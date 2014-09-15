@@ -55,7 +55,7 @@ public class MemSortExec extends SortExec {
         tupleSlots.add(new VTuple(tuple));
       }
       
-      Collections.sort(tupleSlots, getComparator());
+      Collections.sort(tupleSlots, getUnSafeComparator());
       this.iterator = tupleSlots.iterator();
       sorted = true;
     }

@@ -58,13 +58,15 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
     private final EvalNodeCompiler evalCompiler;
     private final TupleComparerCompiler comparerCompiler;
     private Map<Pair<Schema,EvalNode>, EvalNode> compiledEvals;
-    private Map<Pair<Schema,BaseTupleComparator>, TupleComparator> compiledComparators;
+    private Map<Pair<Schema,BaseTupleComparator>, TupleComparator> unsafeComparators;
+    private Map<Pair<Schema,BaseTupleComparator>, TupleComparator> comparators;
 
     public CompilationContext(TajoClassLoader classLoader) {
       this.evalCompiler = new EvalNodeCompiler(classLoader);
       this.comparerCompiler = new TupleComparerCompiler(classLoader);
       this.compiledEvals = Maps.newHashMap();
-      this.compiledComparators = Maps.newHashMap();
+      this.unsafeComparators = Maps.newHashMap();
+      this.comparators = Maps.newHashMap();
     }
 
     public EvalNodeCompiler getEvalCompiler() {
@@ -79,8 +81,12 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
       return compiledEvals;
     }
 
-    public Map<Pair<Schema, BaseTupleComparator>, TupleComparator> getPrecompiedComparators() {
-      return compiledComparators;
+    public Map<Pair<Schema, BaseTupleComparator>, TupleComparator> getUnSafeComparators() {
+      return unsafeComparators;
+    }
+
+    public Map<Pair<Schema, BaseTupleComparator>, TupleComparator> getComparators() {
+      return comparators;
     }
   }
 
@@ -102,15 +108,29 @@ public class ExecutorPreCompiler extends BasicLogicalPlanVisitor<ExecutorPreComp
 
   private static void compileIfAbsent(CompilationContext context, Schema schema, BaseTupleComparator comparator) {
     Pair<Schema, BaseTupleComparator> key = new Pair<Schema, BaseTupleComparator>(schema, comparator);
-    if (!context.compiledComparators.containsKey(key)) {
+
+    if (!context.unsafeComparators.containsKey(key)) {
       try {
-        TupleComparator compiled = context.comparerCompiler.compile(comparator, false);
-        context.compiledComparators.put(key, compiled);
+        TupleComparator unsafeComparator = context.comparerCompiler.compile(comparator, true);
+        context.unsafeComparators.put(key, unsafeComparator);
 
       } catch (Throwable t) {
         // If any compilation error occurs, it works in a fallback mode. This mode just uses EvalNode objects
         // instead of a compiled EvalNode.
-        context.compiledComparators.put(key, comparator);
+        context.unsafeComparators.put(key, comparator);
+        LOG.warn(t.getMessage());
+      }
+    }
+
+    if (!context.comparators.containsKey(key)) {
+      try {
+        TupleComparator compiledComparator = context.comparerCompiler.compile(comparator, false);
+        context.comparators.put(key, compiledComparator);
+
+      } catch (Throwable t) {
+        // If any compilation error occurs, it works in a fallback mode. This mode just uses EvalNode objects
+        // instead of a compiled EvalNode.
+        context.comparators.put(key, comparator);
         LOG.warn(t.getMessage());
       }
     }

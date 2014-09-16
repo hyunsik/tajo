@@ -724,12 +724,12 @@ public class Task {
             } catch (Throwable t) {
               hasError = true;
             }
-            if (storeChunk != null && storeChunk.getFile() != null && storeChunk.startOffset > -1 && hasError == false) {
+
+            if (storeChunk == null) {
+              continue;
+            } else {
               fetchLocal = true;
               storeChunk.fromRemote = false;
-            } else {
-              storeChunk = new FileChunk(defaultStoreFile, 0, -1);
-              storeChunk.fromRemote = true;
             }
           } else {
             storeChunk = new FileChunk(defaultStoreFile, 0, -1);

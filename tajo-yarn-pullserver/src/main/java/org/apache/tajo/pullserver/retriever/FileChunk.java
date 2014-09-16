@@ -32,7 +32,6 @@ public class FileChunk {
    * TRUE if this.file is created by getting data from a remote host
    * (e.g., by HttpRequest). FALSE otherwise.
    */
-
   public boolean fromRemote;
 
   /**

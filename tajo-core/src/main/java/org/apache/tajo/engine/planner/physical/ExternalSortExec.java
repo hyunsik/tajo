@@ -392,9 +392,9 @@ public class ExternalSortExec extends SortExec {
       }
 
       // delete merged intermediate files
-      for (Path path : inputFiles) {
-        localFS.delete(path, true);
-      }
+//      for (Path path : inputFiles) {
+//        localFS.delete(path, true);
+//      }
       info(LOG, inputFiles.size() + " merged intermediate files deleted");
 
       // switch input files to output files, and then clear outputFiles
@@ -740,11 +740,11 @@ public class ExternalSortExec extends SortExec {
       result = null;
     }
 
-    if (finalOutputFiles != null) {
-      for (Path path : finalOutputFiles) {
-        localFS.delete(path, true);
-      }
-    }
+//    if (finalOutputFiles != null) {
+//      for (Path path : finalOutputFiles) {
+//        localFS.delete(path, true);
+//      }
+//    }
 
     if(inMemoryTable != null){
       inMemoryTable.clear();

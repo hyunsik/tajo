@@ -18,13 +18,17 @@
 
 package org.apache.tajo.worker.dataserver.retriever;
 
+import org.apache.tajo.ExecutionBlockId;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 
 public class FileChunk {
   private final File file;
-  private final long startOffset;
+  public final long startOffset;
   private final long length;
+  public boolean fromRemote;
+  public String ebId;
 
   public FileChunk(File file, long startOffset, long length) throws FileNotFoundException {
     this.file = file;

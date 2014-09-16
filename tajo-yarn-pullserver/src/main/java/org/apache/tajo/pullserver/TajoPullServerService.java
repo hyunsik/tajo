@@ -704,7 +704,7 @@ public class TajoPullServerService extends AbstractService {
     }
   }
 
-  public FileChunk getFileCunks(Path outDir,
+  public static FileChunk getFileCunks(Path outDir,
                                       String startKey,
                                       String endKey,
                                       boolean last) throws IOException {

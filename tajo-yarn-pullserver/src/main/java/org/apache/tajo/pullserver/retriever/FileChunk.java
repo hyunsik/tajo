@@ -21,10 +21,24 @@ package org.apache.tajo.pullserver.retriever;
 import java.io.File;
 import java.io.FileNotFoundException;
 
+import org.apache.tajo.ExecutionBlockId;
+
 public class FileChunk {
   private final File file;
   public final long startOffset;
-  public final long length;
+  public long length;
+
+  /**
+   * TRUE if this.file is created by getting data from a remote host
+   * (e.g., by HttpRequest). FALSE otherwise.
+   */
+
+  public boolean fromRemote;
+
+  /**
+   * ExecutionBlockId
+   */
+  public String ebId;
 
   public FileChunk(File file, long startOffset, long length) throws FileNotFoundException {
     this.file = file;
@@ -44,8 +58,12 @@ public class FileChunk {
     return this.length;
   }
 
+  public void setLength(long newLength) {
+    this.length = newLength;
+  }
+
   public String toString() {
-    return " (start=" + startOffset() + ", length=" + length + ") "
-        + file.getAbsolutePath();
+    return " (start=" + startOffset() + ", length=" + length + ", fromRemote=" + fromRemote 
+	+ ", ebId=" + ebId + ") " + file.getAbsolutePath();
   }
 }

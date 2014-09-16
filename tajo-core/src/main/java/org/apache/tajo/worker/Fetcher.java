@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.tajo.TajoProtos;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.pullserver.retriever.FileChunk;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
@@ -52,11 +53,12 @@ public class Fetcher {
   private final static Log LOG = LogFactory.getLog(Fetcher.class);
 
   private final URI uri;
-  private final File file;
+  private final FileChunk fileChunk;
   private final TajoConf conf;
 
   private final String host;
   private int port;
+  private final boolean useLocalFile;
 
   private long startTime;
   private long finishTime;
@@ -67,11 +69,12 @@ public class Fetcher {
 
   private ClientBootstrap bootstrap;
 
-  public Fetcher(TajoConf conf, URI uri, File file, ClientSocketChannelFactory factory) {
+  public Fetcher(TajoConf conf, URI uri, FileChunk chunk, ClientSocketChannelFactory factory, boolean useLocalFile) {
     this.uri = uri;
-    this.file = file;
+    this.fileChunk = chunk;
     this.state = TajoProtos.FetcherState.FETCH_INIT;
     this.conf = conf;
+    this.useLocalFile = useLocalFile;
 
     String scheme = uri.getScheme() == null ? "http" : uri.getScheme();
     this.host = uri.getHost() == null ? "localhost" : uri.getHost();
@@ -84,13 +87,15 @@ public class Fetcher {
       }
     }
 
-    bootstrap = new ClientBootstrap(factory);
-    bootstrap.setOption("connectTimeoutMillis", 5000L); // set 5 sec
-    bootstrap.setOption("receiveBufferSize", 1048576); // set 1M
-    bootstrap.setOption("tcpNoDelay", true);
-
-    ChannelPipelineFactory pipelineFactory = new HttpClientPipelineFactory(file);
-    bootstrap.setPipelineFactory(pipelineFactory);
+    if(!useLocalFile) {
+      bootstrap = new ClientBootstrap(factory);
+      bootstrap.setOption("connectTimeoutMillis", 5000L); // set 5 sec
+      bootstrap.setOption("receiveBufferSize", 1048576); // set 1M
+      bootstrap.setOption("tcpNoDelay", true);
+  
+      ChannelPipelineFactory pipelineFactory = new HttpClientPipelineFactory(fileChunk.getFile());
+      bootstrap.setPipelineFactory(pipelineFactory);
+    }
   }
 
   public long getStartTime() {
@@ -113,7 +118,17 @@ public class Fetcher {
     return messageReceiveCount;
   }
 
-  public File get() throws IOException {
+  public FileChunk get() throws IOException {
+    if (useLocalFile) {
+      LOG.info("Get pseudo fetch from local host");
+      startTime = System.currentTimeMillis();
+      finishTime = System.currentTimeMillis();
+      state = TajoProtos.FetcherState.FETCH_FINISHED;
+      return fileChunk;
+    }
+
+    LOG.info("Get real fetch from remote host");
+    
     this.startTime = System.currentTimeMillis();
     this.state = TajoProtos.FetcherState.FETCH_FETCHING;
     ChannelFuture future = null;
@@ -145,7 +160,8 @@ public class Fetcher {
 
       channelFuture.addListener(ChannelFutureListener.CLOSE);
 
-      return file;
+      fileChunk.setLength(fileChunk.getFile().length());
+      return fileChunk;
     } finally {
       if(future != null){
         // Close the channel to exit.

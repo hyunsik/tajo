@@ -139,6 +139,8 @@ Release 0.9.0 - unreleased
 
   BUG FIXES
 
+    TAJO-1037: KillQuery hang in subquery init state. (jinho)
+
     TAJO-1024: RpcConnectionPool::getConnection can cause NPE at 
     initialization. (hyunsik)
 
@@ -428,6 +430,8 @@ Release 0.9.0 - unreleased
     TAJO-834: Add Travis notification to issues@tajo.a.o and IRC. hyunsik)
 
   SUB TASKS
+
+    TAJO-1015: Add executionblock event in worker. (jinho)
 
     TAJO-783: Remove yarn-related code from tajo-core. (hyunsik)
 

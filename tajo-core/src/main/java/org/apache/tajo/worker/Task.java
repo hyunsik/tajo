@@ -54,6 +54,7 @@ import org.apache.tajo.storage.RawFile;
 import org.apache.tajo.storage.StorageUtil;
 import org.apache.tajo.storage.fragment.FileFragment;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.util.Timer;
 
 import java.io.File;
 import java.io.IOException;
@@ -307,7 +308,7 @@ public class Task {
 
   public TaskStatusProto getReport() {
     TaskStatusProto.Builder builder = TaskStatusProto.newBuilder();
-    builder.setWorkerName(executionBlockContext.getTaskRunner(taskRunnerId).getNodeId().toString());
+    builder.setWorkerName(executionBlockContext.getWorkerContext().getConnectionInfo().getHostAndPeerRpcPort());
     builder.setId(context.getTaskId().getProto())
         .setProgress(context.getProgress())
         .setState(context.getState());
@@ -323,6 +324,7 @@ public class Task {
   public boolean isRunning(){
     return context.getState() == TaskAttemptState.TA_RUNNING;
   }
+
   public boolean isProgressChanged() {
     return context.isProgressChanged();
   }
@@ -673,6 +675,7 @@ public class Task {
 
     if (fetches.size() > 0) {
       ClientSocketChannelFactory channelFactory = executionBlockContext.getShuffleChannelFactory();
+      Timer timer = executionBlockContext.getRPCTimer();
       Path inputDir = executionBlockContext.getLocalDirAllocator().
           getLocalPathToRead(getTaskAttemptDir(ctx.getTaskId()).toString(), systemConf);
       File storeDir;
@@ -687,7 +690,7 @@ public class Task {
             storeDir.mkdirs();
           }
           storeFile = new File(storeDir, "in_" + i + "." + RawFile.FILE_EXTENSION);
-          Fetcher fetcher = new Fetcher(systemConf, uri, storeFile, channelFactory);
+          Fetcher fetcher = new Fetcher(systemConf, uri, storeFile, channelFactory, timer);
           runnerList.add(fetcher);
           i++;
         }

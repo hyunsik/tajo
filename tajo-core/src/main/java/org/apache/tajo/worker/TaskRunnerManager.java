@@ -33,9 +33,10 @@ import org.apache.tajo.engine.utils.TupleCache;
 import org.apache.tajo.worker.event.TaskRunnerEvent;
 import org.apache.tajo.worker.event.TaskRunnerStartEvent;
 import org.apache.tajo.worker.event.TaskRunnerStopEvent;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,6 +52,7 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
   private AtomicBoolean stop = new AtomicBoolean(false);
   private FinishedTaskCleanThread finishedTaskCleanThread;
   private Dispatcher dispatcher;
+  private HashedWheelTimer rpcTimer;
 
   public TaskRunnerManager(TajoWorker.WorkerContext workerContext, Dispatcher dispatcher) {
     super(TaskRunnerManager.class.getName());
@@ -75,6 +77,7 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
   public void start() {
     finishedTaskCleanThread = new FinishedTaskCleanThread();
     finishedTaskCleanThread.start();
+    rpcTimer = new HashedWheelTimer();
     super.start();
   }
 
@@ -98,6 +101,11 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
     if(finishedTaskCleanThread != null) {
       finishedTaskCleanThread.interrupted();
     }
+
+    if(rpcTimer != null){
+      rpcTimer.stop();
+    }
+
     super.stop();
     if(workerContext.isYarnContainerMode()) {
       workerContext.stopWorker(true);
@@ -158,14 +166,10 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
     if (event instanceof TaskRunnerStartEvent) {
       TaskRunnerStartEvent startEvent = (TaskRunnerStartEvent) event;
       ExecutionBlockContext context = executionBlockContextMap.get(event.getExecutionBlockId());
-      String[] params = startEvent.getParams();
+
       if(context == null){
         try {
-          // QueryMaster's address
-          String host = params[4];
-          int port = Integer.parseInt(params[5]);
-
-          context = new ExecutionBlockContext(this, startEvent, new InetSocketAddress(host, port));
+          context = new ExecutionBlockContext(this, startEvent, startEvent.getQueryMaster());
         } catch (Throwable e) {
           LOG.fatal(e.getMessage(), e);
           throw new RuntimeException(e);
@@ -173,7 +177,7 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
         executionBlockContextMap.put(event.getExecutionBlockId(), context);
       }
 
-      TaskRunner taskRunner = new TaskRunner(context, params);
+      TaskRunner taskRunner = new TaskRunner(context, startEvent.getContainerId());
       LOG.info("Start TaskRunner:" + taskRunner.getId());
       taskRunnerMap.put(taskRunner.getId(), taskRunner);
       taskRunnerHistoryMap.put(taskRunner.getId(), taskRunner.getHistory());
@@ -204,6 +208,10 @@ public class TaskRunnerManager extends CompositeService implements EventHandler<
 
   public TajoConf getTajoConf() {
     return tajoConf;
+  }
+
+  public Timer getRPCTimer(){
+    return rpcTimer;
   }
 
   class FinishedTaskCleanThread extends Thread {

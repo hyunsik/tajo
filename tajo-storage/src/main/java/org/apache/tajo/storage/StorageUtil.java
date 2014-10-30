@@ -94,6 +94,18 @@ public class StorageUtil extends StorageConstants {
     out.flush();
     out.close();
   }
+
+  public static String concatPathString(String parent, String...childs) {
+    StringBuilder sb = new StringBuilder();
+
+    for(int i=0; i < childs.length; i++) {
+      sb.append(childs[i]);
+      if(i < childs.length - 1)
+        sb.append("/");
+    }
+
+    return sb.toString();
+  }
   
   public static Path concatPath(String parent, String...childs) {
     return concatPath(new Path(parent), childs);

@@ -39,6 +39,7 @@ import org.apache.tajo.engine.planner.global.DataChannel;
 import org.apache.tajo.engine.planner.global.ExecutionBlock;
 import org.apache.tajo.engine.planner.global.MasterPlan;
 import org.apache.tajo.ipc.ClientProtos;
+import org.apache.tajo.jdbc.TajoMemoryResultSet;
 import org.apache.tajo.jdbc.TajoResultSet;
 import org.apache.tajo.master.querymaster.QueryMasterTask;
 import org.apache.tajo.plan.logical.NodeType;
@@ -821,7 +822,7 @@ public class TestTablePartitions extends QueryTestCaseBase {
   }
 
   private MasterPlan getQueryPlan(ResultSet res) {
-    QueryId queryId = ((TajoResultSet)res).getQueryId();
+    QueryId queryId = ((TajoMemoryResultSet)res).getQueryId();
     for (TajoWorker eachWorker: testingCluster.getTajoWorkers()) {
       QueryMasterTask queryMasterTask = eachWorker.getWorkerContext().getQueryMaster().getQueryMasterTask(queryId, true);
       if (queryMasterTask != null) {

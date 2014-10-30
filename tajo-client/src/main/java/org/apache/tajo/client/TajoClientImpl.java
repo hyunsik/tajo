@@ -21,7 +21,6 @@ package org.apache.tajo.client;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.annotation.ThreadSafe;
@@ -123,7 +122,7 @@ public class TajoClientImpl extends SessionConnection implements TajoClient, Que
   }
 
   public ResultSet createNullResultSet(QueryId queryId) throws IOException {
-    return new TajoResultSet(this, queryId);
+    return new TajoMemoryResultSet(queryId, new Schema(), null, 0);
   }
 
   public GetQueryResultResponse getResultResponse(QueryId queryId) throws ServiceException {
@@ -182,12 +181,12 @@ public class TajoClientImpl extends SessionConnection implements TajoClient, Que
     return catalogClient.existTable(tableName);
   }
 
-  public TableDesc createExternalTable(final String tableName, final Schema schema, final Path path,
+  public TableDesc createExternalTable(final String tableName, final Schema schema, final String path,
                                        final TableMeta meta) throws SQLException, ServiceException {
     return catalogClient.createExternalTable(tableName, schema, path, meta);
   }
 
-  public TableDesc createExternalTable(final String tableName, final Schema schema, final Path path,
+  public TableDesc createExternalTable(final String tableName, final Schema schema, final String path,
                                        final TableMeta meta, final PartitionMethodDesc partitionMethodDesc)
       throws SQLException, ServiceException {
     return catalogClient.createExternalTable(tableName, schema, path, meta, partitionMethodDesc);

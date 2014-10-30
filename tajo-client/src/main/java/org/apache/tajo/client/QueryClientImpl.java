@@ -21,15 +21,14 @@ package org.apache.tajo.client;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.QueryIdFactory;
 import org.apache.tajo.TajoIdProtos;
 import org.apache.tajo.TajoProtos;
+import org.apache.tajo.auth.UserRoleInfo;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableDesc;
-import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.ipc.QueryMasterClientProtocol;
 import org.apache.tajo.ipc.TajoMasterClientProtocol;
@@ -84,7 +83,7 @@ public class QueryClientImpl implements QueryClient {
   }
 
   @Override
-  public UserGroupInformation getUserInfo() {
+  public UserRoleInfo getUserInfo() {
     return connection.getUserInfo();
   }
 
@@ -382,7 +381,7 @@ public class QueryClientImpl implements QueryClient {
 
   @Override
   public ResultSet createNullResultSet(QueryId queryId) throws IOException {
-    return new TajoResultSet(this, queryId);
+    return new TajoMemoryResultSet(queryId, new Schema(), null, 0);
   }
 
   @Override
@@ -453,7 +452,7 @@ public class QueryClientImpl implements QueryClient {
 
       ClientProtos.SerializedResultSet serializedResultSet = callable.withRetries();
 
-      return new TajoMemoryResultSet(
+      return new TajoMemoryResultSet(queryId,
           new Schema(serializedResultSet.getSchema()),
           serializedResultSet.getSerializedTuplesList(),
           serializedResultSet.getSerializedTuplesCount());

@@ -19,6 +19,7 @@ package org.apache.tajo.jdbc;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
+import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.client.TajoClient;
 
 import java.sql.*;
@@ -168,7 +169,7 @@ public class TajoStatement implements Statement {
       throw new SQLException(e.getMessage(), e);
     }
 
-    return new TajoResultSet(client, null);
+    return new TajoMemoryResultSet(null, new Schema(), null, 0);
   }
 
   public static ResultSet unSetSessionVariable(TajoClient client, String sql) throws SQLException {
@@ -187,7 +188,7 @@ public class TajoStatement implements Statement {
       throw new SQLException(e.getMessage(), e);
     }
 
-    return new TajoResultSet(client, null);
+    return new TajoMemoryResultSet(null, new Schema(), null, 0);
   }
 
   @Override

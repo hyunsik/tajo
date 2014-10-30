@@ -678,7 +678,7 @@ public class TajoTestingCluster {
         }
       }
       TableMeta meta = CatalogUtil.newTableMeta(CatalogProtos.StoreType.CSV, tableOption);
-      client.createExternalTable(tableName, schema, tablePath, meta);
+      client.createExternalTable(tableName, schema, tablePath.toString(), meta);
     } finally {
       client.close();
     }

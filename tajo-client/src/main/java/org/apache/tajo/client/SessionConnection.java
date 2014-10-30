@@ -21,10 +21,10 @@ package org.apache.tajo.client;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.TajoIdProtos;
 import org.apache.tajo.annotation.Nullable;
+import org.apache.tajo.auth.UserRoleInfo;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.ipc.TajoMasterClientProtocol;
@@ -62,7 +62,7 @@ public class SessionConnection implements Closeable {
 
   private final String baseDatabase;
 
-  private final UserGroupInformation userInfo;
+  private final UserRoleInfo userInfo;
 
   volatile TajoIdProtos.SessionIdProto sessionId;
 
@@ -101,7 +101,7 @@ public class SessionConnection implements Closeable {
     int workerNum = conf.getIntVar(TajoConf.ConfVars.RPC_CLIENT_WORKER_THREAD_NUM);
     // Don't share connection pool per client
     connPool = RpcConnectionPool.newPool(conf, getClass().getSimpleName(), workerNum);
-    userInfo = UserGroupInformation.getCurrentUser();
+    userInfo = new UserRoleInfo("tajo");
     this.baseDatabase = baseDatabase != null ? baseDatabase : null;
   }
 
@@ -155,7 +155,7 @@ public class SessionConnection implements Closeable {
     return conf;
   }
 
-  public UserGroupInformation getUserInfo() {
+  public UserRoleInfo getUserInfo() {
     return userInfo;
   }
 

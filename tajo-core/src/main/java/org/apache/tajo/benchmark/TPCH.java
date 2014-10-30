@@ -32,6 +32,7 @@ import org.apache.tajo.catalog.proto.CatalogProtos.StoreType;
 import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.storage.StorageConstants;
+import org.apache.tajo.storage.StorageUtil;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -220,7 +221,7 @@ public class TPCH extends BenchmarkSet {
     }
     try {
       tajo.createExternalTable(tableName, getSchema(tableName),
-          new Path(dataDir, tableName), meta, partitionMethodDesc);
+          StorageUtil.concatPathString(dataDir, tableName), meta, partitionMethodDesc);
     } catch (SQLException s) {
       throw new ServiceException(s);
     }

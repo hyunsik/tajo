@@ -85,7 +85,7 @@ public class TajoClientUtil {
       // simple eval query
       // select substr('abc', 1, 2)
       ClientProtos.SerializedResultSet serializedResultSet = response.getResultSet();
-      return new TajoMemoryResultSet(
+      return new TajoMemoryResultSet(null,
           new Schema(serializedResultSet.getSchema()),
           serializedResultSet.getSerializedTuplesList(),
           response.getMaxRowNum());

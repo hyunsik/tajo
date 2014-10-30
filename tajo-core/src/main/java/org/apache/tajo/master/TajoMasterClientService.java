@@ -292,7 +292,7 @@ public class TajoMasterClientService extends AbstractService {
 
         UpdateQueryResponse.Builder builder = UpdateQueryResponse.newBuilder();
         try {
-          context.getGlobalEngine().updateQuery(queryContext, request.getQuery(), request.getIsJson());
+          context.getGlobalEngine().updateQuery(queryContext, session, request.getQuery(), request.getIsJson());
           builder.setResultCode(ResultCode.OK);
           return builder.build();
         } catch (Exception e) {
@@ -606,7 +606,7 @@ public class TajoMasterClientService extends AbstractService {
         Session session = context.getSessionManager().getSession(request.getSessionId().getId());
         QueryContext queryContext = new QueryContext(conf, session);
 
-        if (context.getGlobalEngine().createDatabase(queryContext, request.getValue(), null, false)) {
+        if (context.getGlobalEngine().getDDLExecutor().createDatabase(queryContext, request.getValue(), null, false)) {
           return BOOL_TRUE;
         } else {
           return BOOL_FALSE;
@@ -636,7 +636,7 @@ public class TajoMasterClientService extends AbstractService {
         Session session = context.getSessionManager().getSession(request.getSessionId().getId());
         QueryContext queryContext = new QueryContext(conf, session);
 
-        if (context.getGlobalEngine().dropDatabase(queryContext, request.getValue(), false)) {
+        if (context.getGlobalEngine().getDDLExecutor().dropDatabase(queryContext, request.getValue(), false)) {
           return BOOL_TRUE;
         } else {
           return BOOL_FALSE;
@@ -762,7 +762,7 @@ public class TajoMasterClientService extends AbstractService {
 
         TableDesc desc;
         try {
-          desc = context.getGlobalEngine().createTableOnPath(queryContext, request.getName(), schema,
+          desc = context.getGlobalEngine().getDDLExecutor().createTableOnPath(queryContext, request.getName(), schema,
               meta, path, true, partitionDesc, false);
         } catch (Exception e) {
           return TableResponse.newBuilder()
@@ -790,7 +790,7 @@ public class TajoMasterClientService extends AbstractService {
         Session session = context.getSessionManager().getSession(dropTable.getSessionId().getId());
         QueryContext queryContext = new QueryContext(conf, session);
 
-        context.getGlobalEngine().dropTable(queryContext, dropTable.getName(), false, dropTable.getPurge());
+        context.getGlobalEngine().getDDLExecutor().dropTable(queryContext, dropTable.getName(), false, dropTable.getPurge());
         return BOOL_TRUE;
       } catch (Throwable t) {
         throw new ServiceException(t);

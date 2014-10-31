@@ -208,17 +208,17 @@ public class GlobalEngine extends AbstractService {
 
 
     } else if (plan.isExplain()) { // explain query
-      queryExecutor.explainQuery(queryContext, session, plan, responseBuilder);
+      queryExecutor.explainQuery(queryContext, session, sql, plan, responseBuilder);
 
 
     } else if (PlannerUtil.checkIfSimpleQuery(plan)) {
       // Simple query indicates a form of 'select * from tb_name [LIMIT X];'.
-      queryExecutor.executeSimpleQuery(queryContext, session, plan, responseBuilder);
+      queryExecutor.executeSimpleQuery(queryContext, session, sql, plan, responseBuilder);
 
 
     } else if (PlannerUtil.checkIfNonFromQuery(plan)) {
       // NonFromQuery indicates a form of 'select a, x+y;'
-      queryExecutor.execNonFromQuery(queryContext, session, plan, responseBuilder);
+      queryExecutor.execNonFromQuery(queryContext, session, sql, plan, responseBuilder);
 
 
     } else { // it requires distributed execution. So, the query is forwarded to a query master.

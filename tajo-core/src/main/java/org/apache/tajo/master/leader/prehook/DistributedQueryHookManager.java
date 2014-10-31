@@ -25,11 +25,9 @@ import org.apache.tajo.plan.LogicalPlan;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
-* Created by hyunsik on 10/30/14.
-*/
 public class DistributedQueryHookManager {
   private List<DistributedQueryHook> hooks = new ArrayList<DistributedQueryHook>();
+
   public void addHook(DistributedQueryHook hook) {
     hooks.add(hook);
   }

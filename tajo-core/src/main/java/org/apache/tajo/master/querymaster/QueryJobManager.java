@@ -35,6 +35,7 @@ import org.apache.tajo.master.cluster.WorkerConnectionInfo;
 import org.apache.tajo.master.session.Session;
 import org.apache.tajo.scheduler.SimpleFifoScheduler;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,6 +115,22 @@ public class QueryJobManager extends CompositeService {
     synchronized (finishedQueries){
       return Collections.unmodifiableCollection(finishedQueries.values());
     }
+  }
+
+  public QueryInfo createNewSimpleQuery(QueryContext queryContext, Session session, String sql,  LogicalRootNode plan)
+      throws IOException {
+
+    QueryId queryId = QueryIdFactory.newQueryId(masterContext.getResourceManager().getSeedQueryId());
+    QueryInProgress queryInProgress = new QueryInProgress(masterContext, session, queryContext, queryId, sql,
+        null, plan);
+
+    synchronized (submittedQueries) {
+      queryInProgress.getQueryInfo().setQueryMaster("");
+      submittedQueries.put(queryInProgress.getQueryId(), queryInProgress);
+    }
+
+    scheduler.addQuery(queryInProgress);
+    return queryInProgress.getQueryInfo();
   }
 
   public QueryInfo createNewQueryJob(Session session, QueryContext queryContext, String sql,

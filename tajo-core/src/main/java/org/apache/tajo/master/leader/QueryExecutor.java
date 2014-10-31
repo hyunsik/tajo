@@ -84,7 +84,9 @@ public class QueryExecutor {
     this.hookManager = hookManager;
   }
 
-  public void explainQuery(QueryContext queryContext, Session session, LogicalPlan plan, Builder builder) {
+  public void explainQuery(QueryContext queryContext, Session session, String query, LogicalPlan plan, Builder builder)
+      throws IOException {
+
     String explainStr = PlannerUtil.buildExplainString(plan.getRootBlock().getRoot());
     Schema schema = new Schema();
     schema.addColumn("explain", TajoDataTypes.Type.TEXT);
@@ -108,9 +110,12 @@ public class QueryExecutor {
     builder.setMaxRowNum(lines.length);
     builder.setResultCode(ClientProtos.ResultCode.OK);
     builder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
+
+    context.getQueryJobManager().createNewSimpleQuery(queryContext, session, query,
+        (LogicalRootNode) plan.getRootBlock().getRoot());
   }
 
-  public void executeSimpleQuery(QueryContext queryContext, Session session, LogicalPlan plan,
+  public void executeSimpleQuery(QueryContext queryContext, Session session, String query, LogicalPlan plan,
                                  Builder responseBuilder) throws Exception {
     ScanNode scanNode = plan.getRootBlock().getNode(NodeType.SCAN);
     if (scanNode == null) {
@@ -135,10 +140,13 @@ public class QueryExecutor {
     responseBuilder.setTableDesc(desc.getProto());
     responseBuilder.setSessionVariables(session.getProto().getVariables());
     responseBuilder.setResultCode(ClientProtos.ResultCode.OK);
+
+    context.getQueryJobManager().createNewSimpleQuery(queryContext, session, query,
+        (LogicalRootNode) plan.getRootBlock().getRoot());
   }
 
-  public void execNonFromQuery(QueryContext queryContext, Session session, LogicalPlan plan, Builder responseBuilder)
-      throws Exception {
+  public void execNonFromQuery(QueryContext queryContext, Session session, String query,
+                               LogicalPlan plan, Builder responseBuilder) throws Exception {
 
     LogicalRootNode rootNode = plan.getRootBlock().getRoot();
     Target[] targets = plan.getRootBlock().getRawTargets();
@@ -168,6 +176,9 @@ public class QueryExecutor {
       responseBuilder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
       responseBuilder.setResultCode(ClientProtos.ResultCode.OK);
     }
+
+    context.getQueryJobManager().createNewSimpleQuery(queryContext, session, query,
+        (LogicalRootNode) plan.getRootBlock().getRoot());
   }
 
   private void insertNonFromQuery(TajoMaster.MasterContext context, QueryContext queryContext,
@@ -274,7 +285,7 @@ public class QueryExecutor {
 
   public void executeDistributedQuery(QueryContext queryContext, Session session,
                                       LogicalPlan plan,
-                                      String sql,
+                                      String query,
                                       String jsonExpr,
                                       Builder builder) throws Exception {
     context.getSystemMetrics().counter("Query", "numDMLQuery").inc();
@@ -286,7 +297,7 @@ public class QueryExecutor {
     QueryJobManager queryJobManager = this.context.getQueryJobManager();
     QueryInfo queryInfo;
 
-    queryInfo = queryJobManager.createNewQueryJob(session, queryContext, sql, jsonExpr, rootNode);
+    queryInfo = queryJobManager.createNewQueryJob(session, queryContext, query, jsonExpr, rootNode);
 
     if(queryInfo == null) {
       builder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
@@ -300,6 +311,7 @@ public class QueryExecutor {
         builder.setQueryMasterHost(queryInfo.getQueryMasterHost());
       }
       builder.setQueryMasterPort(queryInfo.getQueryMasterClientPort());
+
       LOG.info("Query is forwarded to " + queryInfo.getQueryMasterHost() + ":" + queryInfo.getQueryMasterPort());
     }
   }

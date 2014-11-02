@@ -36,16 +36,7 @@ import org.apache.tajo.algebra.JsonHelper;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.conf.TajoConf;
-import org.apache.tajo.master.leader.prehook.DistributedQueryHookManager;
-import org.apache.tajo.master.leader.prehook.InsertHook;
-import org.apache.tajo.plan.LogicalOptimizer;
-import org.apache.tajo.plan.LogicalPlan;
-import org.apache.tajo.plan.LogicalPlanner;
-import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.engine.planner.global.MasterPlan;
-import org.apache.tajo.plan.logical.LogicalNode;
-import org.apache.tajo.plan.logical.NodeType;
-import org.apache.tajo.plan.logical.ScanNode;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.exception.UnimplementedException;
 import org.apache.tajo.ipc.TajoMasterProtocol;
@@ -53,8 +44,18 @@ import org.apache.tajo.ipc.TajoWorkerProtocol;
 import org.apache.tajo.master.TajoAsyncDispatcher;
 import org.apache.tajo.master.TajoContainerProxy;
 import org.apache.tajo.master.event.*;
+import org.apache.tajo.master.leader.prehook.CreateTableHook;
+import org.apache.tajo.master.leader.prehook.DistributedQueryHookManager;
+import org.apache.tajo.master.leader.prehook.InsertHook;
 import org.apache.tajo.master.rm.TajoWorkerResourceManager;
 import org.apache.tajo.master.session.Session;
+import org.apache.tajo.plan.LogicalOptimizer;
+import org.apache.tajo.plan.LogicalPlan;
+import org.apache.tajo.plan.LogicalPlanner;
+import org.apache.tajo.plan.logical.LogicalNode;
+import org.apache.tajo.plan.logical.NodeType;
+import org.apache.tajo.plan.logical.ScanNode;
+import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.rpc.CallFuture;
 import org.apache.tajo.rpc.NettyClientBase;
 import org.apache.tajo.rpc.RpcConnectionPool;
@@ -72,6 +73,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.tajo.TajoProtos.QueryState;
+import static org.apache.tajo.ipc.TajoMasterProtocol.QueryCompleteReport;
 
 public class QueryMasterTask extends CompositeService {
   private static final Log LOG = LogFactory.getLog(QueryMasterTask.class.getName());
@@ -221,7 +223,16 @@ public class QueryMasterTask extends CompositeService {
       }
 
       TajoMasterProtocol.TajoMasterProtocolService masterClientService = tmClient.getStub();
-      masterClientService.stopQueryMaster(null, queryId.getProto(), future);
+
+
+      QueryCompleteReport.Builder completionReport = QueryCompleteReport.newBuilder();
+      completionReport.setQueryId(queryId.getProto());
+      Query query = queryMasterContext.getQueryMaster().getQueryMasterTask(queryId, true).getQuery();
+      if (query != null && query.getSynchronizedState() == QueryState.QUERY_SUCCEEDED) {
+        completionReport.setTableDesc(query.getResultDesc().getProto());
+      }
+      masterClientService.stopQueryMaster(null, completionReport.build(), future);
+
     } catch (Exception e) {
       LOG.error(e.getMessage(), e);
     } finally {
@@ -360,6 +371,7 @@ public class QueryMasterTask extends CompositeService {
 
       DistributedQueryHookManager hookManager = new DistributedQueryHookManager();
       hookManager.addHook(new InsertHook());
+      hookManager.addHook(new CreateTableHook());
       hookManager.doHooks(null, queryContext, plan);
 
       for (LogicalPlan.QueryBlock block : plan.getQueryBlocks()) {

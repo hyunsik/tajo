@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.TajoProtos;
+import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.plan.logical.LogicalRootNode;
 import org.apache.tajo.engine.query.QueryContext;
@@ -74,7 +75,7 @@ public class QueryInProgress extends CompositeService {
 
   private QueryMasterProtocolService queryMasterRpcClient;
 
-  private YarnProtos.ContainerIdProto qmContainerId;
+  private TableDesc resultDesc;
 
   public QueryInProgress(
       TajoMaster.MasterContext masterContext,
@@ -105,6 +106,14 @@ public class QueryInProgress extends CompositeService {
     if(queryMasterRpcClient != null){
       queryMasterRpcClient.killQuery(null, queryId.getProto(), NullCallback.get());
     }
+  }
+
+  public void setResultDesc(TableDesc resultDesc) {
+    this.resultDesc = resultDesc;
+  }
+
+  public TableDesc getResultDesc() {
+    return resultDesc;
   }
 
   @Override

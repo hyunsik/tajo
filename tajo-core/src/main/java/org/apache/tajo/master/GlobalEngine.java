@@ -89,7 +89,7 @@ public class GlobalEngine extends AbstractService {
       annotatedPlanVerifier = new LogicalPlanVerifier(context.getConf(), context.getCatalog());
 
       hookManager = new DistributedQueryHookManager();
-      hookManager.addHook(new CreateTableHook(this));
+      hookManager.addHook(new CreateTableHook());
       hookManager.addHook(new InsertHook());
       this.queryExecutor = new QueryExecutor(context, hookManager);
     } catch (Throwable t) {

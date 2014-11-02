@@ -19,7 +19,9 @@
 package org.apache.tajo.master.leader.prehook;
 
 import org.apache.tajo.catalog.CatalogUtil;
+import org.apache.tajo.catalog.TableMeta;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.engine.planner.physical.PhysicalPlanUtil;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.master.GlobalEngine;
 import org.apache.tajo.master.TajoMaster;
@@ -28,14 +30,9 @@ import org.apache.tajo.plan.logical.CreateTableNode;
 import org.apache.tajo.plan.logical.LogicalRootNode;
 import org.apache.tajo.plan.logical.NodeType;
 import org.apache.tajo.storage.StorageUtil;
+import org.apache.tajo.util.KeyValueSet;
 
 public class CreateTableHook implements DistributedQueryHook {
-
-  private GlobalEngine globalEngine;
-
-  public CreateTableHook(GlobalEngine globalEngine) {
-    this.globalEngine = globalEngine;
-  }
 
   @Override
   public boolean isEligible(QueryContext queryContext, LogicalPlan plan) {
@@ -47,6 +44,12 @@ public class CreateTableHook implements DistributedQueryHook {
   public void hook(TajoMaster.MasterContext context, QueryContext queryContext, LogicalPlan plan) throws Exception {
     LogicalRootNode rootNode = plan.getRootBlock().getRoot();
     CreateTableNode createTableNode = rootNode.getChild();
+
+    TableMeta meta = new TableMeta(createTableNode.getStorageType(), new KeyValueSet());
+    PhysicalPlanUtil.setNullCharIfNecessary(queryContext, createTableNode, meta);
+    meta.getOptions().putAll(createTableNode.getOptions());
+    createTableNode.setOptions(meta.getOptions());
+
     String [] splitted  = CatalogUtil.splitFQTableName(createTableNode.getTableName());
     String databaseName = splitted[0];
     String tableName = splitted[1];

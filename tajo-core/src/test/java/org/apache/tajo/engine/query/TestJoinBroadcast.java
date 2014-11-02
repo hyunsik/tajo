@@ -30,6 +30,7 @@ import org.apache.tajo.datum.Int4Datum;
 import org.apache.tajo.datum.TextDatum;
 import org.apache.tajo.engine.planner.global.ExecutionBlock;
 import org.apache.tajo.engine.planner.global.MasterPlan;
+import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.plan.logical.NodeType;
 import org.apache.tajo.jdbc.TajoResultSet;
 import org.apache.tajo.master.querymaster.QueryMasterTask;
@@ -336,12 +337,12 @@ public class TestJoinBroadcast extends QueryTestCaseBase {
 
   @Test
   public final void testBroadcastBasicJoin() throws Exception {
-    ResultSet res = executeQuery();
-    TajoResultSet ts = (TajoResultSet)res;
+    FetchResultSet res = (FetchResultSet) executeQuery();
+
     assertResultSet(res);
     cleanupQuery(res);
 
-    MasterPlan plan = getQueryPlan(ts.getQueryId());
+    MasterPlan plan = getQueryPlan(res.getQueryId());
     ExecutionBlock rootEB = plan.getRoot();
 
     /*
@@ -364,7 +365,7 @@ public class TestJoinBroadcast extends QueryTestCaseBase {
     assertResultSet(res);
     cleanupQuery(res);
 
-    MasterPlan plan = getQueryPlan(((TajoResultSet)res).getQueryId());
+    MasterPlan plan = getQueryPlan(((FetchResultSet)res).getQueryId());
     ExecutionBlock rootEB = plan.getRoot();
 
     /*

@@ -50,6 +50,11 @@ import org.apache.tajo.master.rm.WorkerResource;
 import org.apache.tajo.master.session.InvalidSessionException;
 import org.apache.tajo.master.session.NoSuchSessionVariableException;
 import org.apache.tajo.master.session.Session;
+import org.apache.tajo.plan.LogicalPlan;
+import org.apache.tajo.plan.logical.LimitNode;
+import org.apache.tajo.plan.logical.NodeType;
+import org.apache.tajo.plan.logical.PartitionedTableScanNode;
+import org.apache.tajo.plan.logical.ScanNode;
 import org.apache.tajo.rpc.BlockingRpcServer;
 import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos.BoolProto;
@@ -498,8 +503,26 @@ public class TajoMasterClientService extends AbstractService {
 
         QueryId queryId = new QueryId(request.getQueryId());
         NonForwardQueryResultScanner queryResultScanner = session.getNonForwardQueryResultScanner(queryId);
+
         if (queryResultScanner == null) {
-          throw new ServiceException("No NonForwardQueryResultScanner for " + queryId);
+          QueryInProgress inProgress = context.getQueryJobManager().getFinishedQuery(queryId);
+
+          TableDesc resultTableDesc = inProgress.getResultDesc();
+
+          ScanNode scanNode;
+          if (resultTableDesc.hasPartition()) {
+            scanNode = LogicalPlan.createNodeWithoutPID(PartitionedTableScanNode.class);
+            scanNode.init(resultTableDesc);
+          } else {
+            scanNode = LogicalPlan.createNodeWithoutPID(ScanNode.class);
+            scanNode.init(resultTableDesc);
+          }
+
+          queryResultScanner =
+              new NonForwardQueryResultScanner(context.getConf(), session.getSessionId(), queryId, scanNode,
+                  resultTableDesc, Integer.MAX_VALUE);
+          queryResultScanner.init();
+          session.addNonForwardQueryResultScanner(queryResultScanner);
         }
 
         List<ByteString> rows = queryResultScanner.getNextRows(request.getFetchRowNum());

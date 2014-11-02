@@ -95,7 +95,7 @@ public class TestCreateTable extends QueryTestCaseBase {
                                               String createTableStmt) throws Exception {
     // create one table
     executeString("CREATE DATABASE " + CatalogUtil.denormalizeIdentifier(databaseName)).close();
-    getClient().existDatabase(CatalogUtil.denormalizeIdentifier(databaseName));
+    assertDatabaseExists(databaseName);
     final String oldFQTableName = CatalogUtil.buildFQName(databaseName, originalTableName);
 
     ResultSet res = executeString(createTableStmt);

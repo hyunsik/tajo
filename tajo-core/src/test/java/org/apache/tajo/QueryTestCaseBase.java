@@ -235,7 +235,7 @@ public class QueryTestCaseBase {
     testingCluster.setAllTajoDaemonConfValue(TajoConf.ConfVars.$TEST_BROADCAST_JOIN_ENABLED.varname, "false");
   }
 
-  protected TajoClient getClient() {
+  protected static TajoClient getClient() {
     return client;
   }
 
@@ -372,7 +372,6 @@ public class QueryTestCaseBase {
    * @param result Query result to be compared.
    */
   public final void assertResultSet(String message, ResultSet result, String resultFileName) throws IOException {
-    FileSystem fs = currentQueryPath.getFileSystem(testBase.getTestingCluster().getConfiguration());
     Path resultFile = getResultFile(resultFileName);
     try {
       verifyResultText(message, result, resultFile);

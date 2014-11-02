@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.QueryIdFactory;
 import org.apache.tajo.TajoProtos;
+import org.apache.tajo.annotation.Nullable;
+import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.plan.logical.LogicalRootNode;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.ipc.TajoMasterProtocol;
@@ -123,13 +125,14 @@ public class QueryJobManager extends CompositeService {
     QueryId queryId = QueryIdFactory.newQueryId(masterContext.getResourceManager().getSeedQueryId());
     QueryInProgress queryInProgress = new QueryInProgress(masterContext, session, queryContext, queryId, sql,
         null, plan);
+    queryInProgress.getQueryInfo().setQueryState(TajoProtos.QueryState.QUERY_SUCCEEDED);
+    queryInProgress.getQueryInfo().setFinishTime(queryInProgress.getQueryInfo().getStartTime());
 
-    synchronized (submittedQueries) {
+    synchronized (finishedQueries) {
       queryInProgress.getQueryInfo().setQueryMaster("");
-      submittedQueries.put(queryInProgress.getQueryId(), queryInProgress);
+      finishedQueries.put(queryInProgress.getQueryId(), queryInProgress);
     }
 
-    scheduler.addQuery(queryInProgress);
     return queryInProgress.getQueryInfo();
   }
 
@@ -218,6 +221,10 @@ public class QueryJobManager extends CompositeService {
   }
 
   public void stopQuery(QueryId queryId) {
+    stopQuery(queryId, null);
+  }
+
+  public void stopQuery(QueryId queryId, @Nullable TableDesc resultDesc) {
     LOG.info("Stop QueryInProgress:" + queryId);
     QueryInProgress queryInProgress = getQueryInProgress(queryId);
     if(queryInProgress != null) {
@@ -232,6 +239,10 @@ public class QueryJobManager extends CompositeService {
 
       synchronized(finishedQueries) {
         finishedQueries.put(queryId, queryInProgress);
+      }
+
+      if (resultDesc != null) {
+        queryInProgress.setResultDesc(resultDesc);
       }
     } else {
       LOG.warn("No QueryInProgress while query stopping: " + queryId);

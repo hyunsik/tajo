@@ -34,6 +34,7 @@ import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
+import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.jdbc.TajoResultSet;
 import org.apache.tajo.storage.StorageConstants;
 import org.apache.tajo.storage.StorageUtil;
@@ -663,7 +664,7 @@ public class TestTajoClient {
       assertNotNull(queryStatus);
       assertTrue(TajoClientUtil.isQueryComplete(queryStatus.getState()));
 
-      TajoResultSet resultSet = (TajoResultSet) client.getQueryResult(queryId);
+      ResultSet resultSet = client.getQueryResult(queryId);
       assertNotNull(resultSet);
 
       int count = 0;
@@ -680,7 +681,7 @@ public class TestTajoClient {
   @Test
   public void testSetCvsNull() throws Exception {
     String sql =
-        "select\n" +
+        "create table csvnull as select\n" +
             "  c_custkey,\n" +
             "  orders.o_orderkey,\n" +
             "  orders.o_orderstatus \n" +
@@ -696,11 +697,13 @@ public class TestTajoClient {
     variables.put(SessionVars.NULL_CHAR.keyname(), "\\\\T");
     client.updateSessionVariables(variables);
 
-    TajoResultSet res = (TajoResultSet)client.executeQueryAndGetResult(sql);
+    ResultSet res = client.executeQueryAndGetResult(sql);
+    res.close();
 
-    assertEquals(res.getTableDesc().getMeta().getOption(StorageConstants.CSVFILE_NULL), "\\\\T");
+    TableDesc desc = client.getTableDesc("csvnull");
 
-    Path path = res.getTableDesc().getPath();
+    assertEquals(desc.getMeta().getOption(StorageConstants.CSVFILE_NULL), "\\\\T");
+    Path path = desc.getPath();
     FileSystem fs = path.getFileSystem(tajoConf);
 
     FileStatus[] files = fs.listStatus(path);

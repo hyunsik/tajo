@@ -21,21 +21,21 @@ package org.apache.tajo.client;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.tajo.QueryId;
-import org.apache.tajo.QueryIdFactory;
-import org.apache.tajo.TajoIdProtos;
-import org.apache.tajo.TajoProtos;
+import org.apache.tajo.*;
 import org.apache.tajo.auth.UserRoleInfo;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.ipc.QueryMasterClientProtocol;
 import org.apache.tajo.ipc.TajoMasterClientProtocol;
+import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.jdbc.TajoMemoryResultSet;
 import org.apache.tajo.jdbc.TajoResultSet;
 import org.apache.tajo.rpc.NettyClientBase;
 import org.apache.tajo.rpc.ServerCallable;
+import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 import org.apache.tajo.util.NetUtils;
 
 import java.io.IOException;
@@ -376,7 +376,8 @@ public class QueryClientImpl implements QueryClient {
     TableDesc tableDesc = CatalogUtil.newTableDesc(response.getTableDesc());
     connection.getConf().setVar(ConfVars.USERNAME, response.getTajoUserName());
 
-    return new TajoResultSet(this, queryId, connection.getConf(), tableDesc);
+    int fetchRowNum = 200;
+    return new FetchResultSet(this, tableDesc.getLogicalSchema(), queryId, fetchRowNum);
   }
 
   @Override

@@ -42,6 +42,10 @@ public class FetchResultSet extends TajoResultSetBase {
     this.schema = schema;
   }
 
+  public QueryId getQueryId() {
+    return queryId;
+  }
+
   @Override
   protected Tuple nextTuple() throws IOException {
     if (finished) {

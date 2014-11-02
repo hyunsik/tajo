@@ -19,12 +19,16 @@
 package org.apache.tajo.engine.query;
 
 import org.apache.tajo.IntegrationTest;
+import org.apache.tajo.QueryTestCaseBase;
 import org.apache.tajo.TajoTestingCluster;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.storage.StorageConstants;
 import org.apache.tajo.util.KeyValueSet;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,6 +43,18 @@ import static org.junit.Assert.*;
  */
 @Category(IntegrationTest.class)
 public class TestNullValues {
+
+  private static TajoClient client;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    client = TajoTestingCluster.newTajoClient();
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    client.close();
+  }
 
   @Test
   public final void testIsNull() throws Exception {
@@ -55,9 +71,8 @@ public class TestNullValues {
     };
     KeyValueSet opts = new KeyValueSet();
     opts.set(StorageConstants.CSVFILE_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
-    ResultSet res = TajoTestingCluster
-        .run(table, schemas, opts, new String[][]{data},
-            "select * from nulltable1 where col3 is null");
+    ResultSet res = TajoTestingCluster.run(table, schemas, opts, new String[][]{data},
+            "select * from nulltable1 where col3 is null", client);
 
     try {
       assertTrue(res.next());
@@ -84,7 +99,7 @@ public class TestNullValues {
     opts.set(StorageConstants.CSVFILE_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
     ResultSet res = TajoTestingCluster
         .run(table, schemas, opts, new String[][]{data},
-            "select * from nulltable2 where col1 is not null");
+            "select * from nulltable2 where col1 is not null", client);
     try {
       assertTrue(res.next());
       assertEquals(1, res.getInt(1));
@@ -119,7 +134,7 @@ public class TestNullValues {
     opts.set(StorageConstants.CSVFILE_DELIMITER, ",");
     ResultSet res = TajoTestingCluster
         .run(table, schemas, opts, new String[][]{data},
-            "select * from nulltable3 where col1 is null and col2 is null and col3 is null and col4 = 43578");
+            "select * from nulltable3 where col1 is null and col2 is null and col3 is null and col4 = 43578", client);
     try {
       assertTrue(res.next());
       assertEquals(43578, res.getLong(4));
@@ -153,7 +168,8 @@ public class TestNullValues {
     opts.set(StorageConstants.CSVFILE_NULL, "\\\\N");
     ResultSet res = TajoTestingCluster
         .run(table, schemas, opts, new String[][]{data},
-            "select * from nulltable4 where col1 is null and col2 is null and col3 is null and col5 is null and col4 = 43578");
+            "select * from nulltable4 where col1 is null and col2 is null and col3 is null and col5 is null and col4 = 43578",
+            client);
     try {
       assertTrue(res.next());
       assertEquals(43578, res.getLong(4));
@@ -168,7 +184,6 @@ public class TestNullValues {
     String tableName = "nulltable5";
     ResultSet res = null;
 
-    TajoClient client = TajoTestingCluster.newTajoClient();
     try {
       res = runNullTableQuery(tableName, "select col1, col2, col3, col4 from " + tableName, client);
       int numRows = 0;
@@ -199,8 +214,6 @@ public class TestNullValues {
       if (res != null) {
         res.close();
       }
-
-      client.close();
     }
   }
 
@@ -214,9 +227,7 @@ public class TestNullValues {
         "col4 " +
         "from " + tableName;
 
-    TajoClient client = TajoTestingCluster.newTajoClient();
     ResultSet res = null;
-
     try {
       res = runNullTableQuery(tableName, query, client);
       int numRows = 0;
@@ -246,8 +257,6 @@ public class TestNullValues {
       if (res != null) {
         res.close();
       }
-
-      client.close();
     }
   }
 
@@ -269,11 +278,7 @@ public class TestNullValues {
     tableOptions.set(StorageConstants.CSVFILE_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
     tableOptions.set(StorageConstants.CSVFILE_NULL, "\\\\N");
 
-    if (client == null) {
-      return TajoTestingCluster.run(table, schemas, tableOptions, new String[][]{data}, query);
-    } else {
-      return TajoTestingCluster.run(table, schemas, tableOptions, new String[][]{data}, query, client);
-    }
+    return TajoTestingCluster.run(table, schemas, tableOptions, new String[][]{data}, query, client);
   }
 
   private void assertResultSetNull(ResultSet res, int numRows, boolean useName, int[] nullIndex) throws SQLException {

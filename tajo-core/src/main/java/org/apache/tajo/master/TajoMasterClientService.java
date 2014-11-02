@@ -346,8 +346,9 @@ public class TajoMasterClientService extends AbstractService {
         }
         switch (queryInfo.getQueryState()) {
           case QUERY_SUCCEEDED:
-            // TODO check this logic needed
-            //builder.setTableDesc((TableDescProto) queryJobManager.getResultDesc().getProto());
+            if (queryInProgress.getResultDesc() != null) {
+              builder.setTableDesc(queryInProgress.getResultDesc().getProto());
+            }
             break;
           case QUERY_FAILED:
           case QUERY_ERROR:
@@ -438,8 +439,7 @@ public class TajoMasterClientService extends AbstractService {
 
     @Override
     public GetQueryStatusResponse getQueryStatus(RpcController controller,
-                                                 GetQueryStatusRequest request)
-        throws ServiceException {
+                                                 GetQueryStatusRequest request) throws ServiceException {
 
       try {
         context.getSessionManager().touch(request.getSessionId().getId());
@@ -462,6 +462,8 @@ public class TajoMasterClientService extends AbstractService {
           if (queryInProgress != null) {
             QueryInfo queryInfo = queryInProgress.getQueryInfo();
             builder.setResultCode(ResultCode.OK);
+            builder.setHasResult(
+                !(queryInProgress.getQueryContext().isCreateTable() || queryInProgress.getQueryContext().isInsert()));
             builder.setState(queryInfo.getQueryState());
             builder.setProgress(queryInfo.getProgress());
             builder.setSubmitTime(queryInfo.getStartTime());

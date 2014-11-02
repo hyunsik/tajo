@@ -306,61 +306,20 @@ public class QueryClientImpl implements QueryClient {
 
     ClientProtos.GetQueryStatusResponse res = null;
 
-    if(connection.queryMasterMap.containsKey(queryId)) {
-      NettyClientBase qmClient = null;
+    NettyClientBase tmClient = null;
 
-      try {
+    try {
+      tmClient = connection.getTajoMasterConnection(false);
+      connection.checkSessionAndGet(tmClient);
+      builder.setSessionId(connection.sessionId);
+      TajoMasterClientProtocolService.BlockingInterface tajoMasterService = tmClient.getStub();
 
-        qmClient = connection.connPool.getConnection(connection.queryMasterMap.get(queryId),
-            QueryMasterClientProtocol.class, false);
-        QueryMasterClientProtocolService.BlockingInterface queryMasterService = qmClient.getStub();
-        res = queryMasterService.getQueryStatus(null, builder.build());
+      res = tajoMasterService.getQueryStatus(null, builder.build());
 
-      } catch (Exception e) {
-        throw new ServiceException(e.getMessage(), e);
-      } finally {
-        connection.connPool.releaseConnection(qmClient);
-      }
-
-    } else {
-
-      NettyClientBase tmClient = null;
-
-      try {
-        tmClient = connection.getTajoMasterConnection(false);
-        connection.checkSessionAndGet(tmClient);
-        builder.setSessionId(connection.sessionId);
-        TajoMasterClientProtocolService.BlockingInterface tajoMasterService = tmClient.getStub();
-
-        res = tajoMasterService.getQueryStatus(null, builder.build());
-
-        String queryMasterHost = res.getQueryMasterHost();
-
-        if(queryMasterHost != null && !queryMasterHost.isEmpty()) {
-          NettyClientBase qmClient = null;
-
-          try {
-
-            InetSocketAddress qmAddr = NetUtils.createSocketAddr(queryMasterHost, res.getQueryMasterPort());
-            qmClient = connection.connPool.getConnection(
-                qmAddr, QueryMasterClientProtocol.class, false);
-            QueryMasterClientProtocolService.BlockingInterface queryMasterService = qmClient.getStub();
-            res = queryMasterService.getQueryStatus(null, builder.build());
-
-            connection.queryMasterMap.put(queryId, qmAddr);
-
-          } catch (Exception e) {
-            throw new ServiceException(e.getMessage(), e);
-          } finally {
-            connection.connPool.releaseConnection(qmClient);
-          }
-        }
-
-      } catch (Exception e) {
-        throw new ServiceException(e.getMessage(), e);
-      } finally {
-        connection.connPool.releaseConnection(tmClient);
-      }
+    } catch (Exception e) {
+      throw new ServiceException(e.getMessage(), e);
+    } finally {
+      connection.connPool.releaseConnection(tmClient);
     }
     return new QueryStatus(res);
   }
@@ -394,19 +353,13 @@ public class QueryClientImpl implements QueryClient {
     NettyClientBase client = null;
 
     try {
-
-      InetSocketAddress queryMasterAddr = connection.queryMasterMap.get(queryId);
-      if(queryMasterAddr == null) {
-        LOG.warn("No Connection to QueryMaster for " + queryId);
-        return null;
-      }
-
-      client = connection.getConnection(queryMasterAddr, QueryMasterClientProtocol.class, false);
-      QueryMasterClientProtocolService.BlockingInterface queryMasterService = client.getStub();
+      client = connection.getConnection(connection.tajoMasterAddr, TajoMasterClientProtocol.class, false);
+      TajoMasterClientProtocolService.BlockingInterface tmService = client.getStub();
 
       GetQueryResultRequest.Builder builder = GetQueryResultRequest.newBuilder();
       builder.setQueryId(queryId.getProto());
-      GetQueryResultResponse response = queryMasterService.getQueryResult(null,builder.build());
+      builder.setSessionId(connection.getSessionId());
+      GetQueryResultResponse response = tmService.getQueryResult(null,builder.build());
 
       return response;
 

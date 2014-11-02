@@ -102,6 +102,10 @@ public class QueryInProgress extends CompositeService {
     super.init(conf);
   }
 
+  public QueryContext getQueryContext() {
+    return queryContext;
+  }
+
   public synchronized void kill() {
     if(queryMasterRpcClient != null){
       queryMasterRpcClient.killQuery(null, queryId.getProto(), NullCallback.get());
@@ -109,11 +113,15 @@ public class QueryInProgress extends CompositeService {
   }
 
   public void setResultDesc(TableDesc resultDesc) {
-    this.resultDesc = resultDesc;
+    synchronized (this) {
+      this.resultDesc = resultDesc;
+    }
   }
 
   public TableDesc getResultDesc() {
-    return resultDesc;
+    synchronized (this) {
+      return resultDesc;
+    }
   }
 
   @Override

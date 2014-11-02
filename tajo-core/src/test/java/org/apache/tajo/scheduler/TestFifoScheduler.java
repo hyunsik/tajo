@@ -19,6 +19,7 @@
 package org.apache.tajo.scheduler;
 
 import org.apache.tajo.*;
+import org.apache.tajo.client.QueryStatus;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.client.TajoClientUtil;
@@ -97,7 +98,9 @@ public class TestFifoScheduler {
 
     cluster.waitForQueryRunning(queryId);
 
-    assertTrue(TajoClientUtil.isQueryRunning(client.getQueryStatus(queryId).getState()));
+    QueryStatus status = client.getQueryStatus(queryId);
+    assertTrue("its actual state: " + status.getState().name(),
+        TajoClientUtil.isQueryRunning(client.getQueryStatus(queryId).getState()));
 
     assertEquals(TajoProtos.QueryState.QUERY_MASTER_INIT, client.getQueryStatus(queryId2).getState());
     assertEquals(TajoProtos.QueryState.QUERY_MASTER_INIT, client.getQueryStatus(queryId3).getState());

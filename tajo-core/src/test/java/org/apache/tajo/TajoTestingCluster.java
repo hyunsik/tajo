@@ -720,15 +720,17 @@ public class TajoTestingCluster {
   }
 
   public void waitForQueryRunning(QueryId queryId, int delay) throws Exception {
-    QueryMasterTask qmt = null;
+    TajoClient client = newTajoClient();
+
+    TajoProtos.QueryState state = client.getQueryStatus(queryId).getState();
 
     int i = 0;
-    while (qmt == null || TajoClientUtil.isQueryWaitingForSchedule(qmt.getState())) {
+    while (TajoClientUtil.isQueryWaitingForSchedule(state)) {
       try {
         Thread.sleep(delay);
-        if(qmt == null){
-          qmt = getQueryMasterTask(queryId);
-        }
+
+        state = client.getQueryStatus(queryId).getState();
+
       } catch (InterruptedException e) {
       }
       if (++i > 200) {

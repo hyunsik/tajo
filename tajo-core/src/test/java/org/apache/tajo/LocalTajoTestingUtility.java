@@ -103,7 +103,7 @@ public class LocalTajoTestingUtility {
     util = new TajoTestingCluster();
     util.startMiniCluster(1);
     conf = util.getConfiguration();
-    client = new TajoClientImpl(conf);
+    client = util.newTajoClient();
 
     FileSystem fs = util.getDefaultFileSystem();
     Path rootDir = util.getMaster().getStorageManager().getWarehouseDir();

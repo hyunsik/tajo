@@ -27,6 +27,7 @@ import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.util.NetUtils;
 import org.apache.tajo.util.Pair;
 import org.apache.tajo.util.TUtil;
 
@@ -101,14 +102,13 @@ public class TajoDump {
     }
 
     TajoClient client = null;
-    if ((hostName == null) ^ (port == null)) {
+
+    if (hostName != null && port != null) {
+      conf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName+":"+port);
+      client = new TajoClientImpl(NetUtils.createSocketAddr(hostName, port), null, null);
+    } else {
       System.err.println("ERROR: cannot find any TajoMaster rpc address in arguments and tajo-site.xml.");
       System.exit(-1);
-    } else if (hostName != null && port != null) {
-      conf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName+":"+port);
-      client = new TajoClientImpl(conf);
-    } else {
-      client = new TajoClientImpl(conf);
     }
 
     PrintWriter writer = new PrintWriter(System.out);

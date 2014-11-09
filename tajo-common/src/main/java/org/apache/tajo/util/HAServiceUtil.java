@@ -41,40 +41,12 @@ public class HAServiceUtil {
     return getMasterAddress(conf, MASTER_UMBILICAL_RPC_ADDRESS);
   }
 
-  public static String getMasterUmbilicalName(TajoConf conf) {
-    return NetUtils.normalizeInetSocketAddress(getMasterUmbilicalAddress(conf));
-  }
-
-  public static InetSocketAddress getMasterClientAddress(TajoConf conf) {
-    return getMasterAddress(conf, MASTER_CLIENT_RPC_ADDRESS);
-  }
-
-  public static String getMasterClientName(TajoConf conf) {
-    return NetUtils.normalizeInetSocketAddress(getMasterClientAddress(conf));
-  }
-
   public static InetSocketAddress getResourceTrackerAddress(TajoConf conf) {
     return getMasterAddress(conf, RESOURCE_TRACKER_RPC_ADDRESS);
   }
 
-  public static String getResourceTrackerName(TajoConf conf) {
-    return NetUtils.normalizeInetSocketAddress(getResourceTrackerAddress(conf));
-  }
-
   public static InetSocketAddress getCatalogAddress(TajoConf conf) {
     return getMasterAddress(conf, CATALOG_ADDRESS);
-  }
-
-  public static String getCatalogName(TajoConf conf) {
-    return NetUtils.normalizeInetSocketAddress(getCatalogAddress(conf));
-  }
-
-  public static InetSocketAddress getMasterInfoAddress(TajoConf conf) {
-    return getMasterAddress(conf, MASTER_INFO_ADDRESS);
-  }
-
-  public static String getMasterInfoName(TajoConf conf) {
-    return NetUtils.normalizeInetSocketAddress(getMasterInfoAddress(conf));
   }
 
   public static InetSocketAddress getMasterAddress(TajoConf conf, int type) {

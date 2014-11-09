@@ -174,6 +174,7 @@ public class TajoConf extends Configuration {
 
     // Tajo Master HA Configurations
     TAJO_MASTER_HA_ENABLE("tajo.master.ha.enable", false, Validators.bool()),
+    TAJO_MASTER_HA_SERVICETRACKER_CLASS("tajo.master.ha.servicetracker", "DummyServiceTracker", Validators.clazz()),
     TAJO_MASTER_HA_MONITOR_INTERVAL("tajo.master.ha.monitor.interval", 5 * 1000), // 5 sec
 
     // Resource tracker service
@@ -355,7 +356,7 @@ public class TajoConf extends Configuration {
     $CLI_ERROR_STOP("tajo.cli.error.stop", false),
 
     // Timezone & Date ----------------------------------------------------------
-    $TIMEZONE("tajo.timezone", System.getProperty("user.timezone")),
+    $TIMEZONE("tajo.timezone", "GMT"),
     $DATE_ORDER("tajo.date.order", "YMD"),
 
     // FILE FORMAT

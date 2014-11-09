@@ -585,7 +585,7 @@ public class TajoTestingCluster {
       Thread.sleep(1000);
     }
     TajoConf conf = util.getConfiguration();
-    return new TajoClientImpl(conf);
+    return new TajoClientImpl(conf.getSocketAddrVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS), null, null);
   }
 
   public static ResultSet run(String[] names,
@@ -608,29 +608,6 @@ public class TajoTestingCluster {
     return res;
   }
 
-  public static ResultSet run(String[] names,
-                              Schema[] schemas,
-                              KeyValueSet tableOption,
-                              String[][] tables,
-                              String query) throws Exception {
-    TpchTestBase instance = TpchTestBase.getInstance();
-    TajoTestingCluster util = instance.getTestingCluster();
-    while(true) {
-      if(util.getMaster().isMasterRunning()) {
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    TajoConf conf = util.getConfiguration();
-    TajoClient client = new TajoClientImpl(conf);
-
-    try {
-      return run(names, schemas, tableOption, tables, query, client);
-    } finally {
-      client.close();
-    }
-  }
-
   public static void createTable(String tableName, Schema schema,
                                  KeyValueSet tableOption, String[] tableDatas) throws Exception {
     createTable(tableName, schema, tableOption, tableDatas, 1);
@@ -647,7 +624,7 @@ public class TajoTestingCluster {
       Thread.sleep(1000);
     }
     TajoConf conf = util.getConfiguration();
-    TajoClient client = new TajoClientImpl(conf);
+    TajoClient client = newTajoClient();
     try {
       FileSystem fs = util.getDefaultFileSystem();
       Path rootDir = util.getMaster().

@@ -36,52 +36,8 @@
 
 package org.apache.tajo.client;
 
-import com.google.protobuf.ServiceException;
-import org.apache.tajo.cli.tsql.TajoCli.TajoCliContext;
-import org.apache.tajo.conf.TajoConf;
-import org.apache.tajo.util.HAServiceUtil;
+import java.io.Closeable;
 
-import java.io.IOException;
-
-public class TajoHAClientUtil {
-
-  /**
-   * In TajoMaster HA mode, if TajoCli can't connect existing active master,
-   * this should try to connect new active master.
-   *
-   * @param conf
-   * @param client
-   * @return
-   * @throws IOException
-   * @throws ServiceException
-   */
-  public static TajoClient getTajoClient(TajoConf conf, TajoClient client)
-      throws IOException, ServiceException {
-    return getTajoClient(conf, client, null);
-  }
-
-  public static TajoClient getTajoClient(TajoConf conf, TajoClient client,
-      TajoCliContext context) throws IOException, ServiceException {
-
-    if (conf.getBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE)) {
-      if (!HAServiceUtil.isMasterAlive(conf.getVar(
-          TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS), conf)) {
-        TajoClient tajoClient = null;
-        String baseDatabase = client.getBaseDatabase();
-        conf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS,
-            HAServiceUtil.getMasterClientName(conf));
-        client.close();
-        tajoClient = new TajoClientImpl(conf, baseDatabase);
-
-        if (context != null && context.getCurrentDatabase() != null) {
-          tajoClient.selectDatabase(context.getCurrentDatabase());
-        }
-        return tajoClient;
-      } else {
-        return client;
-      }
-    } else {
-      return client;
-    }
-  }
+public interface ClientTracker extends Closeable {
+  public TajoClient get();
 }

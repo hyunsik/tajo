@@ -23,6 +23,7 @@ import org.apache.commons.cli.*;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.util.NetUtils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -110,13 +111,12 @@ public class TajoGetConf {
       }
     }
 
-    if ((hostName == null) ^ (port == null)) {
-      return;
-    } else if (hostName != null && port != null) {
+    if (hostName != null && port != null) {
       tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
-      tajoClient = new TajoClientImpl(tajoConf);
-    } else if (hostName == null && port == null) {
-      tajoClient = new TajoClientImpl(tajoConf);
+      tajoClient = new TajoClientImpl(NetUtils.createSocketAddr(hostName, port), null, null);
+    } else  {
+      System.err.println("ERROR: cannot find valid Tajo server address");
+      System.exit(-1);
     }
 
     processConfKey(writer, param);

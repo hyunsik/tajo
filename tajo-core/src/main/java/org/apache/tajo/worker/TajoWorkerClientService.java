@@ -222,8 +222,7 @@ public class TajoWorkerClientService extends AbstractService {
     }
 
     @Override
-    public PrimitiveProtos.BoolProto closeQuery (
-            RpcController controller,
+    public PrimitiveProtos.BoolProto closeQuery (RpcController controller,
             TajoIdProtos.QueryIdProto request) throws ServiceException {
       final QueryId queryId = new QueryId(request);
       LOG.info("Stop Query:" + queryId);

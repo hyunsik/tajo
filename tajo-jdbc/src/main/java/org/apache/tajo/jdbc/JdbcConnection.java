@@ -27,6 +27,7 @@ import org.apache.tajo.client.QueryClient;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.util.NetUtils;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;
@@ -108,7 +109,7 @@ public class JdbcConnection implements Connection {
     }
 
     try {
-      tajoClient = new TajoClientImpl(hostName, port, databaseName);
+      tajoClient = new TajoClientImpl(NetUtils.createSocketAddr(hostName, port), databaseName, null);
     } catch (Exception e) {
       throw new SQLException("Cannot create TajoClient instance:" + e.getMessage(), "TAJO-002");
     }

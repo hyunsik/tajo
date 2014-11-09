@@ -36,7 +36,7 @@ public class Driver {
     Class clazz = Class.forName(args[0]);
     BenchmarkSet benchmark = (BenchmarkSet) clazz.newInstance();
 
-    benchmark.init(conf, args[1]);
+    benchmark.init(args[1]);
     benchmark.loadSchemas();
     benchmark.loadQueries();
     benchmark.loadTables();

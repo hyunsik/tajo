@@ -20,7 +20,7 @@ package org.apache.tajo.jdbc;
 
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.common.TajoDataTypes;
-import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.conf.ShellEnvUtil;
 import org.apache.tajo.datum.*;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.util.datetime.DateTimeUtil;
@@ -226,13 +226,13 @@ public abstract class TajoResultSetBase implements ResultSet {
       case FLOAT8:  return d.asFloat8();
       case NUMERIC:  return d.asFloat8();
       case DATE: {
-        return getDate((DateDatum)d, TajoConf.getCurrentTimeZone());
+        return getDate((DateDatum)d, ShellEnvUtil.CURRENT_TIMEZONE);
       }
       case TIME: {
-        return getTime((TimeDatum)d, TajoConf.getCurrentTimeZone());
+        return getTime((TimeDatum)d, ShellEnvUtil.CURRENT_TIMEZONE);
       }
       case TIMESTAMP: {
-        return getTimestamp((TimestampDatum) d, TajoConf.getCurrentTimeZone());
+        return getTimestamp((TimestampDatum) d, ShellEnvUtil.CURRENT_TIMEZONE);
       }
       default: return d.asChars();
     }
@@ -289,10 +289,10 @@ public abstract class TajoResultSetBase implements ResultSet {
       case BOOLEAN:
         return String.valueOf(datum.asBool());
       case TIME: {
-        return ((TimeDatum)datum).asChars(TajoConf.getCurrentTimeZone(), false);
+        return ((TimeDatum)datum).asChars(ShellEnvUtil.CURRENT_TIMEZONE, false);
       }
       case TIMESTAMP: {
-        return ((TimestampDatum)datum).asChars(TajoConf.getCurrentTimeZone(), false);
+        return ((TimestampDatum)datum).asChars(ShellEnvUtil.CURRENT_TIMEZONE, false);
       }
       default :
         return datum.asChars();
@@ -307,7 +307,7 @@ public abstract class TajoResultSetBase implements ResultSet {
       return null;
     }
 
-    return getDate((DateDatum)datum, TajoConf.getCurrentTimeZone());
+    return getDate((DateDatum)datum, ShellEnvUtil.CURRENT_TIMEZONE);
   }
 
   @Override
@@ -347,7 +347,7 @@ public abstract class TajoResultSetBase implements ResultSet {
       return null;
     }
 
-    return getTime((TimeDatum)datum, TajoConf.getCurrentTimeZone());
+    return getTime((TimeDatum)datum, ShellEnvUtil.CURRENT_TIMEZONE);
 
   }
 
@@ -388,7 +388,7 @@ public abstract class TajoResultSetBase implements ResultSet {
       return null;
     }
 
-    return getTimestamp((TimestampDatum)datum, TajoConf.getCurrentTimeZone());
+    return getTimestamp((TimestampDatum)datum, ShellEnvUtil.CURRENT_TIMEZONE);
   }
 
   @Override

@@ -25,13 +25,12 @@ import org.apache.tajo.QueryId;
 import org.apache.tajo.TajoIdProtos;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.auth.UserRoleInfo;
-import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.ipc.TajoMasterClientProtocol;
 import org.apache.tajo.rpc.NettyClientBase;
 import org.apache.tajo.rpc.RpcConnectionPool;
 import org.apache.tajo.rpc.ServerCallable;
-import org.apache.tajo.util.HAServiceUtil;
 import org.apache.tajo.util.KeyValueSet;
 import org.apache.tajo.util.NetUtils;
 import org.jboss.netty.channel.ConnectTimeoutException;
@@ -52,11 +51,11 @@ public class SessionConnection implements Closeable {
 
   private final Log LOG = LogFactory.getLog(TajoClientImpl.class);
 
-  private final TajoConf conf;
+  final ServiceTracker serviceTracker;
 
   final Map<QueryId, InetSocketAddress> queryMasterMap = new ConcurrentHashMap<QueryId, InetSocketAddress>();
 
-  final InetSocketAddress tajoMasterAddr;
+  final KeyValueSet properties;
 
   final RpcConnectionPool connPool;
 
@@ -68,47 +67,29 @@ public class SessionConnection implements Closeable {
 
   private AtomicBoolean closed = new AtomicBoolean(false);
 
-
-  public SessionConnection(TajoConf conf) throws IOException {
-    this(conf, NetUtils.createSocketAddr(conf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS)), null);
-  }
-
-  public SessionConnection(TajoConf conf, @Nullable String baseDatabase) throws IOException {
-    this(conf, NetUtils.createSocketAddr(conf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS)), baseDatabase);
-  }
-
-  public SessionConnection(InetSocketAddress addr) throws IOException {
-    this(new TajoConf(), addr, null);
-  }
+  private static final int RPC_WORKER_THREAD_NUM = 4;
 
   public SessionConnection(String hostname, int port, String baseDatabase) throws IOException {
-    this(new TajoConf(), NetUtils.createSocketAddr(hostname, port), baseDatabase);
+    this(new DummyClientServiceTracker(NetUtils.createSocketAddr(hostname, port)), baseDatabase, new KeyValueSet());
   }
 
   /**
    * Connect to TajoMaster
    *
-   * @param conf TajoConf
-   * @param addr TajoMaster address
+   * @param tracker service tracker
    * @param baseDatabase The base database name. It is case sensitive. If it is null,
    *                     the 'default' database will be used.
    * @throws java.io.IOException
    */
-  public SessionConnection(TajoConf conf, InetSocketAddress addr, @Nullable String baseDatabase) throws IOException {
-    this.conf = conf;
-    this.conf.set("tajo.disk.scheduler.report.interval", "0");
-    this.tajoMasterAddr = addr;
-    int workerNum = conf.getIntVar(TajoConf.ConfVars.RPC_CLIENT_WORKER_THREAD_NUM);
+  public SessionConnection(ServiceTracker tracker, @Nullable String baseDatabase, @Nullable KeyValueSet properties)
+      throws IOException {
+    this.serviceTracker = tracker;
+    this.properties = properties == null ? new KeyValueSet() : properties;
+
     // Don't share connection pool per client
-    connPool = RpcConnectionPool.newPool(conf, getClass().getSimpleName(), workerNum);
+    connPool = RpcConnectionPool.newPool(getClass().getSimpleName(), RPC_WORKER_THREAD_NUM);
     userInfo = new UserRoleInfo("tajo");
     this.baseDatabase = baseDatabase != null ? baseDatabase : null;
-  }
-
-  public <T> T getStub(QueryId queryId, Class protocolClass, boolean asyncMode) throws NoSuchMethodException,
-      ConnectTimeoutException, ClassNotFoundException {
-    InetSocketAddress addr = queryMasterMap.get(queryId);
-    return connPool.getConnection(addr, protocolClass, asyncMode).getStub();
   }
 
   public NettyClientBase getTajoMasterConnection(boolean asyncMode) throws NoSuchMethodException,
@@ -143,16 +124,12 @@ public class SessionConnection implements Closeable {
   public boolean isConnected() {
     if(!closed.get()){
       try {
-        return connPool.getConnection(tajoMasterAddr, TajoMasterClientProtocol.class, false).isConnected();
+        return connPool.getConnection(getTajoMasterAddr(), TajoMasterClientProtocol.class, false).isConnected();
       } catch (Throwable e) {
         return false;
       }
     }
     return false;
-  }
-
-  public TajoConf getConf() {
-    return conf;
   }
 
   public UserRoleInfo getUserInfo() {
@@ -278,15 +255,7 @@ public class SessionConnection implements Closeable {
   }
 
   protected InetSocketAddress getTajoMasterAddr() {
-    if (!conf.getBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE)) {
-      return tajoMasterAddr;
-    } else {
-      if (!HAServiceUtil.isMasterAlive(tajoMasterAddr, conf)) {
-        return HAServiceUtil.getMasterClientAddress(conf);
-      } else {
-        return tajoMasterAddr;
-      }
-    }
+    return serviceTracker.getMasterClientAddress();
   }
 
   protected void checkSessionAndGet(NettyClientBase client) throws ServiceException {

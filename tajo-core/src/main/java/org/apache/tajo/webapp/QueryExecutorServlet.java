@@ -11,8 +11,10 @@ import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
+import org.apache.tajo.discovery.ServiceTrackerFactory;
 import org.apache.tajo.ipc.ClientProtos;
-import org.apache.tajo.jdbc.TajoResultSet;
+import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.util.JSPUtil;
 import org.apache.tajo.util.TajoIdUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
@@ -37,6 +39,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.apache.tajo.conf.TajoConf.ConfVars;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -66,6 +70,8 @@ public class QueryExecutorServlet extends HttpServlet {
 
   private TajoConf tajoConf;
   private TajoClient tajoClient;
+  private ServiceTracker serviceTracker;
+  private ClientTracker clientTracker;
 
   private ExecutorService queryRunnerExecutor = Executors.newFixedThreadPool(5);
 
@@ -78,7 +84,8 @@ public class QueryExecutorServlet extends HttpServlet {
 
     try {
       tajoConf = new TajoConf();
-      tajoClient = new TajoClientImpl(tajoConf);
+      this.serviceTracker = ServiceTrackerFactory.getServiceTracker(tajoConf);
+      clientTracker = new BaseClientTracker(serviceTracker);
 
       queryRunnerCleaner = new QueryRunnerCleaner();
       queryRunnerCleaner.start();
@@ -273,7 +280,7 @@ public class QueryExecutorServlet extends HttpServlet {
     public void run() {
       startTime = System.currentTimeMillis();
       try {
-        tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
+        tajoClient = clientTracker.get();
 
         response = tajoClient.executeQuery(query);
 
@@ -318,7 +325,7 @@ public class QueryExecutorServlet extends HttpServlet {
           // non-forwarded INSERT INTO query does not have any query id.
           // In this case, it just returns succeeded query information without printing the query results.
         } else {
-          res = TajoClientUtil.createResultSet(tajoConf, tajoClient, response);
+          res = TajoClientUtil.createResultSet(tajoClient, response);
           MakeResultText(res, desc);
         }
         progress.set(100);
@@ -398,8 +405,8 @@ public class QueryExecutorServlet extends HttpServlet {
               try {
                 ClientProtos.GetQueryResultResponse response = tajoClient.getResultResponse(tajoQueryId);
                 TableDesc desc = CatalogUtil.newTableDesc(response.getTableDesc());
-                tajoConf.setVar(TajoConf.ConfVars.USERNAME, response.getTajoUserName());
-                res = new TajoResultSet(tajoClient, queryId, tajoConf, desc);
+                tajoConf.setVar(ConfVars.USERNAME, response.getTajoUserName());
+                res = new FetchResultSet(tajoClient, desc.getLogicalSchema(), queryId, 200);
 
                 MakeResultText(res, desc);
 

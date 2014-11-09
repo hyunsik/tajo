@@ -18,6 +18,7 @@
 
 package org.apache.tajo.worker;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.tajo.ExecutionBlockId;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
+import org.apache.tajo.discovery.ServiceTrackerFactory;
 import org.apache.tajo.ipc.TajoMasterProtocol;
 import org.apache.tajo.ipc.TajoWorkerProtocol;
 import org.apache.tajo.master.*;
@@ -66,13 +69,17 @@ public class TajoResourceAllocator extends AbstractResourceAllocator {
   private TajoConf tajoConf;
   private QueryMasterTask.QueryMasterTaskContext queryTaskContext;
   private final ExecutorService executorService;
+  private final ServiceTracker serviceTracker;
 
   private AtomicBoolean stopped = new AtomicBoolean(false);
 
   public TajoResourceAllocator(QueryMasterTask.QueryMasterTaskContext queryTaskContext) {
+    Preconditions.checkNotNull(queryTaskContext);
+
     this.queryTaskContext = queryTaskContext;
     executorService = Executors.newFixedThreadPool(
         queryTaskContext.getConf().getIntVar(TajoConf.ConfVars.YARN_RM_TASKRUNNER_LAUNCH_PARALLEL_NUM));
+    serviceTracker = ServiceTrackerFactory.getServiceTracker(queryTaskContext.getConf());
   }
 
   @Override
@@ -183,14 +190,14 @@ public class TajoResourceAllocator extends AbstractResourceAllocator {
     NettyClientBase tajoWorkerRpc = null;
     try {
       InetSocketAddress addr = new InetSocketAddress(worker.getHost(), worker.getPort());
-      tajoWorkerRpc = RpcConnectionPool.getPool(tajoConf).getConnection(addr, TajoWorkerProtocol.class, true);
+      tajoWorkerRpc = RpcConnectionPool.getPool().getConnection(addr, TajoWorkerProtocol.class, true);
       TajoWorkerProtocol.TajoWorkerProtocolService tajoWorkerRpcClient = tajoWorkerRpc.getStub();
 
       tajoWorkerRpcClient.stopExecutionBlock(null, executionBlockId.getProto(), NullCallback.get());
     } catch (Throwable e) {
       LOG.error(e.getMessage(), e);
     } finally {
-      RpcConnectionPool.getPool(tajoConf).releaseConnection(tajoWorkerRpc);
+      RpcConnectionPool.getPool().releaseConnection(tajoWorkerRpc);
     }
   }
 
@@ -269,7 +276,7 @@ public class TajoResourceAllocator extends AbstractResourceAllocator {
               .setQueryId(event.getExecutionBlockId().getQueryId().getProto())
               .build();
 
-      RpcConnectionPool connPool = RpcConnectionPool.getPool(queryTaskContext.getConf());
+      RpcConnectionPool connPool = RpcConnectionPool.getPool();
       NettyClientBase tmClient = null;
       try {
 

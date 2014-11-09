@@ -18,6 +18,7 @@
 
 package org.apache.tajo.cli.tsql.commands;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.tajo.cli.tsql.TajoCli;
 
 import java.io.*;
@@ -69,9 +70,9 @@ public class ExecExternalShellCommand extends TajoShellCommand {
         throw new IOException("ERROR: Failed with exit code = " + processResult);
       }
     } finally {
-      org.apache.commons.io.IOUtils.closeQuietly(process.getInputStream());
-      org.apache.commons.io.IOUtils.closeQuietly(process.getOutputStream());
-      org.apache.commons.io.IOUtils.closeQuietly(process.getErrorStream());
+      IOUtils.closeQuietly(process.getInputStream());
+      IOUtils.closeQuietly(process.getOutputStream());
+      IOUtils.closeQuietly(process.getErrorStream());
     }
   }
 

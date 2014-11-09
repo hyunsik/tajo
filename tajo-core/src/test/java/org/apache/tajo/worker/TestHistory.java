@@ -25,7 +25,6 @@ import org.apache.tajo.TajoProtos;
 import org.apache.tajo.TajoTestingCluster;
 import org.apache.tajo.TpchTestBase;
 import org.apache.tajo.client.TajoClient;
-import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.master.TajoMaster;
 import org.apache.tajo.master.querymaster.QueryInProgress;
@@ -50,7 +49,7 @@ public class TestHistory {
     cluster = TpchTestBase.getInstance().getTestingCluster();
     master = cluster.getMaster();
     conf = cluster.getConfiguration();
-    client = new TajoClientImpl(conf);
+    client = cluster.newTajoClient();
   }
 
   @After

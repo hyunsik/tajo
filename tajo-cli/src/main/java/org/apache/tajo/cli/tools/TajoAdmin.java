@@ -25,6 +25,7 @@ import org.apache.tajo.QueryId;
 import org.apache.tajo.TajoProtos;
 import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.ipc.ClientProtos.BriefQueryInfo;
 import org.apache.tajo.ipc.ClientProtos.WorkerResourceInfo;
 import org.apache.tajo.util.NetUtils;
@@ -68,17 +69,19 @@ public class TajoAdmin {
   }
 
   private TajoConf tajoConf;
-  private TajoClient tajoClient;
+  private ServiceTracker serviceTracker;
+  private ClientTracker clientTracker;
   private Writer writer;
 
-  public TajoAdmin(TajoConf tajoConf, Writer writer) {
-    this(tajoConf, writer, null);
+  public TajoAdmin(TajoConf tajoConf, Writer writer) throws IOException {
+    this.tajoConf = tajoConf;
+    this.writer = writer;
   }
 
   public TajoAdmin(TajoConf tajoConf, Writer writer, TajoClient tajoClient) {
     this.tajoConf = tajoConf;
     this.writer = writer;
-    this.tajoClient = tajoClient;
+    this.clientTracker = new DelegateClientTracker(tajoClient);
   }
 
   private void printUsage() {
@@ -117,36 +120,36 @@ public class TajoAdmin {
       cmdType = 5;
     }
 
-    // if there is no "-h" option,
-    if(hostName == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+    if (clientTracker == null) {
+      // if there is no "-h" option,
+      if (hostName == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+        }
       }
-    }
-    if (port == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+      if (port == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+        }
       }
-    }
 
-    if (cmdType == 0) {
-      printUsage();
-      return;
-    }
+      if (cmdType == 0) {
+        printUsage();
+        return;
+      }
 
+      if (hostName != null && port != null) {
+        tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
 
-    if ((hostName == null) ^ (port == null)) {
-      System.err.println("ERROR: cannot find valid Tajo server address");
-      return;
-    } else if (hostName != null && port != null) {
-      tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
-      tajoClient = new TajoClientImpl(tajoConf);
-    } else if (hostName == null && port == null) {
-      tajoClient = new TajoClientImpl(tajoConf);
+        serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
+        clientTracker = new BaseClientTracker(serviceTracker);
+      } else {
+        System.err.println("ERROR: cannot find valid Tajo server address");
+      }
     }
 
     switch (cmdType) {
@@ -175,7 +178,7 @@ public class TajoAdmin {
 
   private void processDesc(Writer writer) throws ParseException, IOException,
       ServiceException, SQLException {
-    tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
+    TajoClient tajoClient = clientTracker.get();
     List<BriefQueryInfo> queryList = tajoClient.getRunningQueryList();
     SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT);
     int id = 1;
@@ -215,7 +218,7 @@ public class TajoAdmin {
 
   private void processCluster(Writer writer) throws ParseException, IOException,
       ServiceException, SQLException {
-    tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
+    TajoClient tajoClient = clientTracker.get();
     List<WorkerResourceInfo> workerList = tajoClient.getClusterInfo();
 
     int runningQueryMasterTasks = 0;
@@ -380,7 +383,7 @@ public class TajoAdmin {
 
   private void processList(Writer writer) throws ParseException, IOException,
       ServiceException, SQLException {
-    tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
+    TajoClient tajoClient = clientTracker.get();
     List<BriefQueryInfo> queryList = tajoClient.getRunningQueryList();
     SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT);
     StringBuilder builder = new StringBuilder();
@@ -407,8 +410,8 @@ public class TajoAdmin {
     writer.write(builder.toString());
   }
 
-  public void processKill(Writer writer, String queryIdStr)
-      throws IOException, ServiceException {
+  public void processKill(Writer writer, String queryIdStr) throws IOException, ServiceException {
+    TajoClient tajoClient = clientTracker.get();
     QueryStatus status = tajoClient.killQuery(TajoIdUtils.parseQueryId(queryIdStr));
     if (status.getState() == TajoProtos.QueryState.QUERY_KILLED) {
       writer.write(queryIdStr + " is killed successfully.\n");
@@ -421,7 +424,6 @@ public class TajoAdmin {
 
   private void processMasters(Writer writer) throws ParseException, IOException,
       ServiceException, SQLException {
-    tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
     if (tajoConf.getBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE)) {
 
       List<String> list = HAServiceUtil.getMasters(tajoConf);
@@ -449,6 +451,7 @@ public class TajoAdmin {
     try {
       TajoAdmin admin = new TajoAdmin(conf, writer);
       admin.runCommand(args);
+      admin.clientTracker.close();
     } finally {
       writer.close();
       System.exit(0);

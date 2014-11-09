@@ -20,17 +20,15 @@ package org.apache.tajo.benchmark;
 
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.tajo.catalog.CatalogConstants;
 import org.apache.tajo.catalog.Schema;
-import org.apache.tajo.catalog.store.MemStore;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
-import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.conf.TajoConf.ConfVars;
 import org.apache.tajo.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,14 +39,15 @@ public abstract class BenchmarkSet {
   protected Map<String, String> queries = new HashMap<String, String>();
   protected String dataDir;
 
-  public void init(TajoConf conf, String dataDir) throws IOException {
+  public void init(String dataDir) throws IOException {
     this.dataDir = dataDir;
-    if (System.getProperty(ConfVars.WORKER_PEER_RPC_ADDRESS.varname) != null) {
-      tajo = new TajoClientImpl(NetUtils.createSocketAddr(
-          System.getProperty(ConfVars.WORKER_PEER_RPC_ADDRESS.varname)));
+
+    if (System.getProperty(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS.varname) != null) {
+      InetSocketAddress addr =
+          NetUtils.createSocketAddr(System.getProperty(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS.varname));
+      tajo = new TajoClientImpl(addr, null, null);
     } else {
-      conf.set(CatalogConstants.STORE_CLASS, MemStore.class.getCanonicalName());
-      tajo = new TajoClientImpl(conf);
+      throw new RuntimeException("no TajoMaster RPC address!");
     }
   }
 

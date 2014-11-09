@@ -18,22 +18,34 @@
 
 package org.apache.tajo.util;
 
+import com.google.common.collect.Maps;
+
 import java.lang.reflect.Constructor;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ReflectionUtil {
   private static final Class<?>[] EMPTY_ARRAY = new Class[]{};
+  private static final Object [] EMPTY_PARAM = new Object[]{};
 
   /**
    * Cache of constructors for each class. Pins the classes so they
    * can't be garbage collected until ReflectionUtils can be collected.
    */
-  private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE =
-      new ConcurrentHashMap<Class<?>, Constructor<?>>();
+  private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE = Maps.newConcurrentMap();
 
-	public static Object newInstance(Class<?> clazz) 
-			throws InstantiationException, IllegalAccessException {         
-		return clazz.newInstance();
+	public static <T> T newInstance(Class<T> clazz)  {
+    Constructor<T> constructor;
+    try {
+      if (CONSTRUCTOR_CACHE.containsKey(clazz)) {
+        constructor = (Constructor<T>) CONSTRUCTOR_CACHE.get(clazz);
+      } else {
+        constructor = clazz.getConstructor(EMPTY_ARRAY);
+        CONSTRUCTOR_CACHE.put(clazz, constructor);
+      }
+
+      return constructor.newInstance(EMPTY_PARAM);
+    } catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
 	}
 }

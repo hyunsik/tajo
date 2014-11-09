@@ -18,9 +18,19 @@
 
 package org.apache.tajo.util;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.tajo.net.SocketIOWithTimeout;
+
+import java.io.IOException;
 import java.net.*;
+import java.nio.channels.SocketChannel;
 
 public class NetUtils {
+  private static final Log LOG = LogFactory.getLog(NetUtils.class);
+
   public static String normalizeInetSocketAddress(InetSocketAddress addr) {
     return addr.getAddress().getHostAddress() + ":" + addr.getPort();
   }
@@ -100,5 +110,83 @@ public class NetUtils {
     } catch (UnknownHostException e) {
     }
     return host;
+  }
+
+  /**
+   * This is a drop-in replacement for
+   * {@link Socket#connect(java.net.SocketAddress, int)}.
+   * In the case of normal sockets that don't have associated channels, this
+   * just invokes <code>socket.connect(endpoint, timeout)</code>. If
+   * <code>socket.getChannel()</code> returns a non-null channel,
+   * connect is implemented using Hadoop's selectors. This is done mainly
+   * to avoid Sun's connect implementation from creating thread-local
+   * selectors, since Hadoop does not have control on when these are closed
+   * and could end up taking all the available file descriptors.
+   *
+   * @see java.net.Socket#connect(java.net.SocketAddress, int)
+   *
+   * @param socket
+   * @param address the remote address
+   * @param timeout timeout in milliseconds
+   */
+  public static void connect(Socket socket,
+                             SocketAddress address,
+                             int timeout) throws IOException {
+    connect(socket, address, null, timeout);
+  }
+
+  /**
+   * Like {@link NetUtils#connect(Socket, SocketAddress, int)} but
+   * also takes a local address and port to bind the socket to.
+   *
+   * @param socket
+   * @param endpoint the remote address
+   * @param localAddr the local address to bind the socket to
+   * @param timeout timeout in milliseconds
+   */
+  public static void connect(Socket socket,
+                             SocketAddress endpoint,
+                             SocketAddress localAddr,
+                             int timeout) throws IOException {
+    if (socket == null || endpoint == null || timeout < 0) {
+      throw new IllegalArgumentException("Illegal argument for connect()");
+    }
+
+    SocketChannel ch = socket.getChannel();
+
+    if (localAddr != null) {
+      Class localClass = localAddr.getClass();
+      Class remoteClass = endpoint.getClass();
+      Preconditions.checkArgument(localClass.equals(remoteClass),
+          "Local address %s must be of same family as remote address %s.",
+          localAddr, endpoint);
+      socket.bind(localAddr);
+    }
+
+    try {
+      if (ch == null) {
+        // let the default implementation handle it.
+        socket.connect(endpoint, timeout);
+      } else {
+        SocketIOWithTimeout.connect(ch, endpoint, timeout);
+      }
+    } catch (SocketTimeoutException ste) {
+      throw new ConnectTimeoutException(ste.getMessage());
+    }
+
+    // There is a very rare case allowed by the TCP specification, such that
+    // if we are trying to connect to an endpoint on the local machine,
+    // and we end up choosing an ephemeral port equal to the destination port,
+    // we will actually end up getting connected to ourself (ie any data we
+    // send just comes right back). This is only possible if the target
+    // daemon is down, so we'll treat it like connection refused.
+    if (socket.getLocalPort() == socket.getPort() &&
+        socket.getLocalAddress().equals(socket.getInetAddress())) {
+      LOG.info("Detected a loopback TCP socket, disconnecting it");
+      socket.close();
+      throw new ConnectException(
+          "Localhost targeted connection resulted in a loopback. " +
+              "No daemon is listening on the target port.");
+    }
   }
 }

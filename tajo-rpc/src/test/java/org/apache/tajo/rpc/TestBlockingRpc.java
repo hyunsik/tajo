@@ -18,7 +18,6 @@
 
 package org.apache.tajo.rpc;
 
-import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.rpc.test.DummyProtocol;
 import org.apache.tajo.rpc.test.DummyProtocol.DummyProtocolService.BlockingInterface;
 import org.apache.tajo.rpc.test.TestProtos.EchoMessage;
@@ -96,7 +95,7 @@ public class TestBlockingRpc {
 
   @Test
   public void testRpcWithServiceCallable() throws Exception {
-    RpcConnectionPool pool = RpcConnectionPool.newPool(new TajoConf(), getClass().getSimpleName(), 2);
+    RpcConnectionPool pool = RpcConnectionPool.newPool(getClass().getSimpleName(), 2);
     final SumRequest request = SumRequest.newBuilder()
         .setX1(1)
         .setX2(2)

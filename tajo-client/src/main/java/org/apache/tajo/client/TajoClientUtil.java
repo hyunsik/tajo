@@ -24,17 +24,17 @@ import org.apache.tajo.TajoProtos;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableDesc;
-import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.jdbc.TajoMemoryResultSet;
-import org.apache.tajo.jdbc.TajoResultSet;
 import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 
 public class TajoClientUtil {
+
+  private static final int DEFAULT_FETCH_ROWNUM = 200;
 
   /* query submit */
   public static boolean isQueryWaitingForSchedule(TajoProtos.QueryState state) {
@@ -58,20 +58,21 @@ public class TajoClientUtil {
     return !isQueryWaitingForSchedule(state) && !isQueryRunning(state);
   }
 
-  public static ResultSet createResultSet(TajoConf conf, TajoClient client, QueryId queryId,
+  public static ResultSet createResultSet(TajoClient client, QueryId queryId,
                                           ClientProtos.GetQueryResultResponse response)
       throws IOException {
     TableDesc desc = CatalogUtil.newTableDesc(response.getTableDesc());
-    conf.setVar(TajoConf.ConfVars.USERNAME, response.getTajoUserName());
-    return new TajoResultSet(client, queryId, conf, desc);
+    return new FetchResultSet(client, desc.getLogicalSchema(), queryId, 200);
   }
 
-  public static ResultSet createResultSet(TajoConf conf, QueryClient client, ClientProtos.SubmitQueryResponse response)
+  public static ResultSet createResultSet(QueryClient client, ClientProtos.SubmitQueryResponse response)
       throws IOException {
     if (response.hasTableDesc()) {
       // non-forward query
       // select * from table1 [limit 10]
-      int fetchRowNum = conf.getIntVar(TajoConf.ConfVars.$RESULT_SET_FETCH_ROWNUM);
+
+      int fetchRowNum = DEFAULT_FETCH_ROWNUM;
+
       if (response.hasSessionVariables()) {
         for (PrimitiveProtos.KeyValueProto eachKeyValue: response.getSessionVariables().getKeyvalList()) {
           if (eachKeyValue.getKey().equals(SessionVars.FETCH_ROWNUM.keyname())) {

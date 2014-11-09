@@ -162,7 +162,7 @@ message GetQueryResultDataRequest {
 
 message GetQueryResultDataResponse {
   required ResultCode resultCode = 1;
-  required SerializedResultSet resultSet = 2;
+  optional SerializedResultSet resultSet = 2;
   optional string errorMessage = 3;
   optional string errorTrace = 4;
 }

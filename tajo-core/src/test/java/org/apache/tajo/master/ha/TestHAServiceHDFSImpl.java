@@ -26,12 +26,12 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.TajoTestingCluster;
 import org.apache.tajo.client.TajoClient;
-import org.apache.tajo.client.TajoClientImpl;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.master.TajoMaster;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertEquals;
+import static org.apache.tajo.conf.TajoConf.ConfVars;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -56,7 +56,7 @@ public class TestHAServiceHDFSImpl  {
     cluster.startMiniCluster(1);
 
     conf = cluster.getConfiguration();
-    client = new TajoClientImpl(conf);
+    client = cluster.newTajoClient();
 
     FileSystem fs = cluster.getDefaultFileSystem();
     startBackupMasters();
@@ -80,29 +80,29 @@ public class TestHAServiceHDFSImpl  {
   private void startBackupMasters() throws Exception {
 
     conf = cluster.getConfiguration();
-    conf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS,
+    conf.setVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.TAJO_MASTER_UMBILICAL_RPC_ADDRESS,
+    conf.setVar(ConfVars.TAJO_MASTER_UMBILICAL_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.RESOURCE_TRACKER_RPC_ADDRESS,
+    conf.setVar(ConfVars.RESOURCE_TRACKER_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.CATALOG_ADDRESS,
+    conf.setVar(ConfVars.CATALOG_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE, true);
+    conf.setBoolVar(ConfVars.TAJO_MASTER_HA_ENABLE, true);
 
     backupMaster1 = new TajoMaster();
     backupMaster1.init(conf);
     backupMaster1.start();
 
-    conf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS,
+    conf.setVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.TAJO_MASTER_UMBILICAL_RPC_ADDRESS,
+    conf.setVar(ConfVars.TAJO_MASTER_UMBILICAL_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.RESOURCE_TRACKER_RPC_ADDRESS,
+    conf.setVar(ConfVars.RESOURCE_TRACKER_RPC_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setVar(TajoConf.ConfVars.CATALOG_ADDRESS,
+    conf.setVar(ConfVars.CATALOG_ADDRESS,
         LOCAL_HOST + NetUtils.getFreeSocketPort());
-    conf.setBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE, true);
+    conf.setBoolVar(ConfVars.TAJO_MASTER_HA_ENABLE, true);
 
     backupMaster2 = new TajoMaster();
     backupMaster2.init(conf);

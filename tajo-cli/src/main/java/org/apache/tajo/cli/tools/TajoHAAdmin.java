@@ -20,11 +20,11 @@ package org.apache.tajo.cli.tools;
 
 import com.google.protobuf.ServiceException;
 import org.apache.commons.cli.*;
-import org.apache.tajo.client.TajoClient;
-import org.apache.tajo.client.TajoClientImpl;
-import org.apache.tajo.client.TajoHAClientUtil;
+import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.util.HAServiceUtil;
+import org.apache.tajo.util.NetUtils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -44,7 +44,8 @@ public class TajoHAAdmin {
   }
 
   private TajoConf tajoConf;
-  private TajoClient tajoClient;
+  private ServiceTracker serviceTracker;
+  private ClientTracker clientTracker;
   private Writer writer;
 
   public TajoHAAdmin(TajoConf tajoConf, Writer writer) {
@@ -54,7 +55,7 @@ public class TajoHAAdmin {
   public TajoHAAdmin(TajoConf tajoConf, Writer writer, TajoClient tajoClient) {
     this.tajoConf = tajoConf;
     this.writer = writer;
-    this.tajoClient = tajoClient;
+    this.clientTracker = new DelegateClientTracker(tajoClient);
   }
 
   private void printUsage() {
@@ -100,36 +101,38 @@ public class TajoHAAdmin {
       cmdType = 4;
     }
 
-    // if there is no "-h" option,
-    if(hostName == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+    if (clientTracker == null) {
+      // if there is no "-h" option,
+      if (hostName == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+        }
       }
-    }
-    if (port == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+      if (port == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+        }
       }
-    }
 
-    if (cmdType == 0) {
-      printUsage();
-      return;
-    }
+      if (cmdType == 0) {
+        printUsage();
+        return;
+      }
 
 
-    if ((hostName == null) ^ (port == null)) {
-      System.err.println("ERROR: cannot find valid Tajo server address");
-      return;
-    } else if (hostName != null && port != null) {
-      tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
-      tajoClient = new TajoClientImpl(tajoConf);
-    } else if (hostName == null && port == null) {
-      tajoClient = new TajoClientImpl(tajoConf);
+      if (hostName != null && port != null) {
+        tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
+
+        serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
+        clientTracker = new BaseClientTracker(serviceTracker);
+      } else if (hostName == null && port == null) {
+        System.err.println("ERROR: cannot find valid Tajo server address");
+        System.exit(-1);
+      }
     }
 
     if (!tajoConf.getBoolVar(TajoConf.ConfVars.TAJO_MASTER_HA_ENABLE)) {
@@ -159,7 +162,7 @@ public class TajoHAAdmin {
 
   private void getState(Writer writer, String param) throws ParseException, IOException,
       ServiceException {
-    tajoClient = TajoHAClientUtil.getTajoClient(tajoConf, tajoClient);
+    TajoClient tajoClient = clientTracker.get();
     int retValue = HAServiceUtil.getState(param, tajoConf);
 
     switch (retValue) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,6 +31,8 @@ import org.apache.tajo.cli.tsql.commands.*;
 import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.conf.TajoConf.ConfVars;
+import org.apache.tajo.discovery.ServiceTracker;
+import org.apache.tajo.discovery.ServiceTrackerFactory;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.util.FileUtil;
 
@@ -52,7 +54,8 @@ public class TajoCli {
   public static final String KILL_PREFIX = "KILL: ";
 
   private final TajoConf conf;
-  private TajoClient client;
+  private ServiceTracker serviceTracker;
+  private ClientTracker clientTracker;
   private final TajoCliContext context;
 
   // Jline and Console related things
@@ -109,7 +112,7 @@ public class TajoCli {
     }
 
     public TajoClient getTajoClient() {
-      return client;
+      return clientTracker.get();
     }
 
     public void setCurrentDatabase(String databasae) {
@@ -230,14 +233,17 @@ public class TajoCli {
       throw new RuntimeException("cannot find valid Tajo server address");
     } else if (hostName != null && port != null) {
       conf.setVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName+":"+port);
-      client = new TajoClientImpl(conf, baseDatabase);
+
+      serviceTracker = ServiceTrackerFactory.getServiceTracker(conf);
+      clientTracker = new BaseClientTracker(serviceTracker);
     } else if (hostName == null && port == null) {
-      client = new TajoClientImpl(conf, baseDatabase);
+      sout.println("No TajoMaster address");
+      System.exit(-1);
     }
 
     try {
       checkMasterStatus();
-      context.setCurrentDatabase(client.getCurrentDatabase());
+      context.setCurrentDatabase(clientTracker.get().getCurrentDatabase());
       initHistory();
       initCommands();
 
@@ -269,8 +275,8 @@ public class TajoCli {
     } catch (Exception e) {
       System.err.println(ERROR_PREFIX + "Exception was thrown. Caused by " + e.getMessage());
       
-      if (client != null) {
-        client.close();
+      if (clientTracker != null) {
+        clientTracker.close();
       }
       
       throw e;
@@ -372,7 +378,10 @@ public class TajoCli {
           history.flush();
         } catch (IOException e) {
         }
-        client.close();
+        try {
+          clientTracker.close();
+        } catch (IOException e) {
+        }
       }
     }));
   }
@@ -424,8 +433,8 @@ public class TajoCli {
     } catch (Exception e) {
       System.err.println(ERROR_PREFIX + "Exception was thrown. Casued by " + e.getMessage());
       
-      if (client != null) {
-        client.close();
+      if (clientTracker != null) {
+        clientTracker.close();
       }
       
       throw e;
@@ -488,7 +497,7 @@ public class TajoCli {
   private void executeJsonQuery(String json) throws ServiceException, IOException {
     checkMasterStatus();
     long startTime = System.currentTimeMillis();
-    ClientProtos.SubmitQueryResponse response = client.executeQueryWithJson(json);
+    ClientProtos.SubmitQueryResponse response = clientTracker.get().executeQueryWithJson(json);
     if (response == null) {
       displayFormatter.printErrorMessage(sout, "response is null");
       wasError = true;
@@ -517,7 +526,7 @@ public class TajoCli {
     long startTime = System.currentTimeMillis();
     ClientProtos.SubmitQueryResponse response = null;
     try{
-      response = client.executeQuery(statement);
+      response = clientTracker.get().executeQuery(statement);
     } catch (ServiceException e){
       displayFormatter.printErrorMessage(sout, e.getMessage());
       wasError = true;
@@ -562,7 +571,7 @@ public class TajoCli {
       if (response.getMaxRowNum() < 0 && queryId.equals(QueryIdFactory.NULL_QUERY_ID)) {
         displayFormatter.printResult(sout, sin, desc, responseTime, res);
       } else {
-        res = TajoClientUtil.createResultSet(conf, client, response);
+        res = TajoClientUtil.createResultSet(clientTracker.get(), response);
         displayFormatter.printResult(sout, sin, desc, responseTime, res);
       }
     } catch (Throwable t) {
@@ -592,8 +601,7 @@ public class TajoCli {
       int initRetries = 0;
       int progressRetries = 0;
       while (true) {
-        // TODO - configurable
-        status = client.getQueryStatus(queryId);
+        status = clientTracker.get().getQueryStatus(queryId);
         if(TajoClientUtil.isQueryWaitingForSchedule(status.getState())) {
           Thread.sleep(Math.min(20 * initRetries, 1000));
           initRetries++;
@@ -621,9 +629,9 @@ public class TajoCli {
       } else {
         if (status.getState() == QueryState.QUERY_SUCCEEDED) {
           float responseTime = ((float)(status.getFinishTime() - status.getSubmitTime()) / 1000.0f);
-          ClientProtos.GetQueryResultResponse response = client.getResultResponse(queryId);
+          ClientProtos.GetQueryResultResponse response = clientTracker.get().getResultResponse(queryId);
           if (status.hasResult()) {
-            res = TajoClientUtil.createResultSet(conf, client, queryId, response);
+            res = TajoClientUtil.createResultSet(clientTracker.get(), queryId, response);
             TableDesc desc = new TableDesc(response.getTableDesc());
             displayFormatter.printResult(sout, sin, desc, responseTime, res);
           } else {
@@ -643,7 +651,7 @@ public class TajoCli {
         }
       } else {
         if (status != null && status.getQueryId() != null) {
-          client.closeQuery(status.getQueryId());
+          clientTracker.get().closeQuery(status.getQueryId());
         }
       }
     }
@@ -666,14 +674,17 @@ public class TajoCli {
 
   public void close() {
     //for testcase
-    if (client != null) {
-      client.close();
+    if (clientTracker != null) {
+      try {
+        clientTracker.close();
+      } catch (IOException e) {
+      }
     }
   }
 
   private void checkMasterStatus() throws IOException, ServiceException {
-    String sessionId = client.getSessionId() != null ? client.getSessionId().getId() : null;
-    client = TajoHAClientUtil.getTajoClient(conf, client, context);
+    String sessionId = clientTracker.get().getSessionId() != null ? clientTracker.get().getSessionId().getId() : null;
+    TajoClient client = clientTracker.get();
     if(sessionId != null && (client.getSessionId() == null ||
         !sessionId.equals(client.getSessionId().getId()))) {
       commands.clear();

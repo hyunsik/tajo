@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,17 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.storage.exception;
+package org.apache.tajo.client;
 
-public class UnknownDataTypeException extends Exception {
+import java.io.IOException;
 
-  private static final long serialVersionUID = -2630390595968966164L;
+public class DelegateClientTracker implements ClientTracker {
+  private TajoClient client;
 
-  public UnknownDataTypeException() {
-
+  public DelegateClientTracker(TajoClient client) {
+    this.client = client;
   }
 
-  public UnknownDataTypeException(String message) {
-    super(message);
+  public TajoClient get() {
+    return client;
+  }
+
+
+  @Override
+  public void close() throws IOException {
   }
 }

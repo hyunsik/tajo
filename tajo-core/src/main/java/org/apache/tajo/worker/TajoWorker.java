@@ -33,6 +33,8 @@ import org.apache.tajo.TajoConstants;
 import org.apache.tajo.catalog.CatalogClient;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
+import org.apache.tajo.discovery.ServiceTrackerFactory;
 import org.apache.tajo.ipc.TajoMasterProtocol;
 import org.apache.tajo.master.cluster.WorkerConnectionInfo;
 import org.apache.tajo.master.ha.TajoMasterInfo;
@@ -91,6 +93,8 @@ public class TajoWorker extends CompositeService {
   private TaskRunnerManager taskRunnerManager;
 
   private TajoPullServerService pullService;
+
+  private ServiceTracker serviceTracker;
 
   @Deprecated
   private boolean yarnContainerMode;
@@ -176,8 +180,9 @@ public class TajoWorker extends CompositeService {
     this.systemConf = (TajoConf)conf;
     RackResolver.init(systemConf);
 
-    this.connPool = RpcConnectionPool.getPool(systemConf);
+    this.connPool = RpcConnectionPool.getPool();
     this.workerContext = new WorkerContext();
+    this.serviceTracker = ServiceTrackerFactory.getServiceTracker(systemConf);
     this.lDirAllocator = new LocalDirAllocator(ConfVars.WORKER_TEMPORAL_DIR.varname);
 
     String resourceManagerClassName = systemConf.getVar(ConfVars.RESOURCE_MANAGER_CLASS);
@@ -392,6 +397,10 @@ public class TajoWorker extends CompositeService {
 
     public TajoConf getConf() {
       return systemConf;
+    }
+
+    public ServiceTracker getHAServiceTracker() {
+      return serviceTracker;
     }
 
     public TajoWorkerManagerService getTajoWorkerManagerService() {

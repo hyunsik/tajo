@@ -105,30 +105,6 @@ public class TestResultSet {
   }
 
   @Test
-  public void test() throws IOException, SQLException {
-    TajoResultSet rs = new TajoResultSet(null, null, conf, desc);
-    ResultSetMetaData meta = rs.getMetaData();
-    assertNotNull(meta);
-    Schema schema = scoreSchema;
-    assertEquals(schema.size(), meta.getColumnCount());
-    for (int i = 0; i < meta.getColumnCount(); i++) {
-      assertEquals(schema.getColumn(i).getSimpleName(), meta.getColumnName(i + 1));
-      assertEquals(schema.getColumn(i).getQualifier(), meta.getTableName(i + 1));
-    }
-
-    int i = 0;
-    assertTrue(rs.isBeforeFirst());
-    for (; rs.next(); i++) {
-      assertEquals("test"+i%100, rs.getString(1));
-      assertEquals("test"+i%100, rs.getString("deptname"));
-      assertEquals(i+1, rs.getInt(2));
-      assertEquals(i+1, rs.getInt("score"));
-    }
-    assertEquals(10000, i);
-    assertTrue(rs.isAfterLast());
-  }
-
-  @Test
   public void testDateTimeType() throws Exception {
     // Hcatalog does not support date type, time type in hive-0.12.0
     if(util.isHCatalogStoreRunning()) return;

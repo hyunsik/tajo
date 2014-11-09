@@ -19,8 +19,6 @@
 package org.apache.tajo.client;
 
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.annotation.ThreadSafe;
@@ -29,15 +27,13 @@ import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.catalog.TableMeta;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
-import org.apache.tajo.conf.TajoConf;
-import org.apache.tajo.conf.TajoConf.ConfVars;
+import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.ipc.ClientProtos.BriefQueryInfo;
 import org.apache.tajo.ipc.ClientProtos.GetQueryResultResponse;
 import org.apache.tajo.ipc.ClientProtos.SubmitQueryResponse;
 import org.apache.tajo.ipc.ClientProtos.WorkerResourceInfo;
 import org.apache.tajo.jdbc.TajoMemoryResultSet;
-import org.apache.tajo.jdbc.TajoResultSet;
-import org.apache.tajo.util.NetUtils;
+import org.apache.tajo.util.KeyValueSet;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -47,40 +43,25 @@ import java.util.List;
 
 @ThreadSafe
 public class TajoClientImpl extends SessionConnection implements TajoClient, QueryClient, CatalogAdminClient {
-
-  private final Log LOG = LogFactory.getLog(TajoClientImpl.class);
   QueryClient queryClient;
   CatalogAdminClient catalogClient;
-
-  public TajoClientImpl(TajoConf conf) throws IOException {
-    this(conf, NetUtils.createSocketAddr(conf.getVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS)), null);
-  }
-
-  public TajoClientImpl(TajoConf conf, @Nullable String baseDatabase) throws IOException {
-    this(conf, NetUtils.createSocketAddr(conf.getVar(ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS)), baseDatabase);
-  }
-
-  public TajoClientImpl(InetSocketAddress addr) throws IOException {
-    this(new TajoConf(), addr, null);
-  }
 
   /**
    * Connect to TajoMaster
    *
-   * @param conf TajoConf
    * @param addr TajoMaster address
    * @param baseDatabase The base database name. It is case sensitive. If it is null,
    *                     the 'default' database will be used.
    * @throws java.io.IOException
    */
-  public TajoClientImpl(TajoConf conf, InetSocketAddress addr, @Nullable String baseDatabase) throws IOException {
-    super(conf, addr, baseDatabase);
-    this.queryClient = new QueryClientImpl(this);
-    this.catalogClient = new CatalogAdminClientImpl(this);
+  public TajoClientImpl(InetSocketAddress addr, @Nullable String baseDatabase, @Nullable KeyValueSet properties)
+      throws IOException {
+    this(new DummyClientServiceTracker(addr), baseDatabase, properties);
   }
 
-  public TajoClientImpl(String hostName, int port, @Nullable String baseDatabase) throws IOException {
-    super(hostName, port, baseDatabase);
+  public TajoClientImpl(ServiceTracker serviceTracker, @Nullable String baseDatabase,
+                        @Nullable KeyValueSet properties) throws IOException {
+    super(serviceTracker, baseDatabase, properties);
     this.queryClient = new QueryClientImpl(this);
     this.catalogClient = new CatalogAdminClientImpl(this);
   }

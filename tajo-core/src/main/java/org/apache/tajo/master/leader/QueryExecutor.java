@@ -197,7 +197,7 @@ public class QueryExecutor {
     Path finalOutputDir = null;
     if (insertNode.getTableName() != null) {
       tableDesc = catalog.getTableDesc(insertNode.getTableName());
-      finalOutputDir = tableDesc.getPath();
+      finalOutputDir = new Path(tableDesc.getPath());
     } else {
       finalOutputDir = insertNode.getPath();
     }

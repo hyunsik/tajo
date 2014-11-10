@@ -75,8 +75,6 @@ public class QueryExecutorServlet extends HttpServlet {
 
   private ExecutorService queryRunnerExecutor = Executors.newFixedThreadPool(5);
 
-  private QueryRunnerCleaner queryRunnerCleaner;
-
   @Override
   public void init(ServletConfig config) throws ServletException {
     om.getDeserializationConfig().disable(
@@ -87,8 +85,7 @@ public class QueryExecutorServlet extends HttpServlet {
       this.serviceTracker = ServiceTrackerFactory.getServiceTracker(tajoConf);
       clientTracker = new BaseClientTracker(serviceTracker);
 
-      queryRunnerCleaner = new QueryRunnerCleaner();
-      queryRunnerCleaner.start();
+      new QueryRunnerCleaner().start();
     } catch (IOException e) {
       LOG.error(e.getMessage());
     }
@@ -128,7 +125,8 @@ public class QueryExecutorServlet extends HttpServlet {
             }
           }
         }
-        QueryRunner queryRunner = new QueryRunner(queryRunnerId, query);
+        String database = request.getParameter("database");
+        QueryRunner queryRunner = new QueryRunner(queryRunnerId, query, database);
         try {
           queryRunner.sizeLimit = Integer.parseInt(request.getParameter("limitSize"));
         } catch (java.lang.NumberFormatException nfe) {
@@ -256,6 +254,7 @@ public class QueryExecutorServlet extends HttpServlet {
     AtomicBoolean stop = new AtomicBoolean(false);
     QueryId queryId;
     String query;
+    String database;
     long resultRows;
     int sizeLimit;
     long numOfRows;
@@ -268,8 +267,13 @@ public class QueryExecutorServlet extends HttpServlet {
     List<List<Object>> queryResult;
 
     public QueryRunner(String queryRunnerId, String query) {
+      this (queryRunnerId, query, "default");
+    }
+
+    public QueryRunner(String queryRunnerId, String query, String database) {
       this.queryRunnerId = queryRunnerId;
       this.query = query;
+      this.database = database;
     }
 
     public void setStop() {
@@ -281,6 +285,9 @@ public class QueryExecutorServlet extends HttpServlet {
       startTime = System.currentTimeMillis();
       try {
         tajoClient = clientTracker.get();
+
+        if (!tajoClient.getCurrentDatabase().equals(database))
+          tajoClient.selectDatabase(database);
 
         response = tajoClient.executeQuery(query);
 

@@ -320,7 +320,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -341,7 +341,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -419,7 +419,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -443,7 +443,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -467,7 +467,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -492,7 +492,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -518,7 +518,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -571,7 +571,7 @@ public class TestTajoClient {
     client.updateQuery(sql);
     assertTrue(client.existTable(tableName));
 
-    Path tablePath = client.getTableDesc(tableName).getPath();
+    Path tablePath = new Path(client.getTableDesc(tableName).getPath());
     FileSystem hdfs = tablePath.getFileSystem(conf);
     assertTrue(hdfs.exists(tablePath));
 
@@ -699,8 +699,9 @@ public class TestTajoClient {
     res.close();
 
     TableDesc desc = client.getTableDesc("csvnull");
-    assertEquals(desc.getMeta().getOption(StorageConstants.CSVFILE_NULL), "\\\\T");
-    Path path = desc.getPath();
+    assertEquals(desc.getMeta().getOption(StorageConstants.TEXT_NULL), "\\\\T");
+    Path path = new Path(desc.getPath());
+
     FileSystem fs = path.getFileSystem(tajoConf);
 
     FileStatus[] files = fs.listStatus(path);

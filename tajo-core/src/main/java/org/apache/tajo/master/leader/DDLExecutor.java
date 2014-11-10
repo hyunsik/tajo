@@ -232,7 +232,7 @@ public class DDLExecutor {
       }
     }
 
-    Path path = catalog.getTableDesc(qualifiedName).getPath();
+    Path path = new Path(catalog.getTableDesc(qualifiedName).getPath());
     catalog.dropTable(qualifiedName);
 
     if (purge) {
@@ -333,7 +333,7 @@ public class DDLExecutor {
 
       Path warehousePath = new Path(TajoConf.getWarehouseDir(context.getConf()), databaseName);
       TableDesc tableDesc = catalog.getTableDesc(databaseName, simpleTableName);
-      Path tablePath = tableDesc.getPath();
+      Path tablePath = new Path(tableDesc.getPath());
       if (tablePath.getParent() == null ||
           !tablePath.getParent().toUri().getPath().equals(warehousePath.toUri().getPath())) {
         throw new IOException("Can't truncate external table:" + eachTableName + ", data dir=" + tablePath +
@@ -343,7 +343,7 @@ public class DDLExecutor {
     }
 
     for (TableDesc eachTable: tableDescList) {
-      Path path = eachTable.getPath();
+      Path path = new Path(eachTable.getPath());
       LOG.info("Truncate table: " + eachTable.getName() + ", delete all data files in " + path);
       FileSystem fs = path.getFileSystem(context.getConf());
 
@@ -442,7 +442,7 @@ public class DDLExecutor {
     }
 
     TableDesc desc = new TableDesc(CatalogUtil.buildFQName(databaseName, simpleTableName),
-        schema, meta, path, isExternal);
+        schema, meta, path.toUri(), isExternal);
     desc.setStats(stats);
     if (partitionDesc != null) {
       desc.setPartitionMethod(partitionDesc);

@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.tajo.TajoConstants;
 import org.apache.tajo.algebra.AlterTablespaceSetType;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.catalog.*;
@@ -31,7 +32,6 @@ import org.apache.tajo.catalog.exception.*;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.catalog.statistics.TableStats;
-import org.apache.tajo.client.QueryClient;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.master.TajoMaster;
@@ -438,7 +438,7 @@ public class DDLExecutor {
     stats.setNumBytes(totalSize);
 
     if (isExternal) { // if it is an external table, there is no way to know the exact row number without processing.
-      stats.setNumRows(QueryClient.UNKNOWN_ROW_NUMBER);
+      stats.setNumRows(TajoConstants.UNKNOWN_ROW_NUMBER);
     }
 
     TableDesc desc = new TableDesc(CatalogUtil.buildFQName(databaseName, simpleTableName),

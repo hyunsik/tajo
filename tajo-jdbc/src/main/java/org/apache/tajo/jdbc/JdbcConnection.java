@@ -26,8 +26,8 @@ import org.apache.tajo.client.CatalogAdminClient;
 import org.apache.tajo.client.QueryClient;
 import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.client.TajoClientImpl;
-import org.apache.tajo.conf.TajoConf;
-import org.apache.tajo.util.NetUtils;
+import org.apache.tajo.rpc.RpcUtils;
+import org.apache.tajo.util.KeyValueSet;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;
@@ -101,15 +101,15 @@ public class JdbcConnection implements Connection {
       throw new SQLException("Invalid JDBC URI: " + rawURI, "TAJO-001");
     }
 
-    TajoConf tajoConf = new TajoConf();
+    KeyValueSet clientProperties = new KeyValueSet();
     if(properties != null) {
       for(Map.Entry<Object, Object> entry: properties.entrySet()) {
-        tajoConf.set(entry.getKey().toString(), entry.getValue().toString());
+        clientProperties.set(entry.getKey().toString(), entry.getValue().toString());
       }
     }
 
     try {
-      tajoClient = new TajoClientImpl(NetUtils.createSocketAddr(hostName, port), databaseName, null);
+      tajoClient = new TajoClientImpl(RpcUtils.createSocketAddr(hostName, port), databaseName, clientProperties);
     } catch (Exception e) {
       throw new SQLException("Cannot create TajoClient instance:" + e.getMessage(), "TAJO-002");
     }

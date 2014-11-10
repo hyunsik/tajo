@@ -24,7 +24,6 @@ import org.apache.tajo.rpc.test.TestProtos.EchoMessage;
 import org.apache.tajo.rpc.test.TestProtos.SumRequest;
 import org.apache.tajo.rpc.test.TestProtos.SumResponse;
 import org.apache.tajo.rpc.test.impl.DummyProtocolBlockingImpl;
-import org.apache.tajo.util.NetUtils;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.junit.After;
 import org.junit.Before;
@@ -58,7 +57,7 @@ public class TestBlockingRpc {
         new InetSocketAddress("127.0.0.1", 0), 2);
     server.start();
     client = new BlockingRpcClient(DummyProtocol.class,
-        NetUtils.getConnectAddress(server.getListenAddress()), clientChannelFactory, retries);
+        RpcUtils.getConnectAddress(server.getListenAddress()), clientChannelFactory, retries);
     stub = client.getStub();
   }
 
@@ -186,7 +185,7 @@ public class TestBlockingRpc {
     try {
       int port = server.getListenAddress().getPort() + 1;
       new BlockingRpcClient(DummyProtocol.class,
-          NetUtils.getConnectAddress(new InetSocketAddress("127.0.0.1", port)), clientChannelFactory, retries);
+          RpcUtils.getConnectAddress(new InetSocketAddress("127.0.0.1", port)), clientChannelFactory, retries);
       fail("Connection should be failed.");
     } catch (ConnectException ce) {
       expected = true;
@@ -259,9 +258,9 @@ public class TestBlockingRpc {
     client.close();
     client = null;
 
-    String hostAndPort = NetUtils.normalizeInetSocketAddress(server.getListenAddress());
+    String hostAndPort = RpcUtils.normalizeInetSocketAddress(server.getListenAddress());
     client = new BlockingRpcClient(DummyProtocol.class,
-        NetUtils.createUnresolved(hostAndPort), clientChannelFactory, retries);
+        RpcUtils.createUnresolved(hostAndPort), clientChannelFactory, retries);
     BlockingInterface stub = client.getStub();
 
     EchoMessage message = EchoMessage.newBuilder()

@@ -21,7 +21,6 @@ package org.apache.tajo.rpc;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.tajo.conf.TajoConf;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.*;
@@ -35,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class RpcChannelFactory {
   private static final Log LOG = LogFactory.getLog(RpcChannelFactory.class);
   private static ClientSocketChannelFactory factory;
+  private static final int DEFAULT_WORKER_NUM = 4;
   private static AtomicInteger clientCount = new AtomicInteger(0);
   private static AtomicInteger serverCount = new AtomicInteger(0);
 
@@ -48,9 +48,7 @@ public final class RpcChannelFactory {
   public static synchronized ClientSocketChannelFactory getSharedClientChannelFactory(){
     //shared woker and boss pool
     if(factory == null){
-      TajoConf conf = new TajoConf();
-      int workerNum = conf.getIntVar(TajoConf.ConfVars.INTERNAL_RPC_CLIENT_WORKER_THREAD_NUM);
-      factory = createClientChannelFactory("Internal-Client", workerNum);
+      factory = createClientChannelFactory("Internal-Client", DEFAULT_WORKER_NUM);
     }
     return factory;
   }

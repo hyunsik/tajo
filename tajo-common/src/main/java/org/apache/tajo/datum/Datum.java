@@ -19,8 +19,6 @@
 package org.apache.tajo.datum;
 
 import com.google.gson.annotations.Expose;
-import org.apache.tajo.conf.TajoConf;
-import org.apache.tajo.conf.TajoConf.ConfVars;
 import org.apache.tajo.exception.InvalidCastException;
 import org.apache.tajo.exception.InvalidOperationException;
 import org.apache.tajo.json.CommonGsonHelper;
@@ -32,7 +30,7 @@ public abstract class Datum implements Comparable<Datum>, GsonObject {
   static boolean abortWhenDivideByZero;
 
   static {
-    initAbortWhenDivideByZero(new TajoConf());
+    initAbortWhenDivideByZero();
   }
 
   @Expose	private final Type type;
@@ -120,8 +118,8 @@ public abstract class Datum implements Comparable<Datum>, GsonObject {
             this.type == Type.FLOAT8;
   }
 
-  protected static void initAbortWhenDivideByZero(TajoConf tajoConf) {
-    abortWhenDivideByZero = tajoConf.getBoolVar(ConfVars.$BEHAVIOR_ARITHMETIC_ABORT);
+  protected static void initAbortWhenDivideByZero() {
+    abortWhenDivideByZero = Boolean.valueOf(System.getProperty("tajo.behavior.arithmetic-abort"));
   }
 
   public abstract int size();

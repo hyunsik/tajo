@@ -45,8 +45,9 @@ import org.apache.tajo.ipc.TajoWorkerProtocol.DistinctGroupbyEnforcer.DistinctAg
 import org.apache.tajo.ipc.TajoWorkerProtocol.DistinctGroupbyEnforcer.MultipleAggregationStage;
 import org.apache.tajo.ipc.TajoWorkerProtocol.DistinctGroupbyEnforcer.SortSpecArray;
 import org.apache.tajo.plan.LogicalPlan;
-import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.plan.logical.*;
+import org.apache.tajo.plan.util.PlannerUtil;
+import org.apache.tajo.storage.BaseTupleComparator;
 import org.apache.tajo.storage.StorageConstants;
 import org.apache.tajo.storage.StorageManager;
 import org.apache.tajo.storage.TupleComparator;
@@ -788,7 +789,7 @@ public class PhysicalPlannerImpl implements PhysicalPlanner {
       // if there is no given NULL CHAR property in the table property and the query is neither CTAS or INSERT,
       // we set DEFAULT NULL CHAR to the table property.
       if (!ctx.getQueryContext().containsKey(SessionVars.NULL_CHAR)) {
-        plan.getOptions().set(StorageConstants.CSVFILE_NULL, TajoConf.ConfVars.$CSVFILE_NULL.defaultVal);
+        plan.getOptions().set(StorageConstants.TEXT_NULL, TajoConf.ConfVars.$TEXT_NULL.defaultVal);
       }
       return new StoreTableExec(ctx, plan, subOp);
 
@@ -1185,7 +1186,7 @@ public class PhysicalPlannerImpl implements PhysicalPlanner {
     String indexName = IndexUtil.getIndexNameOfFrag(fragments.get(0), annotation.getSortKeys());
     Path indexPath = new Path(sm.getTablePath(annotation.getTableName()), "index");
 
-    TupleComparator comp = new TupleComparator(annotation.getKeySchema(),
+    TupleComparator comp = new BaseTupleComparator(annotation.getKeySchema(),
         annotation.getSortKeys());
     return new BSTIndexScanExec(ctx, sm, annotation, fragments.get(0), new Path(indexPath, indexName),
         annotation.getKeySchema(), comp, annotation.getDatum());

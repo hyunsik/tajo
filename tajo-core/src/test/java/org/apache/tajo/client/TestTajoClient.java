@@ -699,7 +699,6 @@ public class TestTajoClient {
     res.close();
 
     TableDesc desc = client.getTableDesc("csvnull");
-
     assertEquals(desc.getMeta().getOption(StorageConstants.CSVFILE_NULL), "\\\\T");
     Path path = desc.getPath();
     FileSystem fs = path.getFileSystem(tajoConf);

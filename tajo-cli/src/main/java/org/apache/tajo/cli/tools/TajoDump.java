@@ -86,7 +86,7 @@ public class TajoDump {
     final Pair<String, Integer> hostAndPort = getConnectionAddr(conf, cmd);
     final String hostName = hostAndPort.getFirst();
     final Integer port = hostAndPort.getSecond();
-    final UserRoleInfo userInfo = new UserRoleInfo("tajo");
+    final UserRoleInfo userInfo = UserRoleInfo.getCurrentUser();
 
     String baseDatabaseName = null;
     if (cmd.getArgList().size() > 0) {

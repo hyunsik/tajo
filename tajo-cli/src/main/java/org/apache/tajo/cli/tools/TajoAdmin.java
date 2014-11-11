@@ -143,8 +143,6 @@ public class TajoAdmin {
       }
 
       if (hostName != null && port != null) {
-        tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
-
         serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
         clientTracker = new BaseClientTracker(serviceTracker);
       } else {

@@ -45,10 +45,18 @@ public final class RpcChannelFactory {
    * make this factory static thus all clients can share its thread pool.
    * NioClientSocketChannelFactory has only one method newChannel() visible for user, which is thread-safe
    */
-  public static synchronized ClientSocketChannelFactory getSharedClientChannelFactory(){
+  public static synchronized ClientSocketChannelFactory getSharedClientChannelFactory() {
+    return getSharedClientChannelFactory(DEFAULT_WORKER_NUM);
+  }
+
+  /**
+   * make this factory static thus all clients can share its thread pool.
+   * NioClientSocketChannelFactory has only one method newChannel() visible for user, which is thread-safe
+   */
+  public static synchronized ClientSocketChannelFactory getSharedClientChannelFactory(int workerNum){
     //shared woker and boss pool
     if(factory == null){
-      factory = createClientChannelFactory("Internal-Client", DEFAULT_WORKER_NUM);
+      factory = createClientChannelFactory("Internal-Client", workerNum);
     }
     return factory;
   }

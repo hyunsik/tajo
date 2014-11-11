@@ -35,7 +35,7 @@ public class TestTajoDump extends QueryTestCaseBase {
       executeString("CREATE TABLE \"" + getCurrentDatabase() +
           "\".\"TableName1\" (\"Age\" int, \"FirstName\" TEXT, lastname TEXT)");
 
-      UserRoleInfo userInfo = new UserRoleInfo("tajo");
+      UserRoleInfo userInfo = UserRoleInfo.getCurrentUser();
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       PrintWriter printWriter = new PrintWriter(bos);
       TajoDump.dump(client, userInfo, getCurrentDatabase(), false, false, false, printWriter);

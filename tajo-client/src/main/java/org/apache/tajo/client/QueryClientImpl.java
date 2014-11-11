@@ -38,6 +38,7 @@ import org.apache.tajo.rpc.NettyClientBase;
 import org.apache.tajo.rpc.ServerCallable;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
@@ -567,5 +568,57 @@ public class QueryClientImpl implements QueryClient {
       connection.connPool.releaseConnection(tmClient);
     }
     return status;
+  }
+
+  public QueryInfoProto getQueryInfo(final QueryId queryId) throws ServiceException {
+    return new ServerCallable<QueryInfoProto>(connection.connPool, connection.getTajoMasterAddr(),
+        TajoMasterClientProtocol.class, false, true) {
+      public QueryInfoProto call(NettyClientBase client) throws ServiceException {
+        connection.checkSessionAndGet(client);
+
+        QueryIdRequest.Builder builder = QueryIdRequest.newBuilder();
+        builder.setSessionId(connection.sessionId);
+        builder.setQueryId(queryId.getProto());
+
+        TajoMasterClientProtocolService.BlockingInterface tajoMasterService = client.getStub();
+        GetQueryInfoResponse res = tajoMasterService.getQueryInfo(null,builder.build());
+        if (res.getResultCode() == ResultCode.OK) {
+          return res.getQueryInfo();
+        } else {
+          abort();
+          throw new ServiceException(res.getErrorMessage());
+        }
+      }
+    }.withRetries();
+  }
+
+  public QueryHistoryProto getQueryHistory(final QueryId queryId) throws ServiceException {
+    final QueryInfoProto queryInfo = getQueryInfo(queryId);
+
+    if (queryInfo.getHostNameOfQM() == null || queryInfo.getQueryMasterClientPort() == 0) {
+      return null;
+    }
+    InetSocketAddress qmAddress = new InetSocketAddress(
+        queryInfo.getHostNameOfQM(), queryInfo.getQueryMasterClientPort());
+
+    return new ServerCallable<QueryHistoryProto>(connection.connPool, qmAddress,
+        QueryMasterClientProtocol.class, false, true) {
+      public QueryHistoryProto call(NettyClientBase client) throws ServiceException {
+        connection.checkSessionAndGet(client);
+
+        QueryIdRequest.Builder builder = QueryIdRequest.newBuilder();
+        builder.setSessionId(connection.sessionId);
+        builder.setQueryId(queryId.getProto());
+
+        QueryMasterClientProtocolService.BlockingInterface queryMasterService = client.getStub();
+        GetQueryHistoryResponse res = queryMasterService.getQueryHistory(null,builder.build());
+        if (res.getResultCode() == ResultCode.OK) {
+          return res.getQueryHistory();
+        } else {
+          abort();
+          throw new ServiceException(res.getErrorMessage());
+        }
+      }
+    }.withRetries();
   }
 }

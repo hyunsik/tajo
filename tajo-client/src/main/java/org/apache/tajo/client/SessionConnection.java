@@ -88,7 +88,7 @@ public class SessionConnection implements Closeable {
 
     // Don't share connection pool per client
     connPool = RpcConnectionPool.newPool(getClass().getSimpleName(), RPC_WORKER_THREAD_NUM);
-    userInfo = new UserRoleInfo("tajo");
+    userInfo = UserRoleInfo.getCurrentUser();
     this.baseDatabase = baseDatabase != null ? baseDatabase : null;
   }
 

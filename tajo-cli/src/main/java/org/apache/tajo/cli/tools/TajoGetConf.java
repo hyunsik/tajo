@@ -20,9 +20,9 @@ package org.apache.tajo.cli.tools;
 
 import com.google.protobuf.ServiceException;
 import org.apache.commons.cli.*;
-import org.apache.tajo.client.TajoClient;
-import org.apache.tajo.client.TajoClientImpl;
+import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.util.NetUtils;
 
 import java.io.IOException;
@@ -40,7 +40,8 @@ public class TajoGetConf {
   }
 
   private TajoConf tajoConf;
-  private TajoClient tajoClient;
+  private ServiceTracker serviceTracker;
+  private ClientTracker clientTracker;
   private Writer writer;
 
   public final static String defaultLeftPad = " ";
@@ -53,7 +54,7 @@ public class TajoGetConf {
   public TajoGetConf(TajoConf tajoConf, Writer writer, TajoClient tajoClient) {
     this.tajoConf = tajoConf;
     this.writer = writer;
-    this.tajoClient = tajoClient;
+    this.clientTracker = new DelegateClientTracker(tajoClient);
   }
 
   private void printUsage(boolean tsqlMode) {
@@ -112,8 +113,8 @@ public class TajoGetConf {
     }
 
     if (hostName != null && port != null) {
-      tajoConf.setVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS, hostName + ":" + port);
-      tajoClient = new TajoClientImpl(NetUtils.createSocketAddr(hostName, port), null, null);
+      serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
+      clientTracker = new BaseClientTracker(serviceTracker);
     } else  {
       System.err.println("ERROR: cannot find valid Tajo server address");
       System.exit(-1);

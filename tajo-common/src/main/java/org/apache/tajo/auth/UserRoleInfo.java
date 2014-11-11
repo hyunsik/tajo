@@ -18,8 +18,9 @@
 
 package org.apache.tajo.auth;
 
-public class UserRoleInfo {
+import java.io.IOException;
 
+public class UserRoleInfo {
   private final String username;
 
   public UserRoleInfo(String username) {
@@ -33,5 +34,10 @@ public class UserRoleInfo {
   @Override
   public String toString() {
     return "user=" + username;
+  }
+
+  public synchronized static UserRoleInfo getCurrentUser() throws IOException {
+    String userName = new com.sun.security.auth.module.UnixSystem().getUsername();
+    return new UserRoleInfo(userName);
   }
 }

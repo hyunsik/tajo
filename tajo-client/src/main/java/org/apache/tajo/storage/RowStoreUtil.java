@@ -29,6 +29,9 @@ import org.apache.tajo.util.BitArray;
 
 import java.nio.ByteBuffer;
 
+/**
+ * It is a copy from tajo-storage module.
+ */
 public class RowStoreUtil {
   public static int[] getTargetIds(Schema inSchema, Schema outSchema) {
     int[] targetIds = new int[outSchema.size()];

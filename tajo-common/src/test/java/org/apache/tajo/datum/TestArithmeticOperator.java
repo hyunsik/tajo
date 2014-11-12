@@ -50,7 +50,6 @@ public class TestArithmeticOperator {
 
   @Before
   public void setUp() {
-    TajoConf tajoConf = new TajoConf();
     if ("Zero_Exception".equals(option)) {
       System.setProperty(ConfVars.$BEHAVIOR_ARITHMETIC_ABORT.name(), "true");
     } else {

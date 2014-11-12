@@ -162,7 +162,6 @@ public class TajoHAAdmin {
 
   private void getState(Writer writer, String param) throws ParseException, IOException,
       ServiceException {
-    TajoClient tajoClient = clientTracker.get();
     int retValue = HAServiceUtil.getState(param, tajoConf);
 
     switch (retValue) {

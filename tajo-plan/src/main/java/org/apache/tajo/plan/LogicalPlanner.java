@@ -1289,11 +1289,11 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
   private void updatePhysicalInfo(TableDesc desc) {
     if (desc.getPath() != null) {
       try {
-        Path path = new Path(desc.getPath());
-        FileSystem fs = path.getFileSystem(new Configuration());
-        FileStatus status = fs.getFileStatus(path);
+        Path tablePath = new Path(desc.getPath());
+        FileSystem fs = tablePath.getFileSystem(new Configuration());
+        FileStatus status = fs.getFileStatus(tablePath);
         if (desc.getStats() != null && (status.isDirectory() || status.isFile())) {
-          ContentSummary summary = fs.getContentSummary(path);
+          ContentSummary summary = fs.getContentSummary(tablePath);
           if (summary != null) {
             long volume = summary.getLength();
             desc.getStats().setNumBytes(volume);

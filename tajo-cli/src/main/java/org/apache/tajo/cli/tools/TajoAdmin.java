@@ -120,6 +120,7 @@ public class TajoAdmin {
       cmdType = 5;
     }
 
+    // If TajoGetConf is executed in tsql, clientTracker will not be NULL.
     if (clientTracker == null) {
       // if there is no "-h" option,
       if (hostName == null) {

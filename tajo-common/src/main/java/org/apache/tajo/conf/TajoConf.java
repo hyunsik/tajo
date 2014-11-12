@@ -174,7 +174,6 @@ public class TajoConf extends Configuration {
 
     // Tajo Master HA Configurations
     TAJO_MASTER_HA_ENABLE("tajo.master.ha.enable", false, Validators.bool()),
-    TAJO_MASTER_HA_SERVICETRACKER_CLASS("tajo.master.ha.servicetracker", "DummyServiceTracker", Validators.clazz()),
     TAJO_MASTER_HA_MONITOR_INTERVAL("tajo.master.ha.monitor.interval", 5 * 1000), // 5 sec
 
     // Resource tracker service
@@ -254,10 +253,6 @@ public class TajoConf extends Configuration {
 
     // RPC --------------------------------------------------------------------
     RPC_POOL_MAX_IDLE("tajo.rpc.pool.idle.max", 10),
-
-    //  Internal RPC Client
-    INTERNAL_RPC_CLIENT_WORKER_THREAD_NUM("tajo.internal.rpc.client.worker-thread-num",
-        Runtime.getRuntime().availableProcessors() * 2),
 
     // Internal RPC Server
     MASTER_RPC_SERVER_WORKER_THREAD_NUM("tajo.master.rpc.server.worker-thread-num",
@@ -361,7 +356,7 @@ public class TajoConf extends Configuration {
     $CLI_ERROR_STOP("tajo.cli.error.stop", false),
 
     // Timezone & Date ----------------------------------------------------------
-    $TIMEZONE("tajo.timezone", "GMT"),
+    $TIMEZONE("tajo.timezone", "UTC"),
     $DATE_ORDER("tajo.date.order", "YMD"),
 
     // FILE FORMAT

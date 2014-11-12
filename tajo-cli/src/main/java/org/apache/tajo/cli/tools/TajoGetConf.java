@@ -96,28 +96,31 @@ public class TajoGetConf {
       param = cmd.getArgs()[0];
     }
 
-    // if there is no "-h" option,
-    if(hostName == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+    // If TajoGetConf is executed in tsql, clientTracker will not be NULL.
+    if (clientTracker == null) {
+      // if there is no "-h" option,
+      if (hostName == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          hostName = tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[0];
+        }
       }
-    }
-    if (port == null) {
-      if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
-        // it checks if the client service address is given in configuration and distributed mode.
-        // if so, it sets entryAddr.
-        port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+      if (port == null) {
+        if (tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS) != null) {
+          // it checks if the client service address is given in configuration and distributed mode.
+          // if so, it sets entryAddr.
+          port = Integer.parseInt(tajoConf.getVar(TajoConf.ConfVars.TAJO_MASTER_CLIENT_RPC_ADDRESS).split(":")[1]);
+        }
       }
-    }
 
-    if (hostName != null && port != null) {
-      serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
-      clientTracker = new BaseClientTracker(serviceTracker);
-    } else  {
-      System.err.println("ERROR: cannot find valid Tajo server address");
-      System.exit(-1);
+      if (hostName != null && port != null) {
+        serviceTracker = new DummyClientServiceTracker(NetUtils.createSocketAddr(hostName, port));
+        clientTracker = new BaseClientTracker(serviceTracker);
+      } else {
+        System.err.println("ERROR: cannot find valid Tajo server address");
+        System.exit(-1);
+      }
     }
 
     processConfKey(writer, param);

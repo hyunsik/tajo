@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class RpcChannelFactory {
   private static final Log LOG = LogFactory.getLog(RpcChannelFactory.class);
   private static ClientSocketChannelFactory factory;
-  private static final int DEFAULT_WORKER_NUM = 4;
+  private static final int DEFAULT_WORKER_NUM = Runtime.getRuntime().availableProcessors() * 2;
   private static AtomicInteger clientCount = new AtomicInteger(0);
   private static AtomicInteger serverCount = new AtomicInteger(0);
 

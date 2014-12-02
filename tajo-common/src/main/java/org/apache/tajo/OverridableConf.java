@@ -181,8 +181,10 @@ public class OverridableConf extends KeyValueSet {
   private void assertRegisteredEnum(ConfigKey key) {
     boolean registered = false;
 
-    for (ConfigType c : configTypes) {
-      registered = key.type() == c;
+    if (configTypes != null) {
+      for (ConfigType c : configTypes) {
+        registered = key.type() == c;
+      }
     }
 
     registered |= key.type() == ConfigType.SESSION || key.type() != ConfigType.SYSTEM;

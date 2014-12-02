@@ -672,6 +672,7 @@ public class TajoCli {
     sout.println("Invalid command " + command + ". Try \\? for help.");
   }
 
+  @VisibleForTesting
   public void close() {
     //for testcase
     if (clientTracker != null) {
@@ -679,6 +680,10 @@ public class TajoCli {
         clientTracker.close();
       } catch (IOException e) {
       }
+    }
+
+    if (reader != null) {
+      reader.shutdown();
     }
   }
 

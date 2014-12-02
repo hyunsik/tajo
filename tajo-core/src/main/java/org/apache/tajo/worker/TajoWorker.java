@@ -19,6 +19,7 @@
 package org.apache.tajo.worker;
 
 import com.codahale.metrics.Gauge;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,6 @@ import org.apache.tajo.master.querymaster.QueryMasterManagerService;
 import org.apache.tajo.master.rm.TajoWorkerResourceManager;
 import org.apache.tajo.pullserver.TajoPullServerService;
 import org.apache.tajo.rpc.RpcChannelFactory;
-import org.apache.tajo.rpc.RpcConnectionPool;
 import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 import org.apache.tajo.storage.HashShuffleAppenderManager;
 import org.apache.tajo.util.*;
@@ -119,8 +119,6 @@ public class TajoWorker extends CompositeService {
 
   private ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
-  private RpcConnectionPool connPool;
-
   private String[] cmdArgs;
 
   private DeletionService deletionService;
@@ -185,8 +183,7 @@ public class TajoWorker extends CompositeService {
 
     this.systemConf = (TajoConf)conf;
     RackResolver.init(systemConf);
-
-    this.connPool = RpcConnectionPool.getPool();
+    
     this.workerContext = new WorkerContext();
     this.serviceTracker = ServiceTrackerFactory.getServiceTracker(systemConf);
     this.lDirAllocator = new LocalDirAllocator(ConfVars.WORKER_TEMPORAL_DIR.varname);
@@ -374,11 +371,6 @@ public class TajoWorker extends CompositeService {
 
     if (catalogClient != null) {
       catalogClient.close();
-    }
-
-    if(connPool != null) {
-      connPool.shutdown();
-      RpcChannelFactory.shutdown();
     }
 
     if(webServer != null && webServer.isAlive()) {
@@ -594,6 +586,7 @@ public class TajoWorker extends CompositeService {
     return pullServerPort;
   }
 
+  @VisibleForTesting
   public void stopWorkerForce() {
     stop();
   }
@@ -614,6 +607,7 @@ public class TajoWorker extends CompositeService {
         LOG.info("TajoWorker received SIGINT Signal");
         LOG.info("============================================");
         stop();
+        RpcChannelFactory.shutdown();
       }
     }
   }

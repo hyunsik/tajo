@@ -18,6 +18,7 @@
 
 package org.apache.tajo.master.querymaster;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,12 +30,15 @@ import org.apache.tajo.QueryIdFactory;
 import org.apache.tajo.TajoProtos;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.annotation.Nullable;
+import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.plan.logical.LogicalRootNode;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.ipc.TajoMasterProtocol;
 import org.apache.tajo.master.TajoMaster;
 import org.apache.tajo.master.cluster.WorkerConnectionInfo;
 import org.apache.tajo.master.session.Session;
+import org.apache.tajo.plan.logical.LogicalRootNode;
 import org.apache.tajo.scheduler.SimpleFifoScheduler;
 
 import java.io.IOException;
@@ -42,6 +46,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryJobManager extends CompositeService {
   private static final Log LOG = LogFactory.getLog(QueryJobManager.class.getName());
@@ -57,7 +62,10 @@ public class QueryJobManager extends CompositeService {
 
   private final Map<QueryId, QueryInProgress> runningQueries = new HashMap<QueryId, QueryInProgress>();
 
-  private final Map<QueryId, QueryInProgress> finishedQueries = new HashMap<QueryId, QueryInProgress>();
+  private AtomicLong minExecutionTime = new AtomicLong(Long.MAX_VALUE);
+  private AtomicLong maxExecutionTime = new AtomicLong();
+  private AtomicLong avgExecutionTime = new AtomicLong();
+  private AtomicLong executedQuerySize = new AtomicLong();
 
   public QueryJobManager(final TajoMaster.MasterContext masterContext) {
     super(QueryJobManager.class.getName());
@@ -113,9 +121,22 @@ public class QueryJobManager extends CompositeService {
     }
   }
 
-  public Collection<QueryInProgress> getFinishedQueries() {
-    synchronized (finishedQueries){
-      return Collections.unmodifiableCollection(finishedQueries.values());
+  public synchronized Collection<QueryInfo> getFinishedQueries() {
+    try {
+      return this.masterContext.getHistoryReader().getQueries(null);
+    } catch (Throwable e) {
+      LOG.error(e);
+      return Lists.newArrayList();
+    }
+  }
+
+
+  public synchronized QueryInfo getFinishedQuery(QueryId queryId) {
+    try {
+      return this.masterContext.getHistoryReader().getQueryInfo(queryId.toString());
+    } catch (Throwable e) {
+      LOG.error(e);
+      return null;
     }
   }
 
@@ -127,11 +148,7 @@ public class QueryJobManager extends CompositeService {
         null, plan);
     queryInProgress.getQueryInfo().setQueryState(TajoProtos.QueryState.QUERY_SUCCEEDED);
     queryInProgress.getQueryInfo().setFinishTime(queryInProgress.getQueryInfo().getStartTime());
-
-    synchronized (finishedQueries) {
-      queryInProgress.getQueryInfo().setQueryMaster("");
-      finishedQueries.put(queryInProgress.getQueryId(), queryInProgress);
-    }
+    masterContext.getHistoryWriter().appendHistory(queryInProgress.getQueryInfo());
 
     return queryInProgress.getQueryInfo();
   }
@@ -214,12 +231,6 @@ public class QueryJobManager extends CompositeService {
     return queryInProgress;
   }
 
-  public QueryInProgress getFinishedQuery(QueryId queryId) {
-    synchronized(finishedQueries) {
-      return finishedQueries.get(queryId);
-    }
-  }
-
   public void stopQuery(QueryId queryId) {
     stopQuery(queryId, null);
   }
@@ -237,16 +248,49 @@ public class QueryJobManager extends CompositeService {
         runningQueries.remove(queryId);
       }
 
-      synchronized(finishedQueries) {
-        finishedQueries.put(queryId, queryInProgress);
-      }
+      QueryInfo queryInfo = queryInProgress.getQueryInfo();
 
       if (resultDesc != null) {
-        queryInProgress.setResultDesc(resultDesc);
+        queryInfo.setResultDesc(resultDesc);
       }
+
+      long executionTime = queryInfo.getFinishTime() - queryInfo.getStartTime();
+      if (executionTime < minExecutionTime.get()) {
+        minExecutionTime.set(executionTime);
+      }
+
+      if (executionTime > maxExecutionTime.get()) {
+        maxExecutionTime.set(executionTime);
+      }
+
+      long totalExecutionTime = executedQuerySize.get() * avgExecutionTime.get();
+      if (totalExecutionTime > 0) {
+        avgExecutionTime.set((totalExecutionTime + executionTime) / (executedQuerySize.get() + 1));
+      } else {
+        avgExecutionTime.set(executionTime);
+      }
+      executedQuerySize.incrementAndGet();
+      removeService(queryInProgress);
     } else {
       LOG.warn("No QueryInProgress while query stopping: " + queryId);
     }
+  }
+
+  public long getMinExecutionTime() {
+    if (getExecutedQuerySize() == 0) return 0;
+    return minExecutionTime.get();
+  }
+
+  public long getMaxExecutionTime() {
+    return maxExecutionTime.get();
+  }
+
+  public long getAvgExecutionTime() {
+    return avgExecutionTime.get();
+  }
+
+  public long getExecutedQuerySize() {
+    return executedQuerySize.get();
   }
 
   private void catchException(QueryId queryId, Exception e) {

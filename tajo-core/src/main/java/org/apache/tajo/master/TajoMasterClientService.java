@@ -18,6 +18,7 @@
 
 package org.apache.tajo.master;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -28,7 +29,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.tajo.*;
+import org.apache.tajo.QueryId;
+import org.apache.tajo.QueryIdFactory;
+import org.apache.tajo.TajoIdProtos;
+import org.apache.tajo.TajoProtos;
+import org.apache.tajo.TajoProtos.QueryState;
 import org.apache.tajo.catalog.*;
 import org.apache.tajo.catalog.exception.NoSuchDatabaseException;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
@@ -62,7 +67,6 @@ import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos.StringProto;
 import org.apache.tajo.util.KeyValueSet;
 import org.apache.tajo.util.NetUtils;
 import org.apache.tajo.util.ProtoUtil;
-import org.apache.tajo.util.StringUtils;
 import org.apache.tajo.util.history.QueryHistory;
 
 import java.io.IOException;
@@ -318,27 +322,28 @@ public class TajoMasterClientService extends AbstractService {
     public GetQueryResultResponse getQueryResult(RpcController controller,
                                                  GetQueryResultRequest request) throws ServiceException {
       try {
-        context.getSessionManager().touch(request.getSessionId().getId());
+        Session session = context.getSessionManager().getSession(request.getSessionId().getId());
         QueryId queryId = new QueryId(request.getQueryId());
-        QueryInProgress queryInProgress = context.getQueryJobManager().getQueryInProgress(queryId);
 
-        // if we cannot get a QueryInProgress instance from QueryJobManager,
-        // the instance can be in the finished query list.
-        if (queryInProgress == null) {
-          queryInProgress = context.getQueryJobManager().getFinishedQuery(queryId);
+        QueryInProgress inProgress = context.getQueryJobManager().getQueryInProgress(queryId);
+        QueryInfo queryInfo;
+
+        if (inProgress != null) {
+          queryInfo = inProgress.getQueryInfo();
+        } else {
+          queryInfo = context.getHistoryReader().getQueryInfo(queryId.toString());
         }
 
         GetQueryResultResponse.Builder builder = GetQueryResultResponse.newBuilder();
+        builder.setTajoUserName(session.getUserName());
 
-        // If we cannot the QueryInProgress instance from the finished list,
+        // If we cannot the QueryInfo instance from the finished list,
         // the query result was expired due to timeout.
         // In this case, we will result in error.
-        if (queryInProgress == null) {
+        if (queryInfo == null) {
           builder.setErrorMessage("No such query: " + queryId.toString());
           return builder.build();
         }
-
-        QueryInfo queryInfo = queryInProgress.getQueryInfo();
 
         try {
           //TODO After implementation Tajo's user security feature, Should be modified.
@@ -348,8 +353,8 @@ public class TajoMasterClientService extends AbstractService {
         }
         switch (queryInfo.getQueryState()) {
           case QUERY_SUCCEEDED:
-            if (queryInProgress.getResultDesc() != null) {
-              builder.setTableDesc(queryInProgress.getResultDesc().getProto());
+            if (queryInfo.hasResultdesc()) {
+              builder.setTableDesc(queryInfo.getResultDesc().getProto());
             }
             break;
           case QUERY_FAILED:
@@ -410,14 +415,12 @@ public class TajoMasterClientService extends AbstractService {
         context.getSessionManager().touch(request.getSessionId().getId());
         GetQueryListResponse.Builder builder = GetQueryListResponse.newBuilder();
 
-        Collection<QueryInProgress> queries
+        Collection<QueryInfo> queries
             = context.getQueryJobManager().getFinishedQueries();
 
         BriefQueryInfo.Builder infoBuilder = BriefQueryInfo.newBuilder();
 
-        for (QueryInProgress queryInProgress : queries) {
-          QueryInfo queryInfo = queryInProgress.getQueryInfo();
-
+        for (QueryInfo queryInfo : queries) {
           infoBuilder.setQueryId(queryInfo.getQueryId().getProto());
           infoBuilder.setState(queryInfo.getQueryState());
           infoBuilder.setQuery(queryInfo.getSql());
@@ -426,8 +429,10 @@ public class TajoMasterClientService extends AbstractService {
               System.currentTimeMillis() : queryInfo.getFinishTime();
           infoBuilder.setFinishTime(endTime);
           infoBuilder.setProgress(queryInfo.getProgress());
-          infoBuilder.setQueryMasterPort(queryInfo.getQueryMasterPort());
-          infoBuilder.setQueryMasterHost(queryInfo.getQueryMasterHost());
+          if (queryInfo.getQueryMasterHost() != null) {
+            infoBuilder.setQueryMasterPort(queryInfo.getQueryMasterPort());
+            infoBuilder.setQueryMasterHost(queryInfo.getQueryMasterHost());
+          }
 
           builder.addQueryList(infoBuilder.build());
         }
@@ -452,29 +457,44 @@ public class TajoMasterClientService extends AbstractService {
 
         if (queryId.equals(QueryIdFactory.NULL_QUERY_ID)) {
           builder.setResultCode(ResultCode.OK);
-          builder.setState(TajoProtos.QueryState.QUERY_SUCCEEDED);
+          builder.setState(QueryState.QUERY_SUCCEEDED);
         } else {
-          QueryInProgress queryInProgress = context.getQueryJobManager().getQueryInProgress(queryId);
+          QueryInProgress inProgress = context.getQueryJobManager().getQueryInProgress(queryId);
+          QueryInfo queryInfo;
 
-          // It will try to find a query status from a finished query list.
-          if (queryInProgress == null) {
-            queryInProgress = context.getQueryJobManager().getFinishedQuery(queryId);
+          if (inProgress == null) {
+            queryInfo = context.getHistoryReader().getQueryInfo(queryId.toString());
+          } else {
+            queryInfo = inProgress.getQueryInfo();
           }
 
-          if (queryInProgress != null) {
-            QueryInfo queryInfo = queryInProgress.getQueryInfo();
-            builder.setResultCode(ResultCode.OK);
-            builder.setHasResult(
-                !(queryInProgress.getQueryContext().isCreateTable() || queryInProgress.getQueryContext().isInsert()));
-            builder.setState(queryInfo.getQueryState());
-            builder.setProgress(queryInfo.getProgress());
-            builder.setSubmitTime(queryInfo.getStartTime());
-            if(queryInfo.getQueryMasterHost() != null) {
-              builder.setQueryMasterHost(queryInfo.getQueryMasterHost());
-              builder.setQueryMasterPort(queryInfo.getQueryMasterClientPort());
+          if (queryInfo != null) {
+            String queryMasterHost = null;
+            int queryMasterPort = -1;
+
+            QueryState queryState = queryInfo.getQueryState();
+            if (queryInfo.getQueryMasterHost() != null) {
+              queryMasterHost = queryInfo.getQueryMasterHost();
+              queryMasterPort = queryInfo.getQueryMasterPort();
             }
-            if (queryInfo.getQueryState() == TajoProtos.QueryState.QUERY_SUCCEEDED) {
-              builder.setFinishTime(queryInfo.getFinishTime());
+
+            long startTime = queryInfo.getStartTime();
+            long finishTime = queryInfo.getFinishTime();
+            boolean isCreateTable = queryInfo.getQueryContext().isCreateTable();
+            boolean isInsert = queryInfo.getQueryContext().isInsert();
+            float progress = queryInfo.getProgress();
+
+            builder.setResultCode(ResultCode.OK);
+            builder.setHasResult(!(isCreateTable || isInsert));
+            builder.setState(queryState);
+            builder.setProgress(progress);
+            builder.setSubmitTime(startTime);
+            if(queryMasterHost != null) {
+              builder.setQueryMasterHost(queryMasterHost);
+              builder.setQueryMasterPort(queryMasterPort);
+            }
+            if (queryState == QueryState.QUERY_SUCCEEDED) {
+              builder.setFinishTime(finishTime);
             } else {
               builder.setFinishTime(System.currentTimeMillis());
             }
@@ -482,7 +502,7 @@ public class TajoMasterClientService extends AbstractService {
             Session session = context.getSessionManager().getSession(request.getSessionId().getId());
             if (session.getNonForwardQueryResultScanner(queryId) != null) {
               builder.setResultCode(ResultCode.OK);
-              builder.setState(TajoProtos.QueryState.QUERY_SUCCEEDED);
+              builder.setState(QueryState.QUERY_SUCCEEDED);
             } else {
               builder.setResultCode(ResultCode.ERROR);
               builder.setErrorMessage("No such query: " + queryId.toString());
@@ -509,9 +529,11 @@ public class TajoMasterClientService extends AbstractService {
         NonForwardQueryResultScanner queryResultScanner = session.getNonForwardQueryResultScanner(queryId);
 
         if (queryResultScanner == null) {
-          QueryInProgress inProgress = context.getQueryJobManager().getFinishedQuery(queryId);
+          QueryInfo queryInfo = context.getHistoryReader().getQueryInfo(queryId.toString());
+          Preconditions.checkNotNull(queryInfo, "QueryInfo cannot be NULL.");
 
-          TableDesc resultTableDesc = inProgress.getResultDesc();
+          TableDesc resultTableDesc = queryInfo.getResultDesc();
+          Preconditions.checkNotNull(resultTableDesc, "QueryInfo::getResultDesc results in NULL.");
 
           ScanNode scanNode;
           if (resultTableDesc.hasPartition()) {

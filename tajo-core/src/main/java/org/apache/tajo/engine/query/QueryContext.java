@@ -74,7 +74,7 @@ public class QueryContext extends OverridableConf {
   }
 
   public QueryContext(TajoConf conf, Session session) {
-    super(conf);
+    super(conf, ConfigKey.ConfigType.QUERY);
     putAll(session.getAllVariables());
   }
 
@@ -142,10 +142,6 @@ public class QueryContext extends OverridableConf {
   public void setPartitionMethod(PartitionMethodDesc partitionMethodDesc) {
     put(QueryVars.OUTPUT_PARTITIONS, partitionMethodDesc != null ? partitionMethodDesc.toJson() : null);
   }
-
-//  public PartitionMethodDesc getPartitionMethod() {
-//    return PartitionMethodDesc.fromJson(get(QueryVars.OUTPUT_PARTITIONS));
-//  }
 
   public void setOutputOverwrite() {
     setBool(QueryVars.OUTPUT_OVERWRITE, true);

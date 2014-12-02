@@ -28,6 +28,7 @@ import org.apache.tajo.QueryId;
 import org.apache.tajo.TajoProtos;
 import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.engine.query.QueryContext;
+import org.apache.tajo.ipc.ContainerProtocol;
 import org.apache.tajo.ipc.QueryMasterProtocol;
 import org.apache.tajo.ipc.QueryMasterProtocol.QueryMasterProtocolService;
 import org.apache.tajo.ipc.TajoWorkerProtocol;
@@ -55,8 +56,6 @@ public class QueryInProgress extends CompositeService {
 
   private Session session;
 
-  private QueryContext queryContext;
-
   private TajoAsyncDispatcher dispatcher;
 
   private LogicalRootNode plan;
@@ -73,6 +72,8 @@ public class QueryInProgress extends CompositeService {
 
   private QueryMasterProtocolService queryMasterRpcClient;
 
+  private ContainerProtocol.TajoContainerIdProto qmContainerId;
+
   private TableDesc resultDesc;
 
   public QueryInProgress(
@@ -83,11 +84,10 @@ public class QueryInProgress extends CompositeService {
     super(QueryInProgress.class.getName());
     this.masterContext = masterContext;
     this.session = session;
-    this.queryContext = queryContext;
     this.queryId = queryId;
     this.plan = plan;
 
-    queryInfo = new QueryInfo(queryId, sql, jsonExpr);
+    queryInfo = new QueryInfo(queryId, queryContext, sql, jsonExpr);
     queryInfo.setStartTime(System.currentTimeMillis());
   }
 
@@ -98,10 +98,6 @@ public class QueryInProgress extends CompositeService {
 
     dispatcher.register(QueryJobEvent.Type.class, new QueryInProgressEventHandler());
     super.init(conf);
-  }
-
-  public QueryContext getQueryContext() {
-    return queryContext;
   }
 
   public synchronized void kill() {
@@ -249,8 +245,8 @@ public class QueryInProgress extends CompositeService {
 
       QueryExecutionRequestProto.Builder builder = TajoWorkerProtocol.QueryExecutionRequestProto.newBuilder();
       builder.setQueryId(queryId.getProto())
+          .setQueryContext(queryInfo.getQueryContext().getProto())
           .setSession(session.getProto())
-          .setQueryContext(queryContext.getProto())
           .setExprInJson(PrimitiveProtos.StringProto.newBuilder().setValue(queryInfo.getJsonExpr()))
           .setLogicalPlanJson(PrimitiveProtos.StringProto.newBuilder().setValue(plan.toJson()).build());
 

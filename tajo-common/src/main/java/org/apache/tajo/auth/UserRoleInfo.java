@@ -19,6 +19,7 @@
 package org.apache.tajo.auth;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 public class UserRoleInfo {
   private final String username;
@@ -37,7 +38,52 @@ public class UserRoleInfo {
   }
 
   public synchronized static UserRoleInfo getCurrentUser() throws IOException {
-    String userName = new com.sun.security.auth.module.UnixSystem().getUsername();
+    Class<?> c;
+    Object   o = null;
+    Method method = null;
+    String userName;
+
+    String osName = System.getProperty("os.name").toLowerCase();
+
+    try {
+      if (isWindows(osName)) {
+        c = Class.forName("com.sun.security.auth.module.NTSystem");
+        o = Class.forName("com.sun.security.auth.module.NTSystem").newInstance();
+        method = c.getDeclaredMethod("getName");
+
+      } else if (isUnix(osName) || isMac(osName)) {
+        c = Class.forName("com.sun.security.auth.module.UnixSystem");
+        o = Class.forName("com.sun.security.auth.module.UnixSystem").newInstance();
+        method = c.getDeclaredMethod("getUsername");
+
+      } else if (isSolaris(osName)) {
+        c = Class.forName("com.sun.security.auth.module.SolarisSystem");
+        o = Class.forName("com.sun.security.auth.module.SolarisSystem").newInstance();
+
+        method = c.getDeclaredMethod("getUsername");
+      }
+
+      userName = (String) method.invoke(o);
+    } catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
+
     return new UserRoleInfo(userName);
+  }
+
+  public static boolean isWindows(String osName) {
+    return (osName.indexOf("win") >= 0);
+  }
+
+  public static boolean isMac(String osName) {
+    return (osName.indexOf("mac") >= 0);
+  }
+
+  public static boolean isUnix(String osName) {
+    return (osName.indexOf("nix") >= 0 || osName.indexOf("nux") >= 0 || osName.indexOf("aix") > 0 );
+  }
+
+  public static boolean isSolaris(String osName) {
+    return (osName.indexOf("sunos") >= 0) || (osName.indexOf("solaris") >= 0);
   }
 }

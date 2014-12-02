@@ -356,7 +356,7 @@ public class TajoConf extends Configuration {
     $CLI_ERROR_STOP("tajo.cli.error.stop", false),
 
     // Timezone & Date ----------------------------------------------------------
-    $TIMEZONE("tajo.timezone", "UTC"),
+    $TIMEZONE("tajo.timezone", "UTC+0"),
     $DATE_ORDER("tajo.date.order", "YMD"),
 
     // FILE FORMAT

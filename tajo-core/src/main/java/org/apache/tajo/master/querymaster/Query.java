@@ -314,13 +314,13 @@ public class Query implements EventHandler<QueryEvent> {
     queryHistory.setLogicalPlan(plan.getLogicalPlan().toString());
     queryHistory.setDistributedPlan(plan.toString());
 
-    List<String[]> sessionVariables = new ArrayList<String[]>();
+    List<String[]> queryContextVariables = new ArrayList<String[]>();
     for(Map.Entry<String,String> entry: plan.getContext().getAllKeyValus().entrySet()) {
       if (SessionVars.exists(entry.getKey()) && SessionVars.isPublic(SessionVars.get(entry.getKey()))) {
-        sessionVariables.add(new String[]{entry.getKey(), entry.getValue()});
+        queryContextVariables.add(new String[]{entry.getKey(), entry.getValue()});
       }
     }
-    queryHistory.setSessionVariables(sessionVariables);
+    queryHistory.setSessionVariables(queryContextVariables);
 
     return queryHistory;
   }

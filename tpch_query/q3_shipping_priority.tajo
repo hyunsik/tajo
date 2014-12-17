@@ -1,0 +1,81 @@
+
+DROP TABLE q3_shipping_priority;
+
+-- create the target table
+create table q3_shipping_priority (l_orderkey int, revenue double, o_orderdate string, o_shippriority int);
+
+-- the query
+Insert overwrite table q3_shipping_priority 
+select 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  customer c join orders o 
+    on c.c_mktsegment = 'BUILDING' and c.c_custkey = o.o_custkey 
+  join lineitem l 
+    on l.l_orderkey = o.o_orderkey
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' 
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+
+===========================================
+Origin Query
+
+select
+l_orderkey, 
+sum(l_extendedprice*(1-l_discount)) as revenue,
+o_orderdate, 
+o_shippriority
+from 
+customer, 
+orders, 
+lineitem
+where 
+c_mktsegment = '[SEGMENT]'
+and c_custkey = o_custkey
+and l_orderkey = o_orderkey
+and o_orderdate < date '[DATE]'
+and l_shipdate > date '[DATE]'
+group by 
+l_orderkey, 
+o_orderdate, 
+o_shippriority
+order by 
+revenue desc, 
+o_orderdate;
+
+1. SEGMENT = BUILDING;
+2. DATE = 1995-03-15.
+================================
+
+
+l_orderkey,  revenue,  o_orderdate,  o_shippriority
+-------------------------------
+249739810,  492136.8537,  1995-02-28,  0
+165214338,  485645.5293,  1995-03-09,  0
+507274210,  485256.2466999999,  1995-03-10,  0
+202071367,  474746.4068,  1995-03-12,  0
+37307463,  474325.1937999999,  1995-02-06,  0
+461984355,  468002.5274,  1995-03-13,  0
+100810368,  467932.7645000001,  1995-02-28,  0
+74015523,  467786.8027,  1995-03-14,  0
+402772582,  463367.0665,  1995-03-10,  0
+367111712,  462559.3977,  1995-03-01,  0
+(10 rows, 54.586 sec, 382 B selected)
+
+=========================================
+
+l_orderkey,  revenue,  o_orderdate,  o_shippriority
+-------------------------------
+18869634,  512508.6578,  1995-01-10,  0
+3947421511,  507889.04639999993,  1995-03-14,  0
+1319897249,  503401.9508,  1995-03-05,  0
+2036965252,  495852.8691999999,  1995-03-03,  0
+1980912577,  493605.4658999999,  1995-02-14,  0
+4803840546,  492521.943,  1995-02-18,  0
+3407391428,  491379.51860000007,  1995-03-09,  0
+5289035781,  488004.5812,  1995-03-11,  0
+5530172133,  487671.6623,  1995-02-07,  0
+3885365216,  487236.4125999999,  1995-03-04,  0
+(10 rows, 407.518 sec, 398 B selected)

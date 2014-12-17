@@ -1,0 +1,200 @@
+--DROP TABLE orders;
+--DROP TABLE lineitem;
+--DROP TABLE supplier;
+--DROP TABLE nation;
+DROP TABLE q21_tmp1;
+DROP TABLE q21_tmp2;
+DROP TABLE q21_suppliers_who_kept_orders_waiting;
+
+-- create tables and load data
+--create external table lineitem (L_ORDERKEY INT, L_PARTKEY INT, L_SUPPKEY INT, L_LINENUMBER INT, L_QUANTITY DOUBLE, L_EXTENDEDPRICE DOUBLE, L_DISCOUNT DOUBLE, L_TAX DOUBLE, L_RETURNFLAG STRING, L_LINESTATUS STRING, L_SHIPDATE STRING, L_COMMITDATE STRING, L_RECEIPTDATE STRING, L_SHIPINSTRUCT STRING, L_SHIPMODE STRING, L_COMMENT STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' STORED AS TEXTFILE LOCATION '/tpch/lineitem';
+--create external table orders (O_ORDERKEY INT, O_CUSTKEY INT, O_ORDERSTATUS STRING, O_TOTALPRICE DOUBLE, O_ORDERDATE STRING, O_ORDERPRIORITY STRING, O_CLERK STRING, O_SHIPPRIORITY INT, O_COMMENT STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' STORED AS TEXTFILE LOCATION '/tpch/orders';
+--create external table supplier (S_SUPPKEY INT, S_NAME STRING, S_ADDRESS STRING, S_NATIONKEY INT, S_PHONE STRING, S_ACCTBAL DOUBLE, S_COMMENT STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' STORED AS TEXTFILE LOCATION '/tpch/supplier';
+--create external table nation (N_NATIONKEY INT, N_NAME STRING, N_REGIONKEY INT, N_COMMENT STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' STORED AS TEXTFILE LOCATION '/tpch/nation';
+
+-- create target tables
+create table q21_tmp1(l_orderkey int8, count_suppkey int8, max_suppkey int);
+create table q21_tmp2(l_orderkey int8, count_suppkey int8, max_suppkey int);
+create table q21_suppliers_who_kept_orders_waiting(s_name text, numwait int);
+
+-- the query
+insert overwrite into q21_tmp1
+select
+  l_orderkey, count(distinct l_suppkey), max(l_suppkey) as max_suppkey
+from
+  lineitem
+group by l_orderkey;
+
+(150000000 rows, 108.318 sec, 2.6 GiB inserted)
+===============================
+(1500000000 rows, 893.537 sec, 29.1 GiB inserted)
+
+tajo.executor.external-sort.buffer-mb: 1024
+tajo.dist-query.join.partition-volume-mb: 128
+tajo.dist-query.sort.partition-volume-mb: 128
+tajo.dist-query.groupby.partition-volume-mb: 128
+
+insert overwrite into q21_tmp2
+select
+  l_orderkey, count(distinct l_suppkey), max(l_suppkey) as max_suppkey
+from
+  lineitem
+where
+  l_receiptdate > l_commitdate
+group by l_orderkey;
+
+(137548511 rows, 81.895 sec, 2.4 GiB inserted)
+================================
+(1375477334 rows, 641.467 sec, 26.6 GiB inserted)
+
+
+tajo.executor.external-sort.buffer-mb: 1024
+tajo.dist-query.join.partition-volume-mb: 128
+tajo.dist-query.sort.partition-volume-mb: 128
+tajo.dist-query.groupby.partition-volume-mb: 128
+
+
+insert overwrite into q21_suppliers_who_kept_orders_waiting
+select
+  s_name, count(1) as numwait
+from
+  (select s_name from
+(select s_name, t2.l_orderkey, l_suppkey, count_suppkey, max_suppkey 
+ from q21_tmp2 t2 right outer join
+      (select s_name, l_orderkey, l_suppkey from
+         (select s_name, t1.l_orderkey, l_suppkey, count_suppkey, max_suppkey
+          from
+            q21_tmp1 t1 join
+            (select s_name, l_orderkey, l_suppkey
+             from 
+               orders o join
+               (select s_name, l_orderkey, l_suppkey
+                from
+                  nation n join supplier s
+                  on
+                    s.s_nationkey = n.n_nationkey
+                    and n.n_name = 'SAUDI ARABIA'
+                  join lineitem l
+                  on
+                    s.s_suppkey = l.l_suppkey
+                where
+                  l.l_receiptdate > l.l_commitdate
+                ) l1 on o.o_orderkey = l1.l_orderkey and o.o_orderstatus = 'F'
+             ) l2 on l2.l_orderkey = t1.l_orderkey
+          ) a
+          where
+           (count_suppkey > 1) or ((count_suppkey=1) and (l_suppkey <> max_suppkey))
+       ) l3 on l3.l_orderkey = t2.l_orderkey
+    ) b
+    where
+     (count_suppkey is null) or ((count_suppkey=1) and (l_suppkey = max_suppkey))
+  )c
+group by s_name
+order by numwait desc, s_name
+limit 100;
+
+s_name,  numwait
+-------------------------------
+Supplier#000153887,  49
+Supplier#000747754,  48
+Supplier#000936846,  48
+Supplier#000458746,  47
+Supplier#000670778,  47
+Supplier#000836792,  47
+Supplier#000176505,  46
+Supplier#000287008,  46
+Supplier#000386093,  46
+Supplier#000395865,  46
+Supplier#000662711,  46
+Supplier#000682347,  46
+Supplier#000811813,  46
+Supplier#000887233,  46
+Supplier#000927796,  46
+Supplier#000945568,  46
+Supplier#000963223,  46
+Supplier#000057046,  45
+Supplier#000122317,  45
+Supplier#000271636,  45
+Supplier#000277040,  45
+Supplier#000407925,  45
+Supplier#000776821,  45
+Supplier#000824256,  45
+Supplier#000831423,  45
+Supplier#000975089,  45
+Supplier#000026807,  44
+Supplier#000084585,  44
+Supplier#000090260,  44
+Supplier#000149956,  44
+Supplier#000158332,  44
+Supplier#000188143,  44
+Supplier#000226181,  44
+Supplier#000236084,  44
+Supplier#000270867,  44
+Supplier#000289046,  44
+Supplier#000308015,  44
+Supplier#000336683,  44
+Supplier#000386672,  44
+Supplier#000401466,  44
+Supplier#000485466,  44
+Supplier#000529545,  44
+Supplier#000542266,  44
+Supplier#000559552,  44
+Supplier#000571599,  44
+Supplier#000602035,  44
+Supplier#000712144,  44
+Supplier#000726863,  44
+Supplier#000891531,  44
+Supplier#000909269,  44
+Supplier#000937862,  44
+Supplier#000991736,  44
+Supplier#000997341,  44
+Supplier#000998874,  44
+Supplier#000028897,  43
+Supplier#000056510,  43
+Supplier#000099325,  43
+Supplier#000115814,  43
+Supplier#000116241,  43
+Supplier#000179805,  43
+Supplier#000198676,  43
+Supplier#000202669,  43
+Supplier#000218586,  43
+Supplier#000228475,  43
+Supplier#000303081,  43
+Supplier#000305639,  43
+Supplier#000321693,  43
+Supplier#000337025,  43
+Supplier#000348949,  43
+Supplier#000360293,  43
+Supplier#000400339,  43
+Supplier#000445142,  43
+Supplier#000460488,  43
+Supplier#000467370,  43
+Supplier#000533485,  43
+Supplier#000562020,  43
+Supplier#000565016,  43
+Supplier#000592204,  43
+Supplier#000600350,  43
+Supplier#000672495,  43
+Supplier#000680875,  43
+Supplier#000694752,  43
+Supplier#000736398,  43
+Supplier#000776859,  43
+Supplier#000831614,  43
+Supplier#000895145,  43
+Supplier#000921523,  43
+Supplier#000938120,  43
+Supplier#000992653,  43
+Supplier#000011516,  42
+Supplier#000036391,  42
+Supplier#000049797,  42
+Supplier#000056300,  42
+Supplier#000073969,  42
+Supplier#000097468,  42
+Supplier#000118264,  42
+Supplier#000180025,  42
+Supplier#000227225,  42
+Supplier#000251330,  42
+Supplier#000260172,  42
+(100 rows, 104.098 sec, 2.1 KiB selected)
+==========================
+(100 rows, 804.719 sec, 2.1 KiB selected)

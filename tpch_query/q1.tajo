@@ -1,0 +1,122 @@
+select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice*(1-l_discount)) as sum_disc_price, sum
+(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as
+ count_order 
+from lineitem
+where l_shipdate <= '1998-09-01' 
+group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;
+
+
+==========================
+Origin query
+
+select
+l_returnflag, 
+l_linestatus, 
+sum(l_quantity) as sum_qty,
+sum(l_extendedprice) as sum_base_price,
+sum(l_extendedprice*(1-l_discount)) as sum_disc_price,
+sum(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge,
+avg(l_quantity) as avg_qty, 
+avg(l_extendedprice) as avg_price,
+avg(l_discount) as avg_disc, 
+count(*) as count_order
+from 
+lineitem
+where 
+l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
+group by 
+l_returnflag, 
+l_linestatus
+order by 
+l_returnflag, 
+l_linestatus;
+
+DELTA is randomly selected within [60. 120].
+=======================
+100GB
+
+l_returnflag,  l_linestatus,  sum_qty,  sum_base_price,  sum_disc_price,  sum_charge,  avg_qty,  avg_price,  avg_disc,  count_order
+-------------------------------
+A,  F,  3.775127758E9,  5.660776097194442E12,  5.377736398183939E12,  5.592847429515924E12,  25.499370423275423,  38236.11698430484,  0.05000224353100083,  148047881
+N,  F,  9.8553062E7,  1.477710983859801E11,  1.4038496596503464E11,  1.4599979303277557E11,  25.501556956882876,  38237.19938880453,  0.04998528433805348,  3864590
+N,  O,  7.431523656E9,  1.1143560604812672E13,  1.0586388136235275E13,  1.1009852657133562E13,  25.50003948264419,  38237.27791952029,  0.04999793090565375,  291431849
+R,  F,  3.77572497E9,  5.66160303274533E12,  5.3785135639154E12,  5.593662252666912E12,  25.50006628406532,  38236.6972584529,  0.05000130433972606,  148067261
+(4 rows, 24.191 sec, 591 B selected)
+
+=======================
+1TB
+
+l_returnflag,  l_linestatus,  sum_qty,  sum_base_price,  sum_disc_price,  sum_charge,  avg_qty,  avg_price,  avg_disc,  count_order
+-------------------------------
+A,  F,  3.7757113842E10,  5.6616527268757234E13,  5.378566580027895E13,  5.593707147105517E13,  25.499822495917584,  38236.804903309145,  0.05000127879640908,  1480681438
+N,  F,  9.85802167E8,  1.47816940172762E12,  1.404256464466542E12,  1.4604439796810676E12,  25.501163950446003,  38237.93609087158,  0.05000779623036794,  38657144
+N,  O,  7.429924649E10,  1.1141194126288552E14,  1.0584137725435194E14,  1.1007507877151488E14,  25.500028861486197,  38237.36917843655,  0.04999957213747038,  2913692643
+R,  F,  3.7757365731E10,  5.661701527762691E13,  5.378616300373274E13,  5.5937599335813086E13,  25.500100042872333,  38237.29557814361,  0.04999960114825045,  1480675200
+(4 rows, 227.51 sec, 606 B selected)
+
+
+
+=================================================
+HBase
+
+create database hbase_tpch100;
+\c hbase_tpch100
+
+create table nation (n_nationkey int4, n_name text, n_regionkey int4, n_comment text)
+using hbase with ('table'='nation_tpch100', 
+'columns'=':key#b,n_name:,n_regionkey:#b,n_comment:', 'hbase.zookeeper.quorum'='appliance001,appliance002,appliance003');
+
+insert into nation select n_nationkey, n_name, n_regionkey, n_comment from tpch100.nation;
+
+==================================
+create table customer 
+(c_custkey int8, c_name text, c_address text, c_nationkey int8, c_phone text, c_acctbal float8, c_mktsegment text, c_comment text)
+using hbase with ('table'='customer_tpch100',
+'hbase.split.rowkeys'='1000000,2000000,3000000,4000000,5000000,6000000,7000000,8000000,9000000,10000000,11000000,12000000,13000000,14000000', 
+'columns'=':key#b,info:c_name,info:c_address,info:c_nationkey#b,info:c_phone,info:c_acctbal#b,info:c_mktsegment,info:c_comment', 
+'hbase.zookeeper.quorum'='appliance001,appliance002,appliance003');
+
+insert into customer select * from tpch100.customer 
+
+
+15,000,000
+
+drop table customer2 purge
+
+create table customer2 
+(c_custkey text, c_nationkey text, c_name text, c_address text, c_phone text, c_acctbal float8, c_mktsegment text, c_comment text)
+using hbase with ('table'='customer_tpch1002',
+'hbase.split.rowkeys'='0001000000,0002000000,0003000000,0004000000,0005000000,0006000000,0007000000,0008000000,0009000000,0011000000,0012000000,0013000000,0014000000', 
+'columns'='0:key,1:key,info:c_name,info:c_address,info:c_phone,info:c_acctbal#b,info:c_mktsegment,info:c_comment', 
+'hbase.zookeeper.quorum'='appliance001,appliance002,appliance003',
+'hbase.rowkey.delimiter'='_');
+
+insert into customer2 select to_char(c_custkey, '0000000000'), to_char(c_nationkey, '00000'), c_name, c_address, c_phone, c_acctbal, c_mktsegment, c_comment from tpch100.customer 
+
+create table orders (
+o_orderkey INT8, 
+o_custkey INT8,
+o_orderstatus TEXT,
+o_totalprice FLOAT8,
+o_orderdate TEXT,
+o_orderpriority TEXT,
+o_clerk TEXT,
+o_shippriority INT4,
+o_comment TEXT )
+using hbase with ( 'table'='orders_tpch100',
+'hbase.split.rowkeys.file'='hdfs://gta/user/tajo/orders.split',
+'columns'=':key#b,o_custkey:#b,o_orderstatus:,o_totalprice:#b,o_orderdate:,o_orderpriority:,o_clerk:,o_shippriority:#b,o_comment:',
+'hbase.zookeeper.quorum'='appliance001,appliance002,appliance003');
+
+
+insert into orders select * from tpch100.orders;
+
+===================================
+create table lineitem 
+(l_orderkey int8, l_partkey int8, l_suppkey int8, l_linenumber int8, l_quantity float8, l_extendedprice float8, l_discount float8, 
+l_tax float8, l_returnflag text l_linestatus text, l_shipdate text, l_commitdate text, l_receiptdate text, 
+l_shipinstruct text, l_shipmode text, l_comment text) 
+using hbase with ('table'='lineitem_tpch100',
+'hbase.split.rowkeys'='1000000,2000000,3000000,4000000,5000000,6000000,7000000,8000000,9000000,10000000,11000000,12000000,13000000,14000000', 
+'columns'=':key#b,l_partkey:#b,l_suppkey:#b,l_linenumber:#b,l_quantity:#b,l_extendedprice:#b,l_discount:#b,l_tax:#b,l_returnflag:,l_linestatus:,l_shipdate:,l_commitdate:,l_receiptdate:,l_shipinstruct:,l_shipmode:,l_comment:', 
+'hbase.zookeeper.quorum'='appliance001,appliance002,appliance003');

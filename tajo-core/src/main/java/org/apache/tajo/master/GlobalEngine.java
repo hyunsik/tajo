@@ -83,6 +83,13 @@ public class GlobalEngine extends AbstractService {
     this.context = context;
     this.catalog = context.getCatalog();
     this.sm = context.getStorageManager();
+
+    hookManager = new DistributedQueryHookManager();
+    hookManager.addHook(new CreateTableHook());
+    hookManager.addHook(new InsertHook());
+
+    queryExecutor = new QueryExecutor(context, hookManager);
+    ddlExecutor = new DDLExecutor(context);
   }
 
   public void start() {
@@ -92,13 +99,6 @@ public class GlobalEngine extends AbstractService {
       planner = new LogicalPlanner(context.getCatalog());
       optimizer = new LogicalOptimizer(context.getConf());
       annotatedPlanVerifier = new LogicalPlanVerifier(context.getConf(), context.getCatalog());
-
-      hookManager = new DistributedQueryHookManager();
-      hookManager.addHook(new CreateTableHook());
-      hookManager.addHook(new InsertHook());
-
-      queryExecutor = new QueryExecutor(context, hookManager);
-      ddlExecutor = new DDLExecutor(context);
     } catch (Throwable t) {
       LOG.error(t.getMessage(), t);
     }

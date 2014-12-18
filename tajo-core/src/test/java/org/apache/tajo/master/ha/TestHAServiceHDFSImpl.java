@@ -60,7 +60,7 @@ public class TestHAServiceHDFSImpl  {
 
     cluster.startMiniCluster(1);
     conf = cluster.getConfiguration();
-    client = new TajoClientImpl(conf);
+    client = cluster.newTajoClient();
 
     try {
       FileSystem fs = cluster.getDefaultFileSystem();
@@ -95,7 +95,7 @@ public class TestHAServiceHDFSImpl  {
       assertFalse(cluster.getMaster().isActiveMaster());
       assertTrue(backupMaster.isActiveMaster());
 
-      client = new TajoClientImpl(conf);
+      client = cluster.newTajoClient();
       verifyDataBaseAndTable();
     } finally {
       client.close();

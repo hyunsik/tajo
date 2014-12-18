@@ -28,7 +28,6 @@ import org.apache.tajo.catalog.TableMeta;
 import org.apache.tajo.catalog.partition.PartitionMethodDesc;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.discovery.ServiceTracker;
-import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.ipc.ClientProtos.*;
 import org.apache.tajo.jdbc.TajoMemoryResultSet;
 import org.apache.tajo.util.KeyValueSet;
@@ -101,7 +100,7 @@ public class TajoClientImpl extends SessionConnection implements TajoClient, Que
   }
 
   public ResultSet createNullResultSet(QueryId queryId) throws IOException {
-    return new TajoMemoryResultSet(queryId, new Schema(), null, 0);
+    return TajoClientUtil.createNullResultSet(queryId);
   }
 
   public GetQueryResultResponse getResultResponse(QueryId queryId) throws ServiceException {

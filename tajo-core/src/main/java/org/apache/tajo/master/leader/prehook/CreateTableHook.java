@@ -44,12 +44,6 @@ public class CreateTableHook implements DistributedQueryHook {
   public void hook(TajoMaster.MasterContext context, QueryContext queryContext, LogicalPlan plan) throws Exception {
     LogicalRootNode rootNode = plan.getRootBlock().getRoot();
     CreateTableNode createTableNode = rootNode.getChild();
-
-    TableMeta meta = new TableMeta(createTableNode.getStorageType(), new KeyValueSet());
-    PhysicalPlanUtil.setNullCharIfNecessary(queryContext, createTableNode, meta);
-    meta.getOptions().putAll(createTableNode.getOptions());
-    createTableNode.setOptions(meta.getOptions());
-
     String [] splitted  = CatalogUtil.splitFQTableName(createTableNode.getTableName());
     String databaseName = splitted[0];
     String tableName = splitted[1];

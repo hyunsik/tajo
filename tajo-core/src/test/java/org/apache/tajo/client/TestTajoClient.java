@@ -682,9 +682,9 @@ public class TestTajoClient {
   }
 
   @Test
-  public void testSetCvsNull() throws Exception {
+  public void testNullCharSessionInCTAS() throws Exception {
     String sql =
-        "create table csvnull as select\n" +
+        "create table nullcharsession as select\n" +
             "  c_custkey,\n" +
             "  orders.o_orderkey,\n" +
             "  orders.o_orderstatus \n" +
@@ -694,19 +694,23 @@ public class TestTajoClient {
             "  c_custkey,\n" +
             "  orders.o_orderkey;\n";
 
-    TajoConf tajoConf = TpchTestBase.getInstance().getTestingCluster().getConfiguration();
-
     Map<String, String> variables = new HashMap<String, String>();
     variables.put(SessionVars.NULL_CHAR.keyname(), "\\\\T");
     client.updateSessionVariables(variables);
-
-    ResultSet res = client.executeQueryAndGetResult(sql);
+    TajoResultSet res = (TajoResultSet)client.executeQueryAndGetResult(sql);
     res.close();
 
-    TableDesc desc = client.getTableDesc("csvnull");
-    assertEquals(desc.getMeta().getOption(StorageConstants.TEXT_NULL), "\\\\T");
-    Path path = new Path(desc.getPath());
+    TableDesc resultDesc = client.getTableDesc("nullcharsession");
+    assertNullCharSessionVar(resultDesc);
+  }
 
+
+  public void assertNullCharSessionVar(TableDesc resultDesc) throws Exception {
+    TajoConf tajoConf = TpchTestBase.getInstance().getTestingCluster().getConfiguration();
+
+    assertEquals(resultDesc.getMeta().getOption(StorageConstants.TEXT_NULL), "\\\\T");
+
+    Path path = new Path(resultDesc.getPath());
     FileSystem fs = path.getFileSystem(tajoConf);
 
     FileStatus[] files = fs.listStatus(path);

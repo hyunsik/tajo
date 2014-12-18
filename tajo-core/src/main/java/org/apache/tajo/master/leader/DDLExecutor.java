@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.algebra.AlterTablespaceSetType;
+import org.apache.tajo.algebra.SetSession;
 import org.apache.tajo.annotation.Nullable;
 import org.apache.tajo.catalog.*;
 import org.apache.tajo.catalog.exception.*;
@@ -38,6 +39,7 @@ import org.apache.tajo.master.TajoMaster;
 import org.apache.tajo.master.session.Session;
 import org.apache.tajo.plan.LogicalPlan;
 import org.apache.tajo.plan.logical.*;
+import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.storage.StorageManager;
 import org.apache.tajo.storage.StorageUtil;
 
@@ -64,10 +66,10 @@ public class DDLExecutor {
     LogicalNode root = ((LogicalRootNode)plan.getRootBlock().getRoot()).getChild();
 
     switch (root.getType()) {
+
     case CREATE_DATABASE:
       CreateDatabaseNode createDatabase = (CreateDatabaseNode) root;
-      createDatabase(queryContext, createDatabase.getDatabaseName(), null,
-          createDatabase.isIfNotExists());
+      createDatabase(queryContext, createDatabase.getDatabaseName(), null, createDatabase.isIfNotExists());
       return true;
     case DROP_DATABASE:
       DropDatabaseNode dropDatabaseNode = (DropDatabaseNode) root;
@@ -87,7 +89,7 @@ public class DDLExecutor {
       return true;
     case ALTER_TABLE:
       AlterTableNode alterTable = (AlterTableNode) root;
-      alterTable(context, queryContext, alterTable);
+      alterTable(context, queryContext,alterTable);
       return true;
     case TRUNCATE_TABLE:
       TruncateTableNode truncateTable = (TruncateTableNode) root;
@@ -126,7 +128,7 @@ public class DDLExecutor {
   /**
    * Alter a given table
    */
-  public static void alterTable(TajoMaster.MasterContext context, final QueryContext queryContext,
+  public void alterTable(TajoMaster.MasterContext context, final QueryContext queryContext,
                                 final AlterTableNode alterTable) throws IOException {
 
     final CatalogService catalog = context.getCatalog();
@@ -179,14 +181,14 @@ public class DDLExecutor {
           AlterTableType.RENAME_TABLE));
       break;
     case RENAME_COLUMN:
-      if (existColumnName(catalog, qualifiedName, alterTable.getNewColumnName())) {
+      if (existColumnName(qualifiedName, alterTable.getNewColumnName())) {
         throw new ColumnNameAlreadyExistException(alterTable.getNewColumnName());
       }
       catalog.alterTable(CatalogUtil.renameColumn(qualifiedName, alterTable.getColumnName(),
           alterTable.getNewColumnName(), AlterTableType.RENAME_COLUMN));
       break;
     case ADD_COLUMN:
-      if (existColumnName(catalog, qualifiedName, alterTable.getAddNewColumn().getSimpleName())) {
+      if (existColumnName(qualifiedName, alterTable.getAddNewColumn().getSimpleName())) {
         throw new ColumnNameAlreadyExistException(alterTable.getAddNewColumn().getSimpleName());
       }
       catalog.alterTable(CatalogUtil.addNewColumn(qualifiedName, alterTable.getAddNewColumn(), AlterTableType.ADD_COLUMN));
@@ -196,7 +198,7 @@ public class DDLExecutor {
     }
   }
 
-  private static boolean existColumnName(CatalogService catalog, String tableName, String columnName) {
+  private boolean existColumnName(String tableName, String columnName) {
     final TableDesc tableDesc = catalog.getTableDesc(tableName);
     return tableDesc.getSchema().containsByName(columnName) ? true : false;
   }
@@ -232,13 +234,13 @@ public class DDLExecutor {
       }
     }
 
-    Path path = new Path(catalog.getTableDesc(qualifiedName).getPath());
+    TableDesc tableDesc = catalog.getTableDesc(qualifiedName);
     catalog.dropTable(qualifiedName);
 
     if (purge) {
       try {
-        FileSystem fs = path.getFileSystem(context.getConf());
-        fs.delete(path, true);
+        StorageManager.getStorageManager(queryContext.getConf(),
+            tableDesc.getMeta().getStoreType()).purgeTable(tableDesc);
       } catch (IOException e) {
         throw new InternalError(e.getMessage());
       }
@@ -251,8 +253,6 @@ public class DDLExecutor {
   public boolean createDatabase(@Nullable QueryContext queryContext, String databaseName,
                                        @Nullable String tablespace,
                                        boolean ifNotExists) throws IOException {
-
-    CatalogService catalog = context.getCatalog();
 
     String tablespaceName;
     if (tablespace == null) {
@@ -283,8 +283,6 @@ public class DDLExecutor {
   }
 
   public boolean dropDatabase(QueryContext queryContext, String databaseName, boolean ifExists) {
-    CatalogService catalog = context.getCatalog();
-
     boolean exists = catalog.existDatabase(databaseName);
     if(!exists) {
       if (ifExists) { // DROP DATABASE IF EXISTS
@@ -366,32 +364,18 @@ public class DDLExecutor {
       meta = CatalogUtil.newTableMeta(createTable.getStorageType());
     }
 
-    if(createTable.isExternal()){
+    if(PlannerUtil.isFileStorageType(createTable.getStorageType()) && createTable.isExternal()){
       Preconditions.checkState(createTable.hasPath(), "ERROR: LOCATION must be given.");
-    } else {
-      String databaseName;
-      String tableName;
-      if (CatalogUtil.isFQTableName(createTable.getTableName())) {
-        databaseName = CatalogUtil.extractQualifier(createTable.getTableName());
-        tableName = CatalogUtil.extractSimpleName(createTable.getTableName());
-      } else {
-        databaseName = queryContext.getCurrentDatabase();
-        tableName = createTable.getTableName();
-      }
-
-      // create a table directory (i.e., ${WAREHOUSE_DIR}/${DATABASE_NAME}/${TABLE_NAME} )
-      Path tablePath = StorageUtil.concatPath(storageManager.getWarehouseDir(), databaseName, tableName);
-      createTable.setPath(tablePath);
     }
 
-    return createTableOnPath(queryContext, createTable.getTableName(), createTable.getTableSchema(),
-        meta, createTable.getPath(), createTable.isExternal(), createTable.getPartitionMethod(), ifNotExists);
+    return createTable(queryContext, createTable.getTableName(), createTable.getStorageType(),
+        createTable.getTableSchema(), meta, createTable.getPath(), createTable.isExternal(),
+        createTable.getPartitionMethod(), ifNotExists);
   }
 
-  public TableDesc createTableOnPath(QueryContext queryContext, String tableName, Schema schema, TableMeta meta,
-                                     Path path, boolean isExternal, PartitionMethodDesc partitionDesc,
-                                     boolean ifNotExists)
-      throws IOException {
+  public TableDesc createTable(QueryContext queryContext, String tableName, CatalogProtos.StoreType storeType,
+                               Schema schema, TableMeta meta, Path path, boolean isExternal,
+                               PartitionMethodDesc partitionDesc, boolean ifNotExists) throws IOException {
     String databaseName;
     String simpleTableName;
     if (CatalogUtil.isFQTableName(tableName)) {
@@ -415,38 +399,14 @@ public class DDLExecutor {
       }
     }
 
-    FileSystem fs = path.getFileSystem(context.getConf());
-
-    if (isExternal) {
-      if(!fs.exists(path)) {
-        LOG.error("ERROR: " + path.toUri() + " does not exist");
-        throw new IOException("ERROR: " + path.toUri() + " does not exist");
-      }
-    } else {
-      fs.mkdirs(path);
-    }
-
-    long totalSize = 0;
-
-    try {
-      totalSize = storageManager.calculateSize(path);
-    } catch (IOException e) {
-      LOG.warn("Cannot calculate the size of the relation", e);
-    }
-
-    TableStats stats = new TableStats();
-    stats.setNumBytes(totalSize);
-
-    if (isExternal) { // if it is an external table, there is no way to know the exact row number without processing.
-      stats.setNumRows(TajoConstants.UNKNOWN_ROW_NUMBER);
-    }
-
     TableDesc desc = new TableDesc(CatalogUtil.buildFQName(databaseName, simpleTableName),
-        schema, meta, path.toUri(), isExternal);
-    desc.setStats(stats);
+        schema, meta, (path != null ? path.toUri(): null), isExternal);
+
     if (partitionDesc != null) {
       desc.setPartitionMethod(partitionDesc);
     }
+
+    StorageManager.getStorageManager(queryContext.getConf(), storeType).createTable(desc, ifNotExists);
 
     if (catalog.createTable(desc)) {
       LOG.info("Table " + desc.getName() + " is created (" + desc.getStats().getNumBytes() + ")");

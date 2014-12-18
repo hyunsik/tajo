@@ -24,6 +24,7 @@ import org.apache.tajo.TajoProtos;
 import org.apache.tajo.catalog.CatalogUtil;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.ipc.ClientProtos;
 import org.apache.tajo.jdbc.FetchResultSet;
 import org.apache.tajo.jdbc.TajoMemoryResultSet;
@@ -73,8 +74,8 @@ public class TajoClientUtil {
 
       int fetchRowNum = DEFAULT_FETCH_ROWNUM;
 
-      if (response.hasSessionVariables()) {
-        for (PrimitiveProtos.KeyValueProto eachKeyValue: response.getSessionVariables().getKeyvalList()) {
+      if (response.hasSessionVars()) {
+        for (PrimitiveProtos.KeyValueProto eachKeyValue: response.getSessionVars().getKeyvalList()) {
           if (eachKeyValue.getKey().equals(SessionVars.FETCH_ROWNUM.keyname())) {
             fetchRowNum = Integer.parseInt(eachKeyValue.getValue());
           }
@@ -89,7 +90,16 @@ public class TajoClientUtil {
       return new TajoMemoryResultSet(null,
           new Schema(serializedResultSet.getSchema()),
           serializedResultSet.getSerializedTuplesList(),
-          response.getMaxRowNum());
+          response.getMaxRowNum(),
+          client.getClientSideSessionVars());
     }
+  }
+
+  public static ResultSet createNullResultSet() {
+    return new TajoMemoryResultSet(null, new Schema(), null, 0, null);
+  }
+
+  public static ResultSet createNullResultSet(QueryId queryId) {
+    return new TajoMemoryResultSet(queryId, new Schema(), null, 0, null);
   }
 }

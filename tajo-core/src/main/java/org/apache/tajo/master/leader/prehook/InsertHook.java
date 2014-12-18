@@ -25,9 +25,6 @@ import org.apache.tajo.plan.LogicalPlan;
 import org.apache.tajo.plan.logical.InsertNode;
 import org.apache.tajo.plan.logical.NodeType;
 
-/**
- * Created by hyunsik on 10/30/14.
- */
 public class InsertHook implements DistributedQueryHook {
 
   @Override

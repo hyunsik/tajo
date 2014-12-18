@@ -29,6 +29,9 @@ import org.apache.tajo.SessionVars;
 import org.apache.tajo.algebra.Expr;
 import org.apache.tajo.algebra.JsonHelper;
 import org.apache.tajo.catalog.CatalogService;
+import org.apache.tajo.catalog.Schema;
+import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.catalog.proto.CatalogProtos.StoreType;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.ipc.ClientProtos;
@@ -40,7 +43,9 @@ import org.apache.tajo.master.leader.prehook.DistributedQueryHookManager;
 import org.apache.tajo.master.leader.prehook.InsertHook;
 import org.apache.tajo.master.session.Session;
 import org.apache.tajo.plan.*;
+import org.apache.tajo.plan.logical.InsertNode;
 import org.apache.tajo.plan.logical.LogicalRootNode;
+import org.apache.tajo.plan.logical.NodeType;
 import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.plan.verifier.LogicalPlanVerifier;
 import org.apache.tajo.plan.verifier.PreLogicalPlanVerifier;
@@ -48,6 +53,7 @@ import org.apache.tajo.plan.verifier.VerificationState;
 import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.storage.StorageManager;
 import org.apache.tajo.util.CommonTestingUtil;
+import org.apache.tajo.util.ProtoUtil;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -69,15 +75,14 @@ public class GlobalEngine extends AbstractService {
   private LogicalPlanVerifier annotatedPlanVerifier;
   private DistributedQueryHookManager hookManager;
 
-  private DDLExecutor ddlExecutor;
   private QueryExecutor queryExecutor;
+  private DDLExecutor ddlExecutor;
 
   public GlobalEngine(final MasterContext context) {
     super(GlobalEngine.class.getName());
     this.context = context;
     this.catalog = context.getCatalog();
     this.sm = context.getStorageManager();
-    this.ddlExecutor = new DDLExecutor(context);
   }
 
   public void start() {
@@ -91,7 +96,9 @@ public class GlobalEngine extends AbstractService {
       hookManager = new DistributedQueryHookManager();
       hookManager.addHook(new CreateTableHook());
       hookManager.addHook(new InsertHook());
-      this.queryExecutor = new QueryExecutor(context, hookManager);
+
+      queryExecutor = new QueryExecutor(context, hookManager);
+      ddlExecutor = new DDLExecutor(context);
     } catch (Throwable t) {
       LOG.error(t.getMessage(), t);
     }
@@ -122,12 +129,14 @@ public class GlobalEngine extends AbstractService {
     return optimizer;
   }
 
-  @VisibleForTesting
   public LogicalPlanVerifier getLogicalPlanVerifier() {
     return annotatedPlanVerifier;
   }
 
-  @VisibleForTesting
+  public QueryExecutor getQueryExecutor() {
+    return queryExecutor;
+  }
+
   public DDLExecutor getDDLExecutor() {
     return ddlExecutor;
   }
@@ -199,37 +208,37 @@ public class GlobalEngine extends AbstractService {
     responseBuilder.setIsForwarded(false);
     responseBuilder.setUserName(queryContext.get(SessionVars.USERNAME));
 
+    if (PlannerUtil.checkIfSetSession(rootNode)) {
+      queryExecutor.execSetSession(queryContext, session, plan, responseBuilder);
 
-    if (PlannerUtil.checkIfDDLPlan(rootNode)) {
+    } else if (PlannerUtil.checkIfDDLPlan(rootNode)) {
       context.getSystemMetrics().counter("Query", "numDDLQuery").inc();
       ddlExecutor.execute(queryContext, session, plan);
       responseBuilder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
       responseBuilder.setResultCode(ClientProtos.ResultCode.OK);
 
-
     } else if (plan.isExplain()) { // explain query
-      queryExecutor.explainQuery(queryContext, session, sql, plan, responseBuilder);
+      queryExecutor.execExplain(queryContext, session, sql, plan, responseBuilder);
 
-
-    } else if (PlannerUtil.checkIfSimpleQuery(plan)) {
       // Simple query indicates a form of 'select * from tb_name [LIMIT X];'.
-      queryExecutor.executeSimpleQuery(queryContext, session, sql, plan, responseBuilder);
+    } else if (PlannerUtil.checkIfSimpleQuery(plan)) {
+      queryExecutor.execSimpleQuery(queryContext, session, sql, plan, responseBuilder);
 
-
-    } else if (PlannerUtil.checkIfNonFromQuery(plan)) {
       // NonFromQuery indicates a form of 'select a, x+y;'
+    } else if (PlannerUtil.checkIfNonFromQuery(plan)) {
       queryExecutor.execNonFromQuery(queryContext, session, sql, plan, responseBuilder);
-
 
     } else { // it requires distributed execution. So, the query is forwarded to a query master.
       queryExecutor.executeDistributedQuery(queryContext, session, plan, sql, jsonExpr, responseBuilder);
     }
+
+    responseBuilder.setSessionVars(ProtoUtil.convertFromMap(session.getAllVariables()));
     SubmitQueryResponse response = responseBuilder.build();
     return response;
   }
 
-  public QueryId updateQuery(QueryContext queryContext, Session session, String sql, boolean isJson)
-      throws IOException, SQLException, PlanningException {
+  public QueryId updateQuery(QueryContext queryContext, Session session, String sql, boolean isJson) throws IOException,
+      SQLException, PlanningException {
     try {
       LOG.info("SQL: " + sql);
 
@@ -281,6 +290,7 @@ public class GlobalEngine extends AbstractService {
     LOG.info("=============================================");
 
     annotatedPlanVerifier.verify(queryContext, state, plan);
+    verifyInsertTableSchema(queryContext, state, plan);
 
     if (!state.verified()) {
       StringBuilder sb = new StringBuilder();
@@ -291,5 +301,24 @@ public class GlobalEngine extends AbstractService {
     }
 
     return plan;
+  }
+
+  private void verifyInsertTableSchema(QueryContext queryContext, VerificationState state, LogicalPlan plan) {
+    StoreType storeType = PlannerUtil.getStoreType(plan);
+    if (storeType != null) {
+      LogicalRootNode rootNode = plan.getRootBlock().getRoot();
+      if (rootNode.getChild().getType() == NodeType.INSERT) {
+        try {
+          TableDesc tableDesc = PlannerUtil.getTableDesc(catalog, rootNode.getChild());
+          InsertNode iNode = rootNode.getChild();
+          Schema outSchema = iNode.getChild().getOutSchema();
+
+          StorageManager.getStorageManager(queryContext.getConf(), storeType)
+              .verifyInsertTableSchema(tableDesc, outSchema);
+        } catch (Throwable t) {
+          state.addVerification(t.getMessage());
+        }
+      }
+    }
   }
 }

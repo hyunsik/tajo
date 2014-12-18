@@ -32,7 +32,9 @@ import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.catalog.TableMeta;
 import org.apache.tajo.catalog.proto.CatalogProtos.StoreType;
 import org.apache.tajo.catalog.statistics.TableStats;
+import org.apache.tajo.client.QueryClientImpl;
 import org.apache.tajo.client.TajoClient;
+import org.apache.tajo.client.TajoResultSet;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.datum.DatumFactory;
@@ -55,7 +57,7 @@ public class TestResultSet {
   private static TajoTestingCluster util;
   private static TajoConf conf;
   private static TableDesc desc;
-  private static StorageManager sm;
+  private static FileStorageManager sm;
   private static TableMeta scoreMeta;
   private static Schema scoreSchema;
 
@@ -63,7 +65,7 @@ public class TestResultSet {
   public static void setup() throws Exception {
     util = TpchTestBase.getInstance().getTestingCluster();
     conf = util.getConfiguration();
-    sm = StorageManager.getStorageManager(conf);
+    sm = (FileStorageManager)StorageManager.getFileStorageManager(conf);
 
     scoreSchema = new Schema();
     scoreSchema.addColumn("deptname", Type.TEXT);
@@ -73,8 +75,7 @@ public class TestResultSet {
 
     Path p = sm.getTablePath("score");
     sm.getFileSystem().mkdirs(p);
-    Appender appender = StorageManager.getStorageManager(conf).getAppender(scoreMeta, scoreSchema,
-        new Path(p, "score"));
+    Appender appender = sm.getAppender(scoreMeta, scoreSchema, new Path(p, "score"));
     appender.init();
     int deptSize = 100;
     int tupleNum = 10000;
@@ -101,19 +102,13 @@ public class TestResultSet {
 
   @AfterClass
   public static void terminate() throws IOException {
-
   }
+
 
   @Test
   public void testDateTimeType() throws Exception {
     // Hcatalog does not support date type, time type in hive-0.12.0
     if(util.isHCatalogStoreRunning()) return;
-
-    TimeZone tajoCurrentTimeZone = TajoConf.getCurrentTimeZone();
-    TajoConf.setCurrentTimeZone(TimeZone.getTimeZone("UTC"));
-
-    TimeZone systemCurrentTimeZone = TimeZone.getDefault();
-    TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 
     ResultSet res = null;
     TajoClient client = TajoTestingCluster.newTajoClient();
@@ -188,8 +183,6 @@ public class TestResultSet {
       assertNotNull(timestamp);
       assertEquals("2014-01-01 10:00:00.0", timestamp.toString());
     } finally {
-      TajoConf.setCurrentTimeZone(tajoCurrentTimeZone);
-      TimeZone.setDefault(systemCurrentTimeZone);
       if (res != null) {
         res.close();
       }

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.tajo.QueryId;
 import org.apache.tajo.QueryIdFactory;
+import org.apache.tajo.SessionVars;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.catalog.Schema;
@@ -53,10 +54,9 @@ import org.apache.tajo.plan.Target;
 import org.apache.tajo.plan.expr.EvalNode;
 import org.apache.tajo.plan.logical.*;
 import org.apache.tajo.plan.util.PlannerUtil;
-import org.apache.tajo.storage.RowStoreUtil;
-import org.apache.tajo.storage.StorageManager;
-import org.apache.tajo.storage.Tuple;
-import org.apache.tajo.storage.VTuple;
+import org.apache.tajo.plan.verifier.VerifyException;
+import org.apache.tajo.storage.*;
+import org.apache.tajo.util.ProtoUtil;
 import org.apache.tajo.worker.TaskAttemptContext;
 
 import java.io.IOException;
@@ -80,7 +80,38 @@ public class QueryExecutor {
     this.hookManager = hookManager;
   }
 
-  public void explainQuery(QueryContext queryContext, Session session, String query, LogicalPlan plan, Builder builder)
+  public void execSetSession(QueryContext queryContext, Session session, LogicalPlan plan, Builder response) {
+    SetSessionNode setSessionNode = ((LogicalRootNode)plan.getRootBlock().getRoot()).getChild();
+
+    final String varName = setSessionNode.getName();
+
+    // SET CATALOG 'XXX'
+    if (varName.equals(SessionVars.CURRENT_DATABASE.name())) {
+      String databaseName = setSessionNode.getValue();
+
+      if (catalog.existDatabase(databaseName)) {
+        session.selectDatabase(setSessionNode.getValue());
+      } else {
+        response.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
+        response.setResultCode(ClientProtos.ResultCode.ERROR);
+        response.setErrorMessage("database \"" + databaseName + "\" does not exists.");
+      }
+
+      // others
+    } else {
+      if (setSessionNode.isDefaultValue()) {
+        session.removeVariable(varName);
+      } else {
+        session.setVariable(varName, setSessionNode.getValue());
+      }
+    }
+
+    context.getSystemMetrics().counter("Query", "numDDLQuery").inc();
+    response.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
+    response.setResultCode(ClientProtos.ResultCode.OK);
+  }
+
+  public void execExplain(QueryContext queryContext, Session session, String query, LogicalPlan plan, Builder response)
       throws IOException {
 
     String explainStr = PlannerUtil.buildExplainString(plan.getRootBlock().getRoot());
@@ -102,17 +133,17 @@ public class QueryExecutor {
     serializedResBuilder.setSchema(schema.getProto());
     serializedResBuilder.setBytesNum(bytesNum);
 
-    builder.setResultSet(serializedResBuilder.build());
-    builder.setMaxRowNum(lines.length);
-    builder.setResultCode(ClientProtos.ResultCode.OK);
-    builder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
+    response.setResultSet(serializedResBuilder.build());
+    response.setMaxRowNum(lines.length);
+    response.setResultCode(ClientProtos.ResultCode.OK);
+    response.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
 
     context.getQueryJobManager().createNewSimpleQuery(queryContext, session, query,
         (LogicalRootNode) plan.getRootBlock().getRoot());
   }
 
-  public void executeSimpleQuery(QueryContext queryContext, Session session, String query, LogicalPlan plan,
-                                 Builder responseBuilder) throws Exception {
+  public void execSimpleQuery(QueryContext queryContext, Session session, String query, LogicalPlan plan,
+                              Builder response) throws Exception {
     ScanNode scanNode = plan.getRootBlock().getNode(NodeType.SCAN);
     if (scanNode == null) {
       scanNode = plan.getRootBlock().getNode(NodeType.PARTITIONS_SCAN);
@@ -126,6 +157,7 @@ public class QueryExecutor {
     if (desc.getStats().getNumRows() == 0) {
       desc.getStats().setNumRows(TajoConstants.UNKNOWN_ROW_NUMBER);
     }
+
     QueryId queryId = QueryIdFactory.newQueryId(context.getResourceManager().getSeedQueryId());
 
     NonForwardQueryResultScanner queryResultScanner =
@@ -134,11 +166,10 @@ public class QueryExecutor {
     queryResultScanner.init();
     session.addNonForwardQueryResultScanner(queryResultScanner);
 
-    responseBuilder.setQueryId(queryId.getProto());
-    responseBuilder.setMaxRowNum(maxRow);
-    responseBuilder.setTableDesc(desc.getProto());
-    responseBuilder.setSessionVariables(session.getProto().getVariables());
-    responseBuilder.setResultCode(ClientProtos.ResultCode.OK);
+    response.setQueryId(queryId.getProto());
+    response.setMaxRowNum(maxRow);
+    response.setTableDesc(desc.getProto());
+    response.setResultCode(ClientProtos.ResultCode.OK);
 
     context.getQueryJobManager().createNewSimpleQuery(queryContext, session, query,
         (LogicalRootNode) plan.getRootBlock().getRoot());
@@ -146,7 +177,6 @@ public class QueryExecutor {
 
   public void execNonFromQuery(QueryContext queryContext, Session session, String query,
                                LogicalPlan plan, Builder responseBuilder) throws Exception {
-
     LogicalRootNode rootNode = plan.getRootBlock().getRoot();
     Target[] targets = plan.getRootBlock().getRawTargets();
     if (targets == null) {
@@ -183,7 +213,6 @@ public class QueryExecutor {
   private void insertNonFromQuery(TajoMaster.MasterContext context, QueryContext queryContext,
                                          InsertNode insertNode, Builder responseBuilder)
       throws Exception {
-    CatalogService catalog = context.getCatalog();
     String nodeUniqName = insertNode.getTableName() == null ? insertNode.getPath().getName() : insertNode.getTableName();
     String queryId = nodeUniqName + "_" + System.currentTimeMillis();
 
@@ -194,14 +223,13 @@ public class QueryExecutor {
     TableDesc tableDesc = null;
     Path finalOutputDir = null;
     if (insertNode.getTableName() != null) {
-      tableDesc = catalog.getTableDesc(insertNode.getTableName());
+      tableDesc = this.catalog.getTableDesc(insertNode.getTableName());
       finalOutputDir = new Path(tableDesc.getPath());
     } else {
       finalOutputDir = insertNode.getPath();
     }
 
-    TaskAttemptContext taskAttemptContext =
-        new TaskAttemptContext(queryContext, null, null, (CatalogProtos.FragmentProto[]) null, stagingDir);
+    TaskAttemptContext taskAttemptContext = new TaskAttemptContext(queryContext, null, null, null, stagingDir);
     taskAttemptContext.setOutputPath(new Path(stagingResultDir, "part-01-000000"));
 
     EvalExprExec evalExprExec = new EvalExprExec(taskAttemptContext, (EvalExprNode) insertNode.getChild());
@@ -252,8 +280,11 @@ public class QueryExecutor {
       stats.setNumBytes(volume);
       stats.setNumRows(1);
 
-      catalog.dropTable(insertNode.getTableName());
-      catalog.createTable(tableDesc);
+      CatalogProtos.UpdateTableStatsProto.Builder builder = CatalogProtos.UpdateTableStatsProto.newBuilder();
+      builder.setTableName(tableDesc.getName());
+      builder.setStats(stats.getProto());
+
+      catalog.updateTableStats(builder.build());
 
       responseBuilder.setTableDesc(tableDesc.getProto());
     } else {
@@ -282,34 +313,43 @@ public class QueryExecutor {
 
   public void executeDistributedQuery(QueryContext queryContext, Session session,
                                       LogicalPlan plan,
-                                      String query,
+                                      String sql,
                                       String jsonExpr,
-                                      Builder builder) throws Exception {
-    context.getSystemMetrics().counter("Query", "numDMLQuery").inc();
-
+                                      Builder responseBuilder) throws Exception {
     LogicalRootNode rootNode = plan.getRootBlock().getRoot();
 
+    CatalogProtos.StoreType storeType = PlannerUtil.getStoreType(plan);
+    if (storeType != null) {
+      StorageManager sm = StorageManager.getStorageManager(context.getConf(), storeType);
+      StorageProperty storageProperty = sm.getStorageProperty();
+      if (!storageProperty.isSupportsInsertInto()) {
+        throw new VerifyException("Inserting into non-file storage is not supported.");
+      }
+      sm.beforeInsertOrCATS(rootNode.getChild());
+    }
+    context.getSystemMetrics().counter("Query", "numDMLQuery").inc();
     hookManager.doHooks(context, queryContext, plan);
 
     QueryJobManager queryJobManager = this.context.getQueryJobManager();
     QueryInfo queryInfo;
 
-    queryInfo = queryJobManager.createNewQueryJob(session, queryContext, query, jsonExpr, rootNode);
+    queryInfo = queryJobManager.createNewQueryJob(session, queryContext, sql, jsonExpr, rootNode);
 
     if(queryInfo == null) {
-      builder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
-      builder.setResultCode(ClientProtos.ResultCode.ERROR);
-      builder.setErrorMessage("Fail starting QueryMaster.");
+      responseBuilder.setQueryId(QueryIdFactory.NULL_QUERY_ID.getProto());
+      responseBuilder.setResultCode(ClientProtos.ResultCode.ERROR);
+      responseBuilder.setErrorMessage("Fail starting QueryMaster.");
+      LOG.error("Fail starting QueryMaster: " + sql);
     } else {
-      builder.setIsForwarded(true);
-      builder.setQueryId(queryInfo.getQueryId().getProto());
-      builder.setResultCode(ClientProtos.ResultCode.OK);
+      responseBuilder.setIsForwarded(true);
+      responseBuilder.setQueryId(queryInfo.getQueryId().getProto());
+      responseBuilder.setResultCode(ClientProtos.ResultCode.OK);
       if(queryInfo.getQueryMasterHost() != null) {
-        builder.setQueryMasterHost(queryInfo.getQueryMasterHost());
+        responseBuilder.setQueryMasterHost(queryInfo.getQueryMasterHost());
       }
-      builder.setQueryMasterPort(queryInfo.getQueryMasterClientPort());
-
-      LOG.info("Query is forwarded to " + queryInfo.getQueryMasterHost() + ":" + queryInfo.getQueryMasterPort());
+      responseBuilder.setQueryMasterPort(queryInfo.getQueryMasterClientPort());
+      LOG.info("Query " + queryInfo.getQueryId().toString() + "," + queryInfo.getSql() + "," +
+          " is forwarded to " + queryInfo.getQueryMasterHost() + ":" + queryInfo.getQueryMasterPort());
     }
   }
 }

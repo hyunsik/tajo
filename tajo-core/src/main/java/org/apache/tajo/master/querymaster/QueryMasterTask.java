@@ -35,7 +35,14 @@ import org.apache.tajo.algebra.Expr;
 import org.apache.tajo.algebra.JsonHelper;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.catalog.proto.CatalogProtos.StoreType;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.plan.LogicalOptimizer;
+import org.apache.tajo.plan.LogicalPlan;
+import org.apache.tajo.plan.LogicalPlanner;
+import org.apache.tajo.plan.logical.LogicalRootNode;
+import org.apache.tajo.plan.rewrite.RewriteRule;
+import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.engine.planner.global.MasterPlan;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.exception.UnimplementedException;
@@ -56,10 +63,12 @@ import org.apache.tajo.plan.logical.LogicalNode;
 import org.apache.tajo.plan.logical.NodeType;
 import org.apache.tajo.plan.logical.ScanNode;
 import org.apache.tajo.plan.util.PlannerUtil;
+import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.rpc.CallFuture;
 import org.apache.tajo.rpc.NettyClientBase;
 import org.apache.tajo.rpc.RpcConnectionPool;
 import org.apache.tajo.storage.StorageManager;
+import org.apache.tajo.storage.StorageProperty;
 import org.apache.tajo.storage.StorageUtil;
 import org.apache.tajo.util.HAServiceUtil;
 import org.apache.tajo.util.metrics.TajoMetrics;
@@ -360,6 +369,8 @@ public class QueryMasterTask extends CompositeService {
   }
 
   public synchronized void startQuery() {
+    StorageManager sm = null;
+    LogicalPlan plan = null;
     try {
       if (query != null) {
         LOG.warn("Query already started");
@@ -370,7 +381,29 @@ public class QueryMasterTask extends CompositeService {
       LogicalOptimizer optimizer = new LogicalOptimizer(systemConf);
       Expr expr = JsonHelper.fromJson(jsonExpr, Expr.class);
       jsonExpr = null; // remove the possible OOM
-      LogicalPlan plan = planner.createPlan(queryContext, expr);
+      plan = planner.createPlan(queryContext, expr);
+
+      StoreType storeType = PlannerUtil.getStoreType(plan);
+      if (storeType != null) {
+        sm = StorageManager.getStorageManager(systemConf, storeType);
+        StorageProperty storageProperty = sm.getStorageProperty();
+        if (storageProperty.isSortedInsert()) {
+          String tableName = PlannerUtil.getStoreTableName(plan);
+          LogicalRootNode rootNode = plan.getRootBlock().getRoot();
+          TableDesc tableDesc =  PlannerUtil.getTableDesc(catalog, rootNode.getChild());
+          if (tableDesc == null) {
+            throw new VerifyException("Can't get table meta data from catalog: " + tableName);
+          }
+          List<RewriteRule> storageSpecifiedRewriteRules = sm.getRewriteRules(
+              getQueryTaskContext().getQueryContext(), tableDesc);
+          if (storageSpecifiedRewriteRules != null) {
+            for (RewriteRule eachRule: storageSpecifiedRewriteRules) {
+              optimizer.addRuleAfterToJoinOpt(eachRule);
+            }
+          }
+        }
+      }
+
       optimizer.optimize(queryContext, plan);
 
       DistributedQueryHookManager hookManager = new DistributedQueryHookManager();
@@ -406,6 +439,15 @@ public class QueryMasterTask extends CompositeService {
     } catch (Throwable t) {
       LOG.error(t.getMessage(), t);
       initError = t;
+
+      if (plan != null && sm != null) {
+        LogicalRootNode rootNode = plan.getRootBlock().getRoot();
+        try {
+          sm.rollbackOutputCommit(rootNode.getChild());
+        } catch (IOException e) {
+          LOG.warn(query.getId() + ", failed processing cleanup storage when query failed:" + e.getMessage(), e);
+        }
+      }
     }
   }
 
@@ -454,8 +496,14 @@ public class QueryMasterTask extends CompositeService {
     // Create Output Directory
     ////////////////////////////////////////////
 
+    String outputPath = context.get(QueryVars.OUTPUT_TABLE_PATH, "");
     if (context.isCreateTable() || context.isInsert()) {
-      stagingDir = StorageUtil.concatPath(context.getOutputPath(), TMP_STAGING_DIR_PREFIX, queryId);
+      if (outputPath == null || outputPath.isEmpty()) {
+        // hbase
+        stagingDir = new Path(TajoConf.getDefaultRootStagingDir(conf), queryId);
+      } else {
+        stagingDir = StorageUtil.concatPath(context.getOutputPath(), TMP_STAGING_DIR_PREFIX, queryId);
+      }
     } else {
       stagingDir = new Path(TajoConf.getDefaultRootStagingDir(conf), queryId);
     }
@@ -581,10 +629,6 @@ public class QueryMasterTask extends CompositeService {
 
     public QueryId getQueryId() {
       return queryId;
-    }
-
-    public StorageManager getStorageManager() {
-      return queryMasterContext.getStorageManager();
     }
 
     public Path getStagingDir() {

@@ -187,6 +187,7 @@ public class OverridableConf extends KeyValueSet {
       }
     }
 
+    // default permitted keys
     registered |= key.type() == ConfigType.SESSION || key.type() != ConfigType.SYSTEM;
 
     Preconditions.checkArgument(registered, key.keyname() + " (" + key.type() + ") is not allowed in " +

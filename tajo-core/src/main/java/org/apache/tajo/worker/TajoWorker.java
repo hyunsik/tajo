@@ -37,6 +37,7 @@ import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.discovery.ServiceTrackerFactory;
+import org.apache.tajo.ha.HAServiceUtil;
 import org.apache.tajo.ipc.TajoMasterProtocol;
 import org.apache.tajo.master.cluster.WorkerConnectionInfo;
 import org.apache.tajo.master.ha.TajoMasterInfo;

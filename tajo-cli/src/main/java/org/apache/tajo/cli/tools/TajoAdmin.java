@@ -29,7 +29,7 @@ import org.apache.tajo.discovery.ServiceTracker;
 import org.apache.tajo.ipc.ClientProtos.BriefQueryInfo;
 import org.apache.tajo.ipc.ClientProtos.WorkerResourceInfo;
 import org.apache.tajo.util.NetUtils;
-import org.apache.tajo.util.HAServiceUtil;
+import org.apache.tajo.ha.HAServiceUtil;
 import org.apache.tajo.util.TajoIdUtils;
 
 import java.io.IOException;

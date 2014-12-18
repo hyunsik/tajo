@@ -23,8 +23,8 @@ import org.apache.commons.cli.*;
 import org.apache.tajo.client.*;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.discovery.ServiceTracker;
-import org.apache.tajo.util.HAServiceUtil;
 import org.apache.tajo.util.NetUtils;
+import org.apache.tajo.ha.HAServiceUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;

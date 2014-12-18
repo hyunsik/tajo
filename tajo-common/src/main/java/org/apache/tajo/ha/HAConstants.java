@@ -16,26 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.master.event;
+package org.apache.tajo.ha;
 
-import org.apache.tajo.TaskAttemptId;
-import org.apache.tajo.ipc.TajoWorkerProtocol.TaskFatalErrorReport;
-
-public class TaskFatalErrorEvent extends TaskAttemptEvent {
-  private final String message;
-
-  public TaskFatalErrorEvent(TaskFatalErrorReport report) {
-    super(new TaskAttemptId(report.getId()),
-        TaskAttemptEventType.TA_FATAL_ERROR);
-    this.message = report.getErrorMessage();
-  }
-
-  public TaskFatalErrorEvent(TaskAttemptId attemptId, String message) {
-    super(attemptId, TaskAttemptEventType.TA_FATAL_ERROR);
-    this.message = message;
-  }
-
-  public String errorMessage() {
-    return message;
-  }
+public class HAConstants {
+  public final static int MASTER_UMBILICAL_RPC_ADDRESS = 1;
+  public final static int MASTER_CLIENT_RPC_ADDRESS = 2;
+  public final static int RESOURCE_TRACKER_RPC_ADDRESS = 3;
+  public final static int CATALOG_ADDRESS = 4;
+  public final static int MASTER_INFO_ADDRESS = 5;
 }

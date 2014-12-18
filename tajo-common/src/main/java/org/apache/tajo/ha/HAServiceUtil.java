@@ -16,11 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.util;
+package org.apache.tajo.ha;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.*;
 import org.apache.tajo.TajoConstants;
 import org.apache.tajo.conf.TajoConf;
+import org.apache.tajo.util.NetUtils;
+
 
 import javax.net.SocketFactory;
 import java.io.IOException;
@@ -30,23 +34,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HAServiceUtil {
-
-  private final static int MASTER_UMBILICAL_RPC_ADDRESS = 1;
-  private final static int MASTER_CLIENT_RPC_ADDRESS = 2;
-  private final static int RESOURCE_TRACKER_RPC_ADDRESS = 3;
-  private final static int CATALOG_ADDRESS = 4;
-  private final static int MASTER_INFO_ADDRESS = 5;
+  private static Log LOG = LogFactory.getLog(HAServiceUtil.class);
 
   public static InetSocketAddress getMasterUmbilicalAddress(TajoConf conf) {
-    return getMasterAddress(conf, MASTER_UMBILICAL_RPC_ADDRESS);
+    return getMasterAddress(conf, HAConstants.MASTER_UMBILICAL_RPC_ADDRESS);
+  }
+
+  public static String getMasterUmbilicalName(TajoConf conf) {
+    return NetUtils.normalizeInetSocketAddress(getMasterUmbilicalAddress(conf));
+  }
+
+  public static InetSocketAddress getMasterClientAddress(TajoConf conf) {
+    return getMasterAddress(conf, HAConstants.MASTER_CLIENT_RPC_ADDRESS);
+  }
+
+  public static String getMasterClientName(TajoConf conf) {
+    return NetUtils.normalizeInetSocketAddress(getMasterClientAddress(conf));
   }
 
   public static InetSocketAddress getResourceTrackerAddress(TajoConf conf) {
-    return getMasterAddress(conf, RESOURCE_TRACKER_RPC_ADDRESS);
+    return getMasterAddress(conf, HAConstants.RESOURCE_TRACKER_RPC_ADDRESS);
+  }
+
+  public static String getResourceTrackerName(TajoConf conf) {
+    return NetUtils.normalizeInetSocketAddress(getResourceTrackerAddress(conf));
   }
 
   public static InetSocketAddress getCatalogAddress(TajoConf conf) {
-    return getMasterAddress(conf, CATALOG_ADDRESS);
+    return getMasterAddress(conf, HAConstants.CATALOG_ADDRESS);
+  }
+
+  public static String getCatalogName(TajoConf conf) {
+    return NetUtils.normalizeInetSocketAddress(getCatalogAddress(conf));
+  }
+
+  public static InetSocketAddress getMasterInfoAddress(TajoConf conf) {
+    return getMasterAddress(conf, HAConstants.MASTER_INFO_ADDRESS);
+  }
+
+  public static String getMasterInfoName(TajoConf conf) {
+    return NetUtils.normalizeInetSocketAddress(getMasterInfoAddress(conf));
   }
 
   public static InetSocketAddress getMasterAddress(TajoConf conf, int type) {

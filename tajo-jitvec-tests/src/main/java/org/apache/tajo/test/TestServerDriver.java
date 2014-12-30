@@ -49,8 +49,8 @@ import org.apache.tajo.util.NetUtils;
 
 import java.net.InetSocketAddress;
 
-public class TestServerForExternal extends AbstractService {
-  private static final Log LOG = LogFactory.getLog(TestServerForExternal.class);
+public class TestServerDriver extends AbstractService {
+  private static final Log LOG = LogFactory.getLog(TestServerDriver.class);
 
   TajoTestingCluster testingCluster;
 
@@ -65,8 +65,8 @@ public class TestServerForExternal extends AbstractService {
   private BlockingRpcServer rpcServer;
   private TestServerProtocolService.BlockingInterface handler;
 
-  public TestServerForExternal() {
-    super(TestServerForExternal.class.getSimpleName());
+  public TestServerDriver() {
+    super(TestServerDriver.class.getSimpleName());
     testingCluster = TpchTestBase.getInstance().getTestingCluster();
     this.conf = testingCluster.getConfiguration();
     catalog = testingCluster.getMaster().getCatalog();
@@ -171,7 +171,7 @@ public class TestServerForExternal extends AbstractService {
 
   public static void startServer(String [] args) throws Exception {
     TajoConf conf = new TajoConf();
-    TestServerForExternal server = new TestServerForExternal();
+    TestServerDriver server = new TestServerDriver();
     server.init(conf);
     server.start();
   }

@@ -800,7 +800,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.tajo</groupId>
-        <artifactId>tajo-jitvec-tests</artifactId>
+        <artifactId>tajo-jitvec-server</artifactId>
         <version>${tajo.version}</version>
         <type>jar</type>
       </dependency>

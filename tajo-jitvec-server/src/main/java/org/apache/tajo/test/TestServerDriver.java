@@ -24,9 +24,11 @@ import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.tajo.LocalTajoTestingUtility;
 import org.apache.tajo.TajoTestingCluster;
 import org.apache.tajo.TpchTestBase;
 import org.apache.tajo.algebra.Expr;
+import org.apache.tajo.benchmark.TPCH;
 import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
@@ -52,6 +54,7 @@ import java.net.InetSocketAddress;
 public class TestServerDriver extends AbstractService {
   private static final Log LOG = LogFactory.getLog(TestServerDriver.class);
 
+  TpchTestBase tpchTestBase;
   TajoTestingCluster testingCluster;
 
   private TajoConf conf;
@@ -65,9 +68,13 @@ public class TestServerDriver extends AbstractService {
   private BlockingRpcServer rpcServer;
   private TestServerProtocolService.BlockingInterface handler;
 
-  public TestServerDriver() {
+  public TestServerDriver() throws Exception {
     super(TestServerDriver.class.getSimpleName());
-    testingCluster = TpchTestBase.getInstance().getTestingCluster();
+
+    tpchTestBase = new TpchTestBase();
+    tpchTestBase.setUp();
+
+    testingCluster = tpchTestBase.getTestingCluster();
     this.conf = testingCluster.getConfiguration();
     catalog = testingCluster.getMaster().getCatalog();
 
@@ -82,7 +89,7 @@ public class TestServerDriver extends AbstractService {
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
-    rpcServer = new BlockingRpcServer(TestServerProtocolService.class, handler,
+    rpcServer = new BlockingRpcServer(TestServerProtocol.class, handler,
         new InetSocketAddress("0.0.0.0", 30060), 1);
 
     super.serviceInit(conf);
@@ -104,7 +111,9 @@ public class TestServerDriver extends AbstractService {
   }
 
   public void serviceStop() throws Exception {
-    rpcServer.shutdown();
+    if (rpcServer != null) {
+      rpcServer.shutdown();
+    }
 
     super.serviceStop();
   }

@@ -29,6 +29,8 @@ import org.apache.tajo.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.sql.ResultSet;
 import java.util.Map;
 
@@ -54,7 +56,7 @@ public class TpchTestBase {
     }
   }
 
-  private TpchTestBase() throws IOException {
+  public TpchTestBase() throws IOException, URISyntaxException {
     names = new String[] {"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier", "empty_orders"};
     paths = new String[names.length];
     for (int i = 0; i < names.length; i++) {
@@ -72,12 +74,9 @@ public class TpchTestBase {
 
     tables = new String[names.length][];
     File file;
+    URL baseDir = FileUtil.getResourcePath("tpch");
     for (int i = 0; i < names.length; i++) {
-      file = new File("src/test/tpch/" + names[i] + ".tbl");
-      if(!file.exists()) {
-        file = new File(System.getProperty("user.dir") + "/tajo-core/src/test/tpch/" + names[i]
-            + ".tbl");
-      }
+      file = new File(baseDir.getPath() + "/" + names[i] + ".tbl");
       tables[i] = FileUtil.readTextFile(file).split("\n");
       paths[i] = file.getAbsolutePath();
     }
@@ -88,7 +87,7 @@ public class TpchTestBase {
     }
   }
 
-  private void setUp() throws Exception {
+  public void setUp() throws Exception {
     util = new LocalTajoTestingUtility();
     KeyValueSet opt = new KeyValueSet();
     opt.set(StorageConstants.TEXT_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);

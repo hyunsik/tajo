@@ -38,12 +38,15 @@ public class TpchTestBase {
   private static final Log LOG = LogFactory.getLog(TpchTestBase.class);
 
   String [] names;
+  String [] resourceNames;
   String [] paths;
   String [][] tables;
   Schema[] schemas;
   Map<String, Integer> nameMap = Maps.newHashMap();
   protected TPCH tpch;
   protected LocalTajoTestingUtility util;
+
+  public static final String TPCH_SAMPLE_DATA_RESOURCE = "tpch/sample_data/";
 
   private static TpchTestBase testBase;
 
@@ -71,14 +74,11 @@ public class TpchTestBase {
     for (int i = 0; i < names.length; i++) {
       schemas[i] = tpch.getSchema(names[i]);
     }
+    resourceNames = new String[names.length];
 
     tables = new String[names.length][];
-    File file;
-    URL baseDir = FileUtil.getResourcePath("tpch");
     for (int i = 0; i < names.length; i++) {
-      file = new File(baseDir.getPath() + "/" + names[i] + ".tbl");
-      tables[i] = FileUtil.readTextFile(file).split("\n");
-      paths[i] = file.getAbsolutePath();
+      resourceNames[i] = TPCH_SAMPLE_DATA_RESOURCE + names[i] + ".tbl";
     }
     try {
       Thread.sleep(1000);
@@ -91,7 +91,7 @@ public class TpchTestBase {
     util = new LocalTajoTestingUtility();
     KeyValueSet opt = new KeyValueSet();
     opt.set(StorageConstants.TEXT_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
-    util.setup(names, paths, schemas, opt);
+    util.setup(names, resourceNames, schemas, opt);
   }
 
   public static TpchTestBase getInstance() {

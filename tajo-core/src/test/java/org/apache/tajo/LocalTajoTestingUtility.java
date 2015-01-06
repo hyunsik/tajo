@@ -23,11 +23,15 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.tajo.benchmark.TPCH;
-import org.apache.tajo.catalog.*;
+import org.apache.tajo.catalog.CatalogUtil;
+import org.apache.tajo.catalog.Schema;
+import org.apache.tajo.catalog.TableDesc;
+import org.apache.tajo.catalog.TableMeta;
 import org.apache.tajo.catalog.proto.CatalogProtos;
 import org.apache.tajo.catalog.statistics.TableStats;
 import org.apache.tajo.client.TajoClient;
@@ -43,6 +47,7 @@ import org.apache.tajo.util.TajoIdUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.util.UUID;
@@ -93,7 +98,7 @@ public class LocalTajoTestingUtility {
   }
 
   public void setup(String[] names,
-                    String[] tablepaths,
+                    String[] resourceNames,
                     Schema[] schemas,
                     KeyValueSet option) throws Exception {
     LOG.info("===================================================");
@@ -108,12 +113,18 @@ public class LocalTajoTestingUtility {
     FileSystem fs = util.getDefaultFileSystem();
     Path rootDir = util.getMaster().getStorageManager().getWarehouseDir();
     fs.mkdirs(rootDir);
-    for (int i = 0; i < tablepaths.length; i++) {
-      Path localPath = new Path(tablepaths[i]);
-      Path tablePath = new Path(rootDir, names[i]);
-      fs.mkdirs(tablePath);
-      Path dfsPath = new Path(tablePath, localPath.getName());
-      fs.copyFromLocalFile(localPath, dfsPath);
+    for (int i = 0; i < names.length; i++) {
+
+      // preparing target dfs
+      Path tableDirPath = new Path(rootDir, names[i]);
+      fs.mkdirs(tableDirPath);
+      Path tableFilePath = new Path(tableDirPath, names[i]);
+
+      // write table path
+      InputStream inStream = ClassLoader.getSystemResourceAsStream(resourceNames[i]);
+      writeStreamToHDFS(conf, inStream, tableFilePath);
+      inStream.close();
+
       TableMeta meta = CatalogUtil.newTableMeta(CatalogProtos.StoreType.CSV, option);
 
       // Add fake table statistic data to tables.
@@ -122,7 +133,7 @@ public class LocalTajoTestingUtility {
       stats.setNumBytes(TPCH.tableVolumes.get(names[i]));
       TableDesc tableDesc = new TableDesc(
           CatalogUtil.buildFQName(TajoConstants.DEFAULT_DATABASE_NAME, names[i]), schemas[i], meta,
-          tablePath.toUri());
+          tableDirPath.toUri());
       tableDesc.setStats(stats);
       util.getMaster().getCatalog().createTable(tableDesc);
     }
@@ -131,6 +142,17 @@ public class LocalTajoTestingUtility {
     LOG.info("Test Cluster ready and test table created.");
     LOG.info("===================================================");
 
+  }
+
+  private static void writeStreamToHDFS(TajoConf conf, InputStream inputStrem, Path dfsPath) throws IOException {
+    FileSystem fs = dfsPath.getFileSystem(conf);
+    FSDataOutputStream dos = fs.create(dfsPath);
+    byte [] bytes = new byte[65536];
+    while(inputStrem.available() > 0) {
+      int readSizse = inputStrem.read(bytes);
+      dos.write(bytes, 0, readSizse);
+    }
+    dos.close();
   }
 
   public TajoTestingCluster getTestingCluster() {

@@ -21,16 +21,12 @@ package org.apache.tajo.master;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.tajo.LocalTajoTestingUtility;
-import org.apache.tajo.QueryId;
-import org.apache.tajo.QueryIdFactory;
-import org.apache.tajo.TajoTestingCluster;
+import org.apache.tajo.*;
 import org.apache.tajo.algebra.Expr;
 import org.apache.tajo.benchmark.TPCH;
 import org.apache.tajo.catalog.Schema;
@@ -58,6 +54,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.protobuf.ByteString;
+import org.mockito.cglib.core.Local;
 
 public class TestNonForwardQueryResultSystemScanner {
   
@@ -112,7 +109,7 @@ public class TestNonForwardQueryResultSystemScanner {
   
   private static void setupTestingCluster() throws Exception {
     testUtil = new LocalTajoTestingUtility();
-    String[] names, paths;
+    String[] names;
     Schema[] schemas;
     
     TPCH tpch = new TPCH();
@@ -126,20 +123,14 @@ public class TestNonForwardQueryResultSystemScanner {
       schemas[i] = tpch.getSchema(names[i]);
     }
 
-    File file;
-    paths = new String[names.length];
+    String [] resourceNames = new String[names.length];
     for (int i = 0; i < names.length; i++) {
-      file = new File("src/test/tpch/" + names[i] + ".tbl");
-      if(!file.exists()) {
-        file = new File(System.getProperty("user.dir") + "/tajo-core/src/test/tpch/" + names[i]
-            + ".tbl");
-      }
-      paths[i] = file.getAbsolutePath();
+      resourceNames[i] = TpchTestBase.TPCH_SAMPLE_DATA_RESOURCE + names[i] + ".tbl";
     }
     
     KeyValueSet opt = new KeyValueSet();
     opt.set(StorageConstants.TEXT_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
-    testUtil.setup(names, paths, schemas, opt);
+    testUtil.setup(names, resourceNames, schemas, opt);
     
     testingCluster = testUtil.getTestingCluster();
   }

@@ -16,26 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.tajo.cli.tsql;
+package org.apache.tajo.datum.protobuf;
 
-import jline.console.history.FileHistory;
-import org.apache.tajo.cli.tsql.commands.ExitCommand;
+import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
-public class TajoFileHistory extends FileHistory {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-  public TajoFileHistory(File file) throws IOException {
-    super(file);
+public class TestTextUtils {
+
+  @Test
+  public void testDigitValueSuccess() {
+      assertEquals(TextUtils.digitValue('0'), 0);
+      assertEquals(TextUtils.digitValue('a'), 10);
+      assertEquals(TextUtils.digitValue('A'), 10);
+      assertEquals(TextUtils.digitValue('f'), 15);
+      assertEquals(TextUtils.digitValue('F'), 15);
+      assertEquals(TextUtils.digitValue('z'), 35);
+      assertEquals(TextUtils.digitValue('Z'), 35);
   }
 
-  @Override
-  public void add(CharSequence item) {
-    // Don't store an exit command. Most users wouldn't want it.
-    if (item.equals(ExitCommand.COMMAND_STRING)) {
-      return;
-    }
-    super.add(item);
+  @Test
+  public void testDigitValueError() throws IllegalArgumentException {
+      boolean ret = true;
+      try {
+        TextUtils.digitValue('!');
+      } catch(IllegalArgumentException e) {
+        ret = false;
+      }
+
+      assertFalse(ret);
   }
 }

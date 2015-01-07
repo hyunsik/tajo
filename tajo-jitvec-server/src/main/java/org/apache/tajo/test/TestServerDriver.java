@@ -31,6 +31,8 @@ import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
+import org.apache.tajo.master.GlobalEngine;
+import org.apache.tajo.master.TajoMaster;
 import org.apache.tajo.master.session.Session;
 import org.apache.tajo.plan.LogicalOptimizer;
 import org.apache.tajo.plan.LogicalPlan;
@@ -42,6 +44,7 @@ import org.apache.tajo.plan.verifier.PreLogicalPlanVerifier;
 import org.apache.tajo.plan.verifier.VerificationState;
 import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.rpc.BlockingRpcServer;
+import org.apache.tajo.test.TestServerProtocol.ExecuteSQLResponse;
 import org.apache.tajo.test.TestServerProtocol.PlanResponse;
 import org.apache.tajo.test.TestServerProtocol.RequestPlan;
 import org.apache.tajo.test.TestServerProtocol.TestServerProtocolService;
@@ -117,6 +120,32 @@ public class TestServerDriver extends AbstractService {
   }
 
   public class ProtocolHandler implements TestServerProtocolService.BlockingInterface {
+    @Override
+    public ExecuteSQLResponse executeSQL(RpcController controller, TestServerProtocol
+        .ExecuteSQLRequest request) throws ServiceException {
+      TajoMaster.MasterContext context = testingCluster.getMaster().getContext();
+
+      GlobalEngine engine = context.getGlobalEngine();
+
+      Session session;
+
+      ExecuteSQLResponse.Builder responseBuilder = ExecuteSQLResponse.newBuilder();
+      try {
+        session = context.getSessionManager().createSession("test", "default");
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Query [" + request.getSql() + "] is submitted");
+        }
+        context.getGlobalEngine().executeQuery(session, request.getSql(), false);
+        responseBuilder.setStatus(Status.OK.code());
+
+      } catch (Throwable t) {
+        responseBuilder.setStatus(Status.UNKNOWN.code()).setMessage(t.getMessage());
+      }
+
+      return responseBuilder.build();
+    }
+
     @Override
     public PlanResponse requestPlan(RpcController controller, RequestPlan request) throws ServiceException {
 

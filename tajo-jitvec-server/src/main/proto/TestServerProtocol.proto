@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-// JitVecEngine -> JetVecTestServer
-
-package tajo;
+// for C++
+package tajo.test;
 option cc_generic_services = true;
 
+// for Java
 option java_package = "org.apache.tajo.test";
 option java_outer_classname = "TestServerProtocol";
 option java_generic_services = true;
@@ -30,6 +30,15 @@ import "PrimitiveProtos.proto";
 import "CatalogProtos.proto";
 import "DataTypes.proto";
 import "Plan.proto";
+
+message ExecuteSQLRequest {
+  required string sql = 1;
+}
+
+message ExecuteSQLResponse {
+  required int32 statusCode = 1;
+  repeated string errorMessageParams = 2;
+}
 
 message RequestPlan {
   required string sql = 1;
@@ -47,5 +56,6 @@ message InputDesc {
 }
 
 service TestServerProtocolService {
+  rpc ExecuteSQL(ExecuteSQLRequest) returns (ExecuteSQLResponse);
   rpc requestPlan(RequestPlan) returns (PlanResponse);
 }

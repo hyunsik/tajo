@@ -60,7 +60,7 @@ public class SessionManager extends CompositeService implements EventHandler<Ses
     }
   }
 
-  public String createSession(String username, String baseDatabaseName) throws InvalidSessionException {
+  public Session createSession(String username, String baseDatabaseName) throws InvalidSessionException {
     String sessionId;
     Session oldSession;
 
@@ -71,7 +71,7 @@ public class SessionManager extends CompositeService implements EventHandler<Ses
       throw new InvalidSessionException("Session id is duplicated: " + oldSession.getSessionId());
     }
     LOG.info("Session " + sessionId + " is created." );
-    return sessionId;
+    return newSession;
   }
 
   public Session removeSession(String sessionId) {

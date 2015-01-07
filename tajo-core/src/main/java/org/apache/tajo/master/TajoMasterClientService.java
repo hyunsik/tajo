@@ -124,6 +124,10 @@ public class TajoMasterClientService extends AbstractService {
     return this.bindAddress;
   }
 
+  public TajoMasterClientProtocolServiceHandler getServiceHandler() {
+    return clientHandler;
+  }
+
   /////////////////////////////////////////////////////////////////////////////
   // TajoMasterClientProtocolService
   /////////////////////////////////////////////////////////////////////////////
@@ -141,7 +145,7 @@ public class TajoMasterClientService extends AbstractService {
         }
 
         String sessionId =
-            context.getSessionManager().createSession(request.getUsername(), databaseName);
+            context.getSessionManager().createSession(request.getUsername(), databaseName).getSessionId();
         CreateSessionResponse.Builder builder = CreateSessionResponse.newBuilder();
         builder.setResultCode(ResultCode.OK);
         builder.setSessionId(TajoIdProtos.SessionIdProto.newBuilder().setId(sessionId).build());

@@ -56,6 +56,6 @@ message InputDesc {
 }
 
 service TestServerProtocolService {
-  rpc ExecuteSQL(ExecuteSQLRequest) returns (ExecuteSQLResponse);
+  rpc executeSQL(ExecuteSQLRequest) returns (ExecuteSQLResponse);
   rpc requestPlan(RequestPlan) returns (PlanResponse);
 }

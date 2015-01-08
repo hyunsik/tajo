@@ -133,14 +133,12 @@ public class TestServerDriver extends AbstractService {
       try {
         session = context.getSessionManager().createSession("test", "default");
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Query [" + request.getSql() + "] is submitted");
-        }
+        LOG.debug("Submitted Query [\n" + request.getSql() + "\n]");
         context.getGlobalEngine().executeQuery(session, request.getSql(), false);
-        responseBuilder.setStatus(Status.OK.code());
+        responseBuilder.setStatusCode(Status.OK.code());
 
       } catch (Throwable t) {
-        responseBuilder.setStatus(Status.UNKNOWN.code()).setMessage(t.getMessage());
+        responseBuilder.setStatusCode(Status.UNKNOWN.code()).addErrorMessageParams(t.getMessage());
       }
 
       return responseBuilder.build();

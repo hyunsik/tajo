@@ -24,6 +24,7 @@ import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.tajo.TajoIdProtos;
 import org.apache.tajo.TajoTestingCluster;
 import org.apache.tajo.TpchTestBase;
 import org.apache.tajo.algebra.Expr;
@@ -31,8 +32,12 @@ import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
+import org.apache.tajo.ipc.ClientProtos;
+import org.apache.tajo.ipc.ClientProtos.CreateSessionRequest;
+import org.apache.tajo.ipc.TajoMasterClientProtocol;
 import org.apache.tajo.master.GlobalEngine;
 import org.apache.tajo.master.TajoMaster;
+import org.apache.tajo.master.TajoMasterClientService;
 import org.apache.tajo.plan.LogicalOptimizer;
 import org.apache.tajo.plan.LogicalPlan;
 import org.apache.tajo.plan.LogicalPlanner;
@@ -43,9 +48,12 @@ import org.apache.tajo.plan.verifier.PreLogicalPlanVerifier;
 import org.apache.tajo.plan.verifier.VerificationState;
 import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.rpc.BlockingRpcServer;
+import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
+import org.apache.tajo.session.InvalidSessionException;
 import org.apache.tajo.session.Session;
 import org.apache.tajo.test.TestServerProtocol.*;
 import org.apache.tajo.util.NetUtils;
+import org.apache.tajo.util.ProtoUtil;
 
 import java.net.InetSocketAddress;
 
@@ -118,6 +126,22 @@ public class TestServerDriver extends AbstractService {
 
   public class ProtocolHandler implements TestServerProtocolService.BlockingInterface {
     @Override
+    public ClientProtos.CreateSessionResponse createSession(RpcController controller, CreateSessionRequest request)
+        throws ServiceException {
+      TajoMaster.MasterContext context = testingCluster.getMaster().getContext();
+      TajoMasterClientService clientService = context.getClientService();
+      return clientService.getServiceHandler().createSession(controller, request);
+    }
+
+    @Override
+    public PrimitiveProtos.BoolProto removeSession(RpcController controller, TajoIdProtos.SessionIdProto request)
+        throws ServiceException {
+      TajoMaster.MasterContext context = testingCluster.getMaster().getContext();
+      TajoMasterClientService clientService = context.getClientService();
+      return clientService.getServiceHandler().removeSession(controller, request);
+    }
+
+    @Override
     public ExecuteSQLResponse executeSQL(RpcController controller, TestServerProtocol
         .ExecuteSQLRequest request) throws ServiceException {
       TajoMaster.MasterContext context = testingCluster.getMaster().getContext();
@@ -128,14 +152,14 @@ public class TestServerDriver extends AbstractService {
 
       ExecuteSQLResponse.Builder responseBuilder = ExecuteSQLResponse.newBuilder();
       try {
-        session = context.getSessionManager().createSession("test", "default");
+        session = context.getSessionManager().getSession(request.getSessionId().getId());
 
         LOG.debug("Submitted Query [\n" + request.getSql() + "\n]");
-        context.getGlobalEngine().executeQuery(session, request.getSql(), false);
-        responseBuilder.setStatusCode(Status.OK.code());
+        engine.executeQuery(session, request.getSql(), false);
 
+        responseBuilder.setStatus(Status.OK_PROTO);
       } catch (Throwable t) {
-        responseBuilder.setStatusCode(Status.UNKNOWN.code()).addErrorMessageParams(t.getMessage());
+        responseBuilder.setStatus(Status.convertStatus(Status.UNKNOWN, t.getMessage()));
       }
 
       return responseBuilder.build();
@@ -143,10 +167,18 @@ public class TestServerDriver extends AbstractService {
 
     @Override
     public PlanResponse requestPlan(RpcController controller, RequestPlan request) throws ServiceException {
+      TajoMaster.MasterContext context = testingCluster.getMaster().getContext();
 
       PlanResponse.Builder builder = PlanResponse.newBuilder();
 
-      Session session = new Session("00", "tajo", "default");
+      Session session = null;
+      try {
+        session = context.getSessionManager().getSession(request.getSessionId().getId());
+      } catch (InvalidSessionException e) {
+        LOG.error(e.getMessage());
+        builder.setStatus(Status.convertStatus(Status.UNKNOWN, e.getMessage()));
+      }
+
       QueryContext queryContext = new QueryContext(conf, session);
 
       try {
@@ -185,14 +217,15 @@ public class TestServerDriver extends AbstractService {
         }
 
         builder.setPlan(LogicalNodeSerializer.serialize(plan.getRootBlock().getRoot()));
+        builder.setStatus(Status.OK_PROTO);
 
       } catch (PlanningException e) {
         if (e.getMessage() != null) {
           LOG.error(e.getMessage());
-          builder.setErrorMessage(e.getMessage());
+          builder.setStatus(Status.convertStatus(Status.UNKNOWN, e.getMessage()));
         } else {
           e.printStackTrace();
-          builder.setErrorMessage("Internal Error");
+          builder.setStatus(Status.convertStatus(Status.UNKNOWN, "Unknown"));
         }
       }
 

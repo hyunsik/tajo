@@ -38,7 +38,7 @@ public class TestTajoDatabaseMetaData extends QueryTestCaseBase {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    tajoMasterAddress = testingCluster.getMaster().getTajoMasterClientService().getBindAddress();
+    tajoMasterAddress = testingCluster.getMaster().getContext().getClientService().getBindAddress();
     Class.forName("org.apache.tajo.jdbc.TajoDriver").newInstance();
   }
 

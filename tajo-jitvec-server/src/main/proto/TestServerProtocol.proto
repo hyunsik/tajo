@@ -26,32 +26,41 @@ option java_outer_classname = "TestServerProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
-import "PrimitiveProtos.proto";
 import "CatalogProtos.proto";
+import "ClientProtos.proto";
 import "DataTypes.proto";
+import "TajoIdProtos.proto";
 import "Plan.proto";
+import "PrimitiveProtos.proto";
 
 ///////////////////////////////////
 // For Query Test Cases
 ///////////////////////////////////
 
 message ExecuteSQLRequest {
-  required string sql = 1;
+  required SessionIdProto sessionId = 1;
+  required string sql = 2;
 }
 
 message ExecuteSQLResponse {
-  required int32 statusCode = 1;
+  required StatusProto status = 1;
+}
+
+message StatusProto {
+  required int32 code = 1;
   repeated string errorMessageParams = 2;
 }
 
 message RequestPlan {
-  required string sql = 1;
+  required SessionIdProto sessionId = 1;
+  required string sql = 2;
 }
 
 message PlanResponse {
-  optional LogicalNodeTree plan = 1;
-  repeated InputDesc inputs = 2;
-  optional string errorMessage = 3;
+  required StatusProto status = 1;
+
+  optional LogicalNodeTree plan = 2;
+  repeated InputDesc inputs = 3;
 }
 
 message InputDesc {
@@ -86,8 +95,11 @@ message SumResponse {
 
 service TestServerProtocolService {
 
-  // For Query Test Cases
+  // For Session Management
+  rpc createSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc removeSession(SessionIdProto) returns (BoolProto);
 
+  // For Query Test Cases
   rpc executeSQL(ExecuteSQLRequest) returns (ExecuteSQLResponse);
   rpc requestPlan(RequestPlan) returns (PlanResponse);
 

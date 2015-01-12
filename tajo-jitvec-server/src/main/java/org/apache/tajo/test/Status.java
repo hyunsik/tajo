@@ -18,6 +18,9 @@
 
 package org.apache.tajo.test;
 
+import com.google.common.collect.Lists;
+import org.apache.tajo.test.TestServerProtocol.StatusProto;
+
 import java.util.IllegalFormatException;
 
 public enum Status {
@@ -31,6 +34,8 @@ public enum Status {
 
   final int code;
   final String messageTemplate;
+
+  public static final StatusProto OK_PROTO = convertStatus(OK);
 
   Status(int code, String messageTemplate) {
     this.code = code;
@@ -51,5 +56,20 @@ public enum Status {
     } catch (IllegalFormatException ife) {
       throw new RuntimeException(status.name() + " takes wrong error message arguments");
     }
+  }
+
+  public boolean Ok() {
+    return code == OK.code;
+  }
+
+  public static StatusProto convertStatus(Status status, String ... args) {
+    StatusProto.Builder builder = StatusProto.newBuilder();
+    builder.setCode(status.code());
+    if (args != null) {
+      builder.addAllErrorMessageParams(Lists.newArrayList(args));
+    } else {
+      builder.addErrorMessageParams("Unknown Error");
+    }
+    return builder.build();
   }
 }

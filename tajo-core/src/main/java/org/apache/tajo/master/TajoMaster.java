@@ -113,8 +113,8 @@ public class TajoMaster extends CompositeService {
   private FileStorageManager storeManager;
   private GlobalEngine globalEngine;
   private AsyncDispatcher dispatcher;
-  private TajoMasterClientService tajoMasterClientService;
-  private QueryCoordinatorService tajoMasterService;
+  private TajoMasterClientService clientService;
+  private QueryCoordinatorService queryCoordinatorService;
   private SessionManager sessionManager;
 
   private WorkerResourceManager resourceManager;
@@ -140,15 +140,11 @@ public class TajoMaster extends CompositeService {
   }
 
   public String getMasterName() {
-    return NetUtils.normalizeInetSocketAddress(tajoMasterService.getBindAddress());
+    return NetUtils.normalizeInetSocketAddress(queryCoordinatorService.getBindAddress());
   }
 
   public String getVersion() {
     return VersionInfo.getDisplayVersion();
-  }
-
-  public TajoMasterClientService getTajoMasterClientService() {
-    return  tajoMasterClientService;
   }
 
   @Override
@@ -186,11 +182,11 @@ public class TajoMaster extends CompositeService {
       queryManager = new QueryManager(context);
       addIfService(queryManager);
 
-      tajoMasterClientService = new TajoMasterClientService(context);
-      addIfService(tajoMasterClientService);
+      clientService = new TajoMasterClientService(context);
+      addIfService(clientService);
 
-      tajoMasterService = new QueryCoordinatorService(context);
-      addIfService(tajoMasterService);
+      queryCoordinatorService = new QueryCoordinatorService(context);
+      addIfService(queryCoordinatorService);
     } catch (Exception e) {
       LOG.error(e.getMessage(), e);
       throw e;
@@ -441,6 +437,10 @@ public class TajoMaster extends CompositeService {
       return clock;
     }
 
+    public TajoMasterClientService getClientService() {
+      return clientService;
+    }
+
     public QueryManager getQueryJobManager() {
       return queryManager;
     }
@@ -470,7 +470,7 @@ public class TajoMaster extends CompositeService {
     }
 
     public QueryCoordinatorService getTajoMasterService() {
-      return tajoMasterService;
+      return queryCoordinatorService;
     }
 
     public TajoSystemMetrics getSystemMetrics() {

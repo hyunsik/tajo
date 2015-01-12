@@ -115,6 +115,8 @@ public class Session implements SessionConstants, ProtoObject<SessionProto>, Clo
 
   public synchronized void selectDatabase(String databaseName) {
     this.currentDatabase = databaseName;
+    LOG.info("[user=" + userName + ", sid="+ sessionId + "] current db '" + currentDatabase +
+        "' has been changed to '" + databaseName + "'.");
   }
 
   public synchronized String getCurrentDatabase() {

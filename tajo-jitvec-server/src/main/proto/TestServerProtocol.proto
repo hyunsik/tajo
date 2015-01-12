@@ -31,6 +31,10 @@ import "CatalogProtos.proto";
 import "DataTypes.proto";
 import "Plan.proto";
 
+///////////////////////////////////
+// For Query Test Cases
+///////////////////////////////////
+
 message ExecuteSQLRequest {
   required string sql = 1;
 }
@@ -55,7 +59,43 @@ message InputDesc {
   required TableDescProto table = 2;
 }
 
+
+///////////////////////////////////
+// For Rpc Test Messages
+///////////////////////////////////
+
+message EchoMessage {
+  required string message = 1;
+}
+
+message SumRequest {
+  required int32 x1 = 1;
+  required int64 x2 = 2;
+  required double x3 = 3;
+  required float x4 = 4;
+}
+
+message SumResponse {
+  required double result = 1;
+}
+
+
+///////////////////////////////////
+// Protocol Service
+///////////////////////////////////
+
 service TestServerProtocolService {
+
+  // For Query Test Cases
+
   rpc executeSQL(ExecuteSQLRequest) returns (ExecuteSQLResponse);
   rpc requestPlan(RequestPlan) returns (PlanResponse);
+
+  // For Rpc Test
+
+  rpc sum (SumRequest) returns (SumResponse);
+  rpc echo (EchoMessage) returns (EchoMessage);
+  rpc getError (EchoMessage) returns (EchoMessage);
+  rpc getNull (EchoMessage) returns (EchoMessage);
+  rpc deley (EchoMessage) returns (EchoMessage);
 }

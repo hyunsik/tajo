@@ -44,10 +44,8 @@ import org.apache.tajo.plan.verifier.PreLogicalPlanVerifier;
 import org.apache.tajo.plan.verifier.VerificationState;
 import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.rpc.BlockingRpcServer;
-import org.apache.tajo.test.TestServerProtocol.ExecuteSQLResponse;
-import org.apache.tajo.test.TestServerProtocol.PlanResponse;
-import org.apache.tajo.test.TestServerProtocol.RequestPlan;
-import org.apache.tajo.test.TestServerProtocol.TestServerProtocolService;
+import org.apache.tajo.rpc.test.TestProtos;
+import org.apache.tajo.test.TestServerProtocol.*;
 import org.apache.tajo.util.NetUtils;
 
 import java.net.InetSocketAddress;
@@ -200,6 +198,46 @@ public class TestServerDriver extends AbstractService {
       }
 
       return builder.build();
+    }
+
+    @Override
+    public SumResponse sum(RpcController controller, SumRequest request) throws ServiceException {
+      return SumResponse.newBuilder().setResult(
+          request.getX1()+request.getX2()+request.getX3()+request.getX4()
+      ).build();
+    }
+
+    @Override
+    public EchoMessage echo(RpcController controller, EchoMessage request) throws ServiceException {
+      return EchoMessage.newBuilder().setMessage(request.getMessage()).build();
+    }
+
+    public boolean getNullCalled = false;
+    public boolean getErrorCalled = false;
+
+    @Override
+    public EchoMessage getError(RpcController controller, EchoMessage request)
+        throws ServiceException {
+      getErrorCalled = true;
+      controller.setFailed(request.getMessage());
+      return request;
+    }
+
+    @Override
+    public EchoMessage getNull(RpcController controller, EchoMessage request)
+        throws ServiceException {
+      getNullCalled = true;
+      LOG.info("noCallback is called");
+      return null;
+    }
+
+    @Override
+    public EchoMessage deley(RpcController controller, EchoMessage request) throws ServiceException {
+      try {
+        Thread.sleep(3000);
+      } catch (InterruptedException e) {
+      }
+      return request;
     }
   }
 

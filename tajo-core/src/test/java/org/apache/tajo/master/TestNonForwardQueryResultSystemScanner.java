@@ -36,6 +36,8 @@ import org.apache.tajo.datum.Datum;
 import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.master.TajoMaster.MasterContext;
+import org.apache.tajo.master.exec.NonForwardQueryResultScanner;
+import org.apache.tajo.master.exec.NonForwardQueryResultSystemScanner;
 import org.apache.tajo.plan.LogicalOptimizer;
 import org.apache.tajo.plan.LogicalPlan;
 import org.apache.tajo.plan.LogicalPlanner;
@@ -179,7 +181,7 @@ public class TestNonForwardQueryResultSystemScanner {
     }
     
     NonForwardQueryResultScanner queryResultScanner = 
-        new NonForwardQueryResultSystemScanner(masterContext, logicalPlan, queryId, 
+        new NonForwardQueryResultSystemScanner(masterContext, logicalPlan, queryId,
             sessionId, maxRow);
     
     return queryResultScanner;

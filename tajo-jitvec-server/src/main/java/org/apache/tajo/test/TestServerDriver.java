@@ -33,7 +33,6 @@ import org.apache.tajo.engine.parser.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.master.GlobalEngine;
 import org.apache.tajo.master.TajoMaster;
-import org.apache.tajo.master.session.Session;
 import org.apache.tajo.plan.LogicalOptimizer;
 import org.apache.tajo.plan.LogicalPlan;
 import org.apache.tajo.plan.LogicalPlanner;
@@ -44,7 +43,7 @@ import org.apache.tajo.plan.verifier.PreLogicalPlanVerifier;
 import org.apache.tajo.plan.verifier.VerificationState;
 import org.apache.tajo.plan.verifier.VerifyException;
 import org.apache.tajo.rpc.BlockingRpcServer;
-import org.apache.tajo.rpc.test.TestProtos;
+import org.apache.tajo.session.Session;
 import org.apache.tajo.test.TestServerProtocol.*;
 import org.apache.tajo.util.NetUtils;
 

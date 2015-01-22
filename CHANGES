@@ -1,7 +1,7 @@
 Tajo Change Log 
 
 
-Release 0.9.1 - unreleased
+Release 0.10.0 - unreleased
 
   NEW FEATURES
 
@@ -26,6 +26,14 @@ Release 0.9.1 - unreleased
     TAJO-1095: Implement Json file scanner. (hyunsik)
 
   IMPROVEMENT
+
+    TAJO-1307: HBaseStorageManager need to support for users to use
+    hbase-site.xml file. (jaehwa)
+
+    TAJO-1290: Add HBase Storage Integration Documentation. (jaehwa)
+
+    TAJO-1293: Tajo have to accept hostname beginning with digits.
+    (Jinhang Choi via jihun)
 
     TAJO-1281: Remove hadoop-common dependency from tajo-rpc. (hyunsik)
 
@@ -160,6 +168,21 @@ Release 0.9.1 - unreleased
 
 
   BUG FIXES
+
+    TAJO-1308: QueryInprogress can not release when query is QUERY_ERROR.
+    (jinho)
+
+    TAJO-1305: With metadata storage of MySQL, columns with the same 
+    character but difference case are not allowed. (jihun)
+
+    TAJO-1257: ORDER BY with NULL FIRST misses some data. (Keuntae Park)
+
+    TAJO-1225: Fix wrong schema name in JDBC driver. (jaehwa)
+
+    TAJO-1304: Can not found TextFile in catalog. (jinho)
+
+    TAJO-1299: TB and PB representations in StorageUnit are overflow.
+    (jihun)
 
     TAJO-1297: Tajo Web UI does not work after TAJO-1291. (jihoon)
 

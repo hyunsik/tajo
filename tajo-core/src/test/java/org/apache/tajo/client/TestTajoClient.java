@@ -18,6 +18,7 @@
 
 package org.apache.tajo.client;
 
+import net.jcip.annotations.NotThreadSafe;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -57,6 +58,7 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 @Category(IntegrationTest.class)
+@NotThreadSafe
 public class TestTajoClient {
   private static TajoTestingCluster cluster;
   private static TajoConf conf;
@@ -638,9 +640,8 @@ public class TestTajoClient {
     QueryId queryId = new QueryId(response.getQueryId());
 
     try {
-      long startTime = System.currentTimeMillis();
       while (true) {
-        Thread.sleep(5 * 1000);
+        Thread.sleep(100);
 
         List<ClientProtos.BriefQueryInfo> finishedQueries = client.getFinishedQueryList();
         boolean finished = false;
@@ -655,9 +656,6 @@ public class TestTajoClient {
 
         if (finished) {
           break;
-        }
-        if(System.currentTimeMillis() - startTime > 20 * 1000) {
-          fail("Too long time execution query");
         }
       }
 
@@ -755,7 +753,7 @@ public class TestTajoClient {
     assertEquals(expected, resultDatas);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testGetQueryInfoAndHistory() throws Exception {
     String sql = "select count(*) from lineitem";
     ClientProtos.SubmitQueryResponse response = client.executeQuery(sql);
@@ -763,8 +761,7 @@ public class TestTajoClient {
     assertNotNull(response);
     QueryId queryId = new QueryId(response.getQueryId());
 
-    QueryInfoProto queryInfo = null;
-    long startTime = System.currentTimeMillis();
+    QueryInfoProto queryInfo;
     while (true) {
       queryInfo = client.getQueryInfo(queryId);
 
@@ -772,12 +769,7 @@ public class TestTajoClient {
         break;
       }
       Thread.sleep(100);
-
-      if (System.currentTimeMillis() - startTime > 30 * 1000) {
-        fail("Too long running query");
-      }
     }
-    Thread.sleep(5 * 1000);
 
     assertNotNull(queryInfo);
     assertEquals(queryId.toString(), queryInfo.getQueryId());

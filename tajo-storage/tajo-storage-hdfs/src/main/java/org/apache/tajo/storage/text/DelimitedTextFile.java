@@ -79,7 +79,7 @@ public class DelimitedTextFile {
 
     // if there is no given serde class, it will use CSV line serder.
     serDeClassName = meta.getOption(StorageConstants.TEXT_SERDE_CLASS, StorageConstants.DEFAULT_TEXT_SERDE_CLASS);
-
+    LOG.info(">>>>> SerDerClass: " + serDeClassName);
     try {
       Class<? extends TextLineSerDe> serdeClass;
 
@@ -90,6 +90,7 @@ public class DelimitedTextFile {
         serdeClassCache.put(serDeClassName, serdeClass);
       }
       lineSerder = (TextLineSerDe) ReflectionUtil.newInstance(serdeClass);
+      LOG.info(">>>>> Used SerDerClass: " + serdeClass);
     } catch (Throwable e) {
       throw new RuntimeException("TextLineSerde class cannot be initialized.", e);
     }

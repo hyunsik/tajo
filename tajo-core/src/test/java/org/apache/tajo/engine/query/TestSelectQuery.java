@@ -25,6 +25,7 @@ import org.apache.tajo.catalog.CatalogService;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.TableDesc;
 import org.apache.tajo.client.QueryStatus;
+import org.apache.tajo.client.ResultSetUtil;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.conf.TajoConf.ConfVars;
@@ -633,6 +634,18 @@ public class TestSelectQuery extends QueryTestCaseBase {
 
       // restore the config
       testingCluster.getConfiguration().setSystemTimezone(TimeZone.getTimeZone("GMT"));
+    }
+  }
+
+  @Test
+  public void testApacheWebLog() throws Exception {
+    try {
+      executeDDL("web_log_ddl.sql", "web_log", new String[]{"web_log"});
+      ResultSet res = executeString("SELECT * FROM web_log");
+      System.out.println(ResultSetUtil.prettyFormat(res));
+      cleanupQuery(res);
+    } finally {
+      executeString("DROP TABLE IF EXISTS web_log");
     }
   }
 }

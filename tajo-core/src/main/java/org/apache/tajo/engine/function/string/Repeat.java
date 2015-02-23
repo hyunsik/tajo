@@ -39,8 +39,9 @@ import org.apache.tajo.storage.Tuple;
   example = "> SELECT repeat('Pg', 4);\n"
           + "PgPgPgPg",
   returnType = TajoDataTypes.Type.TEXT,
-  paramTypes = {@ParamTypes(paramTypes = {TajoDataTypes.Type.TEXT,
-          TajoDataTypes.Type.INT4})}
+  paramTypes = {
+      @ParamTypes(paramTypes ={TajoDataTypes.Type.TEXT,TajoDataTypes.Type.INT4}),
+      @ParamTypes(paramTypes ={TajoDataTypes.Type.TEXT,TajoDataTypes.Type.INT8})}
 )
 public class Repeat extends GeneralFunction {
   public Repeat() {

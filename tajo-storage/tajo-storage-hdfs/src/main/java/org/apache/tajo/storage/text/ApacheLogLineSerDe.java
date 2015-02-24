@@ -97,7 +97,7 @@ public class ApacheLogLineSerDe extends TextLineSerDe {
       super.deserialize(buf, tuple);
 
       for (int i = 0; i < actualTargetColumns.length; i++) {
-        output.put(i, getField(tuple, actualTargetColumns[i]));
+        output.put(actualTargetColumns[i], getField(tuple, actualTargetColumns[i]));
       }
     }
 

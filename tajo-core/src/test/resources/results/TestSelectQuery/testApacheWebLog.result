@@ -1,0 +1,7 @@
+remote_addr,logname,remote_user,access_timestamp,request_method,request_path,http_version,response_status,transferred_bytes,any_thing,user_agent
+-------------------------------
+127.0.0.1,-,-,2012-01-22 09:09:15,GET,/main,HTTP/1.1,200,17850,http://www.google.com/url?sa=t&rct=j&q=seenal&source=web&cd=1&ved=0CCMQFjAA&url=http%3A%2F%2Fwww.seenal.com%2F&ei=JkyTT96JPOrJmAWIlrDdAQ&usg=AFQjCNFV-4njFCvvDxoca-clkRv7tZXwHA,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.162 Safari/535.19
+121.166.102.206,-,-,2012-01-22 09:09:15,GET,/,HTTP/1.1,200,17850,http://www.google.com/url?sa=t&rct=j&q=seenal&source=web&cd=1&ved=0CCMQFjAA&url=http%3A%2F%2Fwww.seenal.com%2F&ei=JkyTT96JPOrJmAWIlrDdAQ&usg=AFQjCNFV-4njFCvvDxoca-clkRv7tZXwHA,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.162 Safari/535.19
+121.166.102.206,-,-,2012-01-22 09:09:15,GET,/resources/styles/layout.css,HTTP/1.1,200,4032,http://www.seenal.com/,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.162 Safari/535.19
+121.166.102.206,-,-,2012-01-22 09:09:15,GET,/resources/styles/jquery/sexy-combo.css,HTTP/1.1,200,454,http://www.seenal.com/,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.162 Safari/535.19
+121.166.102.206,-,-,2012-01-22 09:09:15,GET,/resources/styles/jquery/themes/base/jquery-ui-1.8.17.custom.css,HTTP/1.1,200,5946,http://www.seenal.com/,Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.162 Safari/535.19

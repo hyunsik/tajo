@@ -642,7 +642,19 @@ public class TestSelectQuery extends QueryTestCaseBase {
     try {
       executeDDL("web_log_ddl.sql", "web_log", new String[]{"web_log"});
       ResultSet res = executeString("SELECT * FROM web_log");
-      System.out.println(ResultSetUtil.prettyFormat(res));
+      assertResultSet(res);
+      cleanupQuery(res);
+    } finally {
+      executeString("DROP TABLE IF EXISTS web_log");
+    }
+  }
+
+  @Test
+  public void testApacheWebLog2() throws Exception {
+    try {
+      executeDDL("web_log_ddl.sql", "web_log", new String[]{"web_log"});
+      ResultSet res = executeString("SELECT request_path, transferred_bytes, response_status FROM web_log");
+      assertResultSet(res);
       cleanupQuery(res);
     } finally {
       executeString("DROP TABLE IF EXISTS web_log");

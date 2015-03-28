@@ -223,12 +223,16 @@ public class TajoWorker extends CompositeService {
     tajoWorkerClientService = new TajoWorkerClientService(workerContext, clientPort);
     addIfService(tajoWorkerClientService);
 
-    queryMasterManagerService = new QueryMasterManagerService(workerContext, qmManagerPort);
-    addIfService(queryMasterManagerService);
+    if (queryMasterMode) {
+      queryMasterManagerService = new QueryMasterManagerService(workerContext, qmManagerPort);
+      addIfService(queryMasterManagerService);
+    }
 
-    // taskrunner worker
-    taskRunnerManager = new TaskRunnerManager(workerContext, dispatcher);
-    addService(taskRunnerManager);
+    if (taskRunnerMode) {
+      // taskrunner worker
+      taskRunnerManager = new TaskRunnerManager(workerContext, dispatcher);
+      addService(taskRunnerManager);
+    }
 
     workerHeartbeatThread = new WorkerHeartbeatService(workerContext);
     addIfService(workerHeartbeatThread);

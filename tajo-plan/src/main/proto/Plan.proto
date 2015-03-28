@@ -349,7 +349,8 @@ enum EvalType {
 }
 
 message EvalNodeTree {
-  repeated EvalNode nodes = 1;
+  required int32 root_id = 1;
+  repeated EvalNode nodes = 2;
 }
 
 message EvalNode {

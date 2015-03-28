@@ -59,6 +59,7 @@ public class EvalNodeSerializer
     EvalNodeSerializer.EvalTreeProtoBuilderContext context =
         new EvalNodeSerializer.EvalTreeProtoBuilderContext();
     instance.visit(context, evalNode, new Stack<EvalNode>());
+    context.treeBuilder.setRootId(context.seqId - 1);
     return context.treeBuilder.build();
   }
 

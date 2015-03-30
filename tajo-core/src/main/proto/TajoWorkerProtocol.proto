@@ -30,7 +30,7 @@ import "PrimitiveProtos.proto";
 import "Plan.proto";
 import "ContainerProtocol.proto";
 
-package hadoop.yarn;
+package tajo;
 
 message SessionProto {
   required string session_id = 1;

@@ -18,6 +18,8 @@
 
 //TajoWorker -> TajoMaster protocol
 
+package tajo;
+
 option java_package = "org.apache.tajo.ipc";
 option java_outer_classname = "QueryCoordinatorProtocol";
 option java_generic_services = true;
@@ -29,8 +31,6 @@ import "TajoIdProtos.proto";
 import "CatalogProtos.proto";
 import "PrimitiveProtos.proto";
 import "ContainerProtocol.proto";
-
-package hadoop.yarn;
 
 message ServerStatusProto {
     message System {
@@ -108,6 +108,8 @@ message WorkerResourceAllocationRequest {
 
     required float maxDiskSlotPerContainer = 6;
     required float minDiskSlotPerContainer = 7;
+
+    optional bool forQueryMaster = 8 [default = false];
 }
 
 message WorkerResourceProto {

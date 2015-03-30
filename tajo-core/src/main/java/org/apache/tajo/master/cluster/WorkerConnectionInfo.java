@@ -83,20 +83,50 @@ public class WorkerConnectionInfo implements ProtoObject<WorkerConnectionInfoPro
     return host;
   }
 
+  public void setPeerRpcPort(int peerRpcPort) {
+    if (peerRpcPort > 0) {
+      this.peerRpcPort = peerRpcPort;
+    }
+  }
+
   public int getPeerRpcPort() {
     return peerRpcPort;
+  }
+
+  public void setPullServerPort(int pullServerPort) {
+    if (pullServerPort > 0) {
+      this.pullServerPort = pullServerPort;
+    }
   }
 
   public int getPullServerPort() {
     return pullServerPort;
   }
 
+  public void setQueryMasterPort(int queryMasterPort) {
+    if (queryMasterPort > 0) {
+      this.queryMasterPort = queryMasterPort;
+    }
+  }
+
   public int getQueryMasterPort() {
     return queryMasterPort;
   }
 
+  public void setClientPort(int clientPort) {
+    if (clientPort > 0) {
+      this.clientPort = clientPort;
+    }
+  }
+
   public int getClientPort() {
     return clientPort;
+  }
+
+  public void setHttpInfoPort(int httpInfoPort) {
+    if (httpInfoPort > 0) {
+      this.httpInfoPort = httpInfoPort;
+    }
   }
 
   public int getHttpInfoPort() {

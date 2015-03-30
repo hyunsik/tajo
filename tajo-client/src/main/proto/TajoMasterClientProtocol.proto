@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 //TajoClient -> TajoMaster Protocol
 option java_package = "org.apache.tajo.ipc";
 option java_outer_classname = "TajoMasterClientProtocol";

@@ -16,17 +16,18 @@
  * limitations under the License.
  */
 
+package tajo;
 
 option java_package = "org.apache.tajo.ipc";
 option java_outer_classname = "TajoResourceTrackerProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
+option cc_generic_services = true;
+
 import "QueryCoordinatorProtocol.proto";
 import "ContainerProtocol.proto";
 import "tajo_protos.proto";
-
-package hadoop.yarn;
 
 message NodeHeartbeat {
   required WorkerConnectionInfoProto connectionInfo = 1;

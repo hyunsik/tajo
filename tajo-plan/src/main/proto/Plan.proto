@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 option java_package = "org.apache.tajo.plan.serder";
 option java_outer_classname = "PlanProto";
 option java_generic_services = false;

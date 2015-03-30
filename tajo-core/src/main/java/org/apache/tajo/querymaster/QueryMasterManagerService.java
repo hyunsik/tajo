@@ -198,7 +198,7 @@ public class QueryMasterManagerService extends CompositeService
   }
 
   @Override
-  public void done(RpcController controller, TajoWorkerProtocol.TaskCompletionReport report,
+  public void complete(RpcController controller, TajoWorkerProtocol.TaskCompletionReport report,
                    RpcCallback<PrimitiveProtos.BoolProto> done) {
     try {
       QueryMasterTask queryMasterTask = queryMaster.getQueryMasterTask(

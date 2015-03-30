@@ -449,7 +449,7 @@ public class Task {
         executionBlockContext.succeededTasksNum.incrementAndGet();
 
         TaskCompletionReport report = getTaskCompletionReport();
-        queryMasterStub.done(null, report, NullCallback.get());
+        queryMasterStub.complete(null, report, NullCallback.get());
       }
       finishTime = System.currentTimeMillis();
       LOG.info(context.getTaskId() + " completed. " +

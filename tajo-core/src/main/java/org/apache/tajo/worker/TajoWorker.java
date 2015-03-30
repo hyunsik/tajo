@@ -216,9 +216,6 @@ public class TajoWorker extends CompositeService {
     this.dispatcher = new AsyncDispatcher();
     addIfService(dispatcher);
 
-    tajoWorkerManagerService = new TajoWorkerManagerService(workerContext, peerRpcPort);
-    addIfService(tajoWorkerManagerService);
-
     // querymaster worker
     tajoWorkerClientService = new TajoWorkerClientService(workerContext, clientPort);
     addIfService(tajoWorkerClientService);
@@ -229,6 +226,9 @@ public class TajoWorker extends CompositeService {
     }
 
     if (taskRunnerMode) {
+      tajoWorkerManagerService = new TajoWorkerManagerService(workerContext, peerRpcPort);
+      addIfService(tajoWorkerManagerService);
+
       // taskrunner worker
       taskRunnerManager = new TaskRunnerManager(workerContext, dispatcher);
       addService(taskRunnerManager);
@@ -257,11 +257,11 @@ public class TajoWorker extends CompositeService {
     }
 
     this.connectionInfo = new WorkerConnectionInfo(
-        tajoWorkerManagerService.getBindAddr().getHostName(),
-        tajoWorkerManagerService.getBindAddr().getPort(),
-        pullServerPort,
+        tajoWorkerClientService.getBindAddr().getHostName(),
+        taskRunnerMode == false ? 0 : tajoWorkerManagerService.getBindAddr().getPort(),
+        taskRunnerMode == false ? 0 : pullServerPort,
         tajoWorkerClientService.getBindAddr().getPort(),
-        queryMasterManagerService.getBindAddr().getPort(),
+        queryMasterMode == false ? 0 : queryMasterManagerService.getBindAddr().getPort(),
         httpPort);
 
     LOG.info("Tajo Worker is initialized. \r\nQueryMaster=" + queryMasterMode + " TaskRunner=" + taskRunnerMode

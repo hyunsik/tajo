@@ -29,7 +29,7 @@ import "PrimitiveProtos.proto";
 import "TajoWorkerProtocol.proto";
 import "ContainerProtocol.proto";
 
-package hadoop.yarn;
+package tajo;
 
 service QueryMasterProtocolService {
   //from Worker
@@ -37,7 +37,7 @@ service QueryMasterProtocolService {
   rpc statusUpdate (TaskStatusProto) returns (BoolProto);
   rpc ping (ExecutionBlockIdProto) returns (BoolProto);
   rpc fatalError(TaskFatalErrorReport) returns (BoolProto);
-  rpc done (TaskCompletionReport) returns (BoolProto);
+  rpc complete (TaskCompletionReport) returns (BoolProto);
   rpc doneExecutionBlock(ExecutionBlockReport) returns (BoolProto);
 
   //from TajoMaster's QueryJobManager

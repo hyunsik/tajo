@@ -186,12 +186,14 @@ public class QueryMaster extends CompositeService implements EventHandler {
 
     for (WorkerResourceProto worker : workers) {
       try {
-        TajoProtos.WorkerConnectionInfoProto connectionInfo = worker.getConnectionInfo();
-        rpc = connPool.getConnection(NetUtils.createSocketAddr(connectionInfo.getHost(), connectionInfo.getPeerRpcPort()),
-            TajoWorkerProtocol.class, true);
-        TajoWorkerProtocol.TajoWorkerProtocolService tajoWorkerProtocolService = rpc.getStub();
+        if (worker.getConnectionInfo().getPeerRpcPort() > 0) {
+          TajoProtos.WorkerConnectionInfoProto connectionInfo = worker.getConnectionInfo();
+          rpc = connPool.getConnection(NetUtils.createSocketAddr(connectionInfo.getHost(), connectionInfo.getPeerRpcPort()),
+              TajoWorkerProtocol.class, true);
+          TajoWorkerProtocol.TajoWorkerProtocolService tajoWorkerProtocolService = rpc.getStub();
 
-        tajoWorkerProtocolService.cleanupExecutionBlocks(null, executionBlockListProto, NullCallback.get());
+          tajoWorkerProtocolService.cleanupExecutionBlocks(null, executionBlockListProto, NullCallback.get());
+        }
       } catch (Exception e) {
         continue;
       } finally {
@@ -208,11 +210,14 @@ public class QueryMaster extends CompositeService implements EventHandler {
     for (WorkerResourceProto worker : workers) {
       try {
         TajoProtos.WorkerConnectionInfoProto connectionInfo = worker.getConnectionInfo();
-        rpc = connPool.getConnection(NetUtils.createSocketAddr(connectionInfo.getHost(), connectionInfo.getPeerRpcPort()),
-            TajoWorkerProtocol.class, true);
-        TajoWorkerProtocol.TajoWorkerProtocolService tajoWorkerProtocolService = rpc.getStub();
+        if (connectionInfo.getPeerRpcPort() > 0) {
+          rpc = connPool.getConnection(NetUtils.createSocketAddr(connectionInfo.getHost(), connectionInfo.getPeerRpcPort()),
 
-        tajoWorkerProtocolService.cleanup(null, queryId.getProto(), NullCallback.get());
+              TajoWorkerProtocol.class, true);
+          TajoWorkerProtocol.TajoWorkerProtocolService tajoWorkerProtocolService = rpc.getStub();
+
+          tajoWorkerProtocolService.cleanup(null, queryId.getProto(), NullCallback.get());
+        }
       } catch (Exception e) {
         LOG.error(e.getMessage());
       } finally {
@@ -235,8 +240,7 @@ public class QueryMaster extends CompositeService implements EventHandler {
       QueryCoordinatorProtocolService masterService = rpc.getStub();
 
       CallFuture<WorkerResourcesRequest> callBack = new CallFuture<WorkerResourcesRequest>();
-      masterService.getAllWorkerResource(callBack.getController(),
-          PrimitiveProtos.NullProto.getDefaultInstance(), callBack);
+      masterService.getAllWorkerResource(callBack.getController(), PrimitiveProtos.NullProto.getDefaultInstance(), callBack);
 
       WorkerResourcesRequest workerResourcesRequest = callBack.get(2, TimeUnit.SECONDS);
       return workerResourcesRequest.getWorkerResourcesList();

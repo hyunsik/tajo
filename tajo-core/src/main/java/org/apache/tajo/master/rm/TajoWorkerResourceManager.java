@@ -204,6 +204,7 @@ public class TajoWorkerResourceManager extends CompositeService implements Worke
     builder.setMinDiskSlotPerContainer(queryMasterDefaultDiskSlot);
     builder.setResourceRequestPriority(ResourceRequestPriority.MEMORY);
     builder.setNumContainers(1);
+    builder.setForQueryMaster(true);
     return builder.build();
   }
 
@@ -313,11 +314,11 @@ public class TajoWorkerResourceManager extends CompositeService implements Worke
 
                 ContainerProtocol.TajoContainerIdProto containerIdProto = containerId.getProto();
                 allocatedResources.add(WorkerAllocatedResource.newBuilder()
-                  .setContainerId(containerIdProto)
-                  .setConnectionInfo(allocatedResource.worker.getConnectionInfo().getProto())
-                  .setAllocatedMemoryMB(allocatedResource.allocatedMemoryMB)
-                  .setAllocatedDiskSlots(allocatedResource.allocatedDiskSlots)
-                  .build());
+                    .setContainerId(containerIdProto)
+                    .setConnectionInfo(allocatedResource.worker.getConnectionInfo().getProto())
+                    .setAllocatedMemoryMB(allocatedResource.allocatedMemoryMB)
+                    .setAllocatedDiskSlots(allocatedResource.allocatedDiskSlots)
+                    .build());
 
 
                 allocatedResourceMap.putIfAbsent(containerIdProto, allocatedResource);
@@ -352,6 +353,9 @@ public class TajoWorkerResourceManager extends CompositeService implements Worke
   }
 
   private List<AllocatedWorkerResource> chooseWorkers(WorkerResourceRequest resourceRequest) {
+
+    boolean isForQueryMaster = resourceRequest.request.getForQueryMaster();
+
     List<AllocatedWorkerResource> selectedWorkers = new ArrayList<AllocatedWorkerResource>();
 
     int allocatedResources = 0;
@@ -400,7 +404,9 @@ public class TajoWorkerResourceManager extends CompositeService implements Worke
 
             Worker worker = rmContext.getWorkers().get(eachWorker);
             WorkerResource workerResource = worker.getResource();
-            if(workerResource.getAvailableMemoryMB() >= compareAvailableMemory) {
+
+            if(workerResource.getAvailableMemoryMB() >= compareAvailableMemory &&
+                (isForQueryMaster ? worker.getConnectionInfo().getQueryMasterPort() > 0 : worker.getConnectionInfo().getPeerRpcPort() > 0)) {
               int workerMemory;
               if(workerResource.getAvailableMemoryMB() >= maxMemoryMB) {
                 workerMemory = maxMemoryMB;
@@ -469,7 +475,9 @@ public class TajoWorkerResourceManager extends CompositeService implements Worke
 
             Worker worker = rmContext.getWorkers().get(eachWorker);
             WorkerResource workerResource = worker.getResource();
-            if(workerResource.getAvailableDiskSlots() >= compareAvailableDisk) {
+
+            if(workerResource.getAvailableDiskSlots() >= compareAvailableDisk &&
+                (isForQueryMaster ? worker.getConnectionInfo().getQueryMasterPort() > 0 : worker.getConnectionInfo().getPeerRpcPort() > 0)) {
               float workerDiskSlots;
               if(workerResource.getAvailableDiskSlots() >= maxDiskSlots) {
                 workerDiskSlots = maxDiskSlots;

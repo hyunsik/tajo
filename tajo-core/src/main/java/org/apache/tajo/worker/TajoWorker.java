@@ -238,10 +238,10 @@ public class TajoWorker extends CompositeService {
     addIfService(workerHeartbeatThread);
 
     int httpPort = 0;
-    if(taskRunnerMode && !TajoPullServerService.isStandalone()) {
-      pullService = new TajoPullServerService();
-      addIfService(pullService);
-    }
+//    if(taskRunnerMode && !TajoPullServerService.isStandalone()) {
+//      pullService = new TajoPullServerService();
+//      addIfService(pullService);
+//    }
 
     if (!systemConf.get(CommonTestingUtil.TAJO_TEST_KEY, "FALSE").equalsIgnoreCase("TRUE")) {
       httpPort = initWebServer();
@@ -249,17 +249,20 @@ public class TajoWorker extends CompositeService {
 
     super.serviceInit(conf);
 
-    int pullServerPort;
-    if(pullService != null){
-      pullServerPort = pullService.getPort();
-    } else {
-      pullServerPort = getStandAlonePullServerPort();
-    }
+//    int pullServerPort = 0;
+//
+//    if (!taskRunnerMode) {
+//      if (pullService != null) {
+//        pullServerPort = pullService.getPort();
+//      } else {
+//        pullServerPort = getStandAlonePullServerPort();
+//      }
+//    }
 
     this.connectionInfo = new WorkerConnectionInfo(
         tajoWorkerClientService.getBindAddr().getHostName(),
         taskRunnerMode == false ? 0 : tajoWorkerManagerService.getBindAddr().getPort(),
-        taskRunnerMode == false ? 0 : pullServerPort,
+        0,
         tajoWorkerClientService.getBindAddr().getPort(),
         queryMasterMode == false ? 0 : queryMasterManagerService.getBindAddr().getPort(),
         httpPort);

@@ -170,6 +170,7 @@ public class DefaultTaskScheduler extends AbstractTaskScheduler {
         if (taskRequestEvents.size() > 0) {
           scheduledRequests.assignToLeafTasks(taskRequestEvents);
           taskRequestEvents.clear();
+
         }
       }
     }

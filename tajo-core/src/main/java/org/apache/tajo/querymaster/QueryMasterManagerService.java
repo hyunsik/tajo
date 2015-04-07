@@ -149,6 +149,13 @@ public class QueryMasterManagerService extends CompositeService
       if (queryMasterTask == null) {
         queryMasterTask = queryMaster.getQueryMasterTask(queryId, true);
       }
+
+      if (queryMasterTask == null) {
+        LOG.info(">>>>>> statusUpdate");
+        done.run(TajoWorker.FALSE_PROTO);
+        return;
+      }
+
       Stage sq = queryMasterTask.getQuery().getStage(attemptId.getTaskId().getExecutionBlockId());
       Task task = sq.getTask(attemptId.getTaskId());
       TaskAttempt attempt = task.getAttempt(attemptId.getId());

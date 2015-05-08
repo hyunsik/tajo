@@ -68,6 +68,15 @@
         <enabled>false</enabled>
       </snapshots>
     </repository>
+ 
+    <!-- for CDH 5 -->
+    <repository>
+      <id>cloudera</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository> 
   </repositories>
 
   <properties>

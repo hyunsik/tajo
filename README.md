@@ -24,7 +24,16 @@ unzip apache-maven-3.2.2-bin.zip
 ```
 Please put ```maven/bin/``` directory to ```PATH``` shell environment variable.
 
+### Install SUN JDK 7
 
+Download ```jdk-7uXX-linux-x64.rpm``` from http://www.oracle.com/technetwork/java/javase/downloads/index.html
+
+```sh
+alternatives --install /usr/bin/java java /usr/java/latest/jre/bin/java 200000
+alternatives --install /usr/bin/javaws javaws /usr/java/latest/jre/bin/javaws 200000
+alternatives --install /usr/bin/javac javac /usr/java/latest/bin/javac 200000
+alternatives --install /usr/bin/jar jar /usr/java/latest/bin/jar 200000
+```
 ### Download source code
 
 ```sh

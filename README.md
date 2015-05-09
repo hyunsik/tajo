@@ -48,5 +48,17 @@ git clone -b CDH-5_3 https://github.com/hyunsik/tajo.git
 ### How to build
 ```sh
 cd tajo
-mvn clean install package  -DskipTests -Pdist -Dhadoop.version=2.5.0-cdh5.3.3
+mvn clean install package  -DskipTests -Pdist -Dtar -Dhadoop.version=2.5.0-cdh5.3.3
+```
+
+### Installation
+```sh
+cp -a tajo/tajo-dist/target/TAJO-0.11.0-SNAPSHOT path/to/install
+```
+
+### Configuration
+
+Set ```JAVA_HOME``` in ```tajo/conf/tajo-env.sh``` as follows:
+```
+export JAVA_HOME=/usr/java/latest
 ```

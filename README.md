@@ -1,10 +1,16 @@
-## Tajo-0.10.1 CDH Edition
+# Tajo-0.10.1 CDH Edition
 
-* Last Update Date: 2015-05-08
+## History
+* Initial commit: 2015-05-08
+* Modified some jars CLASSPATH and tested on CDH 5.4 : 2015-05-12
 
-### Preparing
+## Download
+ * (Direct Download) [https://www.dropbox.com/s/ftwm402e39cmws7/tajo-0.11.0-SNAPSHOT.tar.gz?dl=0]
+ * (PATCH) [https://www.dropbox.com/s/5wngftt3ke66u4t/Tajo_for_CDH_5.patch?dl=0)
 
-#### for CentOS 6
+## Building the source code
+
+### for CentOS 6
 ```
 yum groupinstall 'Development Tools'
 yum install git

@@ -48,8 +48,10 @@ git clone -b CDH-5_3 https://github.com/hyunsik/tajo.git
 ### How to build
 ```sh
 cd tajo
-mvn clean install package  -DskipTests -Pdist -Dtar -Dhadoop.version=2.5.0-cdh5.3.3
+mvn clean install package  -DskipTests -Pdist -Dtar -Dhadoop.version=2.6.0-cdh5.4.0
 ```
+
+Please refer to CDH Hadoop version at [here]. (http://www.cloudera.com/content/cloudera/en/documentation/core/latest/topics/cdh_vd_cdh5_maven_repo.html)
 
 ### Installation
 ```sh

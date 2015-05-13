@@ -53,7 +53,7 @@ update-alternatives --config java
 git clone -b CDH-5_3 https://github.com/hyunsik/tajo.git
 ```
 
-### How to build
+### Compiling the source code
 ```sh
 cd tajo
 mvn clean install package  -DskipTests -Pdist -Dtar -Dhadoop.version=2.6.0-cdh5.4.0

@@ -66,9 +66,30 @@ Please refer to CDH Hadoop version at [here]. (http://www.cloudera.com/content/c
 cp -a tajo/tajo-dist/target/TAJO-0.11.0-SNAPSHOT path/to/install
 ```
 
-### Configuration
+## Configuration
 
 Set ```JAVA_HOME``` in ```tajo/conf/tajo-env.sh``` as follows:
 ```
 export JAVA_HOME=/usr/java/latest
 ```
+
+Copy ```tajo/conf/tajo-site.xml.template``` to ```tajo/conf/tajo-site.xml``` and then remove the comments as follows:
+```
+<property>
+  <name>tajo.rootdir</name>
+  <value>hdfs://hostname:port/tajo</value>
+</property>
+```
+
+Then, you should ensure the permission as follows:
+```
+hadoop dfs -mkdir /tajo
+hadoop dfs -chown tajo:tajo /tajo
+
+hadoop dfs -mkdir tajo:tajo /tmp/tajo-${username}
+hadoop dfs -chown tajo:tajo /tmp/tajo-${username}
+```
+
+Instead of ```/tajo```, you should use the specified directory used in ```tajo.rootdir``` in ```tajo-site.xml```. Also, you must substitute ```${username}``` for your real username.
+
+For more detail, please refer to [Tajo official documentation] (http://tajo.apache.org/docs/0.10.0/configuration.html).

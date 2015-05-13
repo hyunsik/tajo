@@ -1,0 +1,34 @@
+diff --git tajo-dist/src/main/bin/tajo tajo-dist/src/main/bin/tajo
+index cc611d5..aa2f0db 100755
+--- tajo-dist/src/main/bin/tajo
++++ tajo-dist/src/main/bin/tajo
+@@ -195,7 +195,7 @@ if [ "$hadoop_major_ver" -lt "1" -a  "$hadoop_minor_ver$hadoop_patch_ver" -lt "2
+ fi
+ 
+ # Allow alternate conf dir location.
+-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/etc/hadoop}"
++HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-/etc/hadoop/conf}"
+ 
+ # CLASSPATH initially contains $HADOOP_CONF_DIR and tools.jar
+ CLASSPATH="${HADOOP_CONF_DIR}:${JAVA_HOME}/lib/tools.jar"
+@@ -209,12 +209,14 @@ CLASSPATH="${HADOOP_CONF_DIR}:${JAVA_HOME}/lib/tools.jar"
+ ##############################################################################
+ 
+ # HADOOP JAR DIRS
+-HADOOP_MODULE_DIRS="$HADOOP_HOME/share/hadoop/common/lib
+-$HADOOP_HOME/share/hadoop/common
+-$HADOOP_HOME/share/hadoop/hdfs
+-$HADOOP_HOME/share/hadoop/hdfs/lib
+-$HADOOP_HOME/share/hadoop/yarn
+-$HADOOP_HOME/share/hadoop/mapreduce"
++HADOOP_MODULE_DIRS="/usr/lib/hadoop/lib
++/usr/lib/hadoop/
++/usr/lib/hadoop-hdfs
++/usr/lib/hadoop-hdfs/lib
++/usr/lib/hadoop-yarn
++/usr/lib/hadoop-yarn/lib
++/usr/lib/hadoop-mapreduce
++/usr/lib/hadoop-mapreduce/lib"
+ 
+ for d in $HADOOP_MODULE_DIRS; do
+   CLASSPATH=${CLASSPATH}:$d/*

@@ -4,9 +4,9 @@
 * Initial commit: 2015-05-08
 * Modified some jars CLASSPATH and tested on CDH 5.4 : 2015-05-12
 
-## Download
- * [Direct Download] (https://www.dropbox.com/s/ftwm402e39cmws7/tajo-0.11.0-SNAPSHOT.tar.gz?dl=0)
- * [PATCH] (https://www.dropbox.com/s/5wngftt3ke66u4t/Tajo_for_CDH_5.patch?dl=0)
+## Direct Download
+ * [tajo-0.10.1-cdh5_4] (https://www.dropbox.com/s/ftwm402e39cmws7/tajo-0.11.0-SNAPSHOT.tar.gz?dl=0)
+ * [Patch] (https://www.dropbox.com/s/5wngftt3ke66u4t/Tajo_for_CDH_5.patch?dl=0)
 
 ## Building the source code
 

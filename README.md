@@ -1,8 +1,10 @@
-# Tajo-0.10.1 CDH Edition
+# Tajo-0.10.1 for CDH5
+
+This branch maintains Tajo 0.10.1 branch for CDH 5.
 
 ## History
-* Initial commit: 2015-05-08
-* Modified some jars CLASSPATH and tested on CDH 5.4 : 2015-05-12
+* 2015-05-08: Initial commit
+* 2015-05-12: Modified some jars CLASSPATH and tested on CDH 5.4
 
 ## Direct Download
  * [tajo-0.10.1-cdh5_4] (https://www.dropbox.com/s/ftwm402e39cmws7/tajo-0.11.0-SNAPSHOT.tar.gz?dl=0)

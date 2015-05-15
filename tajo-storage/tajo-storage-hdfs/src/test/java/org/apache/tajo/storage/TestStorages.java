@@ -38,6 +38,7 @@ import org.apache.tajo.datum.Datum;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.datum.NullDatum;
 import org.apache.tajo.datum.ProtobufDatumFactory;
+import org.apache.tajo.exception.ValueTooLongForTypeCharactersException;
 import org.apache.tajo.storage.fragment.FileFragment;
 import org.apache.tajo.storage.rcfile.RCFile;
 import org.apache.tajo.storage.sequencefile.SequenceFileScanner;
@@ -1010,5 +1011,51 @@ public class TestStorages {
 
     assertEquals(expect.get(1), tuple.get(1));
     assertEquals(NullDatum.get(), tuple.get(4));
+  }
+
+  @Test
+  public final void testInsertFixedCharTypeWithOverSize() throws Exception {
+    if (!storeType.equals(StoreType.CSV) &&
+        !storeType.equals(StoreType.SEQUENCEFILE) &&
+        !storeType.equals(StoreType.RCFILE) &&
+        !storeType.equals(StoreType.PARQUET)) {
+      return;
+    }
+
+    Schema dataSchema = new Schema();
+    dataSchema.addColumn("col1", Type.CHAR);
+
+    KeyValueSet options = new KeyValueSet();
+    TableMeta meta = CatalogUtil.newTableMeta(storeType, options);
+    meta.setOptions(CatalogUtil.newPhysicalProperties(storeType));
+
+    Path tablePath = new Path(testDir, "test_storetype_oversize.data");
+    FileStorageManager sm = (FileStorageManager) StorageManager.getFileStorageManager(conf);
+    Appender appender = sm.getAppender(meta, dataSchema, tablePath);
+    appender.init();
+
+    Tuple expect = new VTuple(dataSchema.size());
+    expect.put(new Datum[]{
+        DatumFactory.createChar("1"),
+    });
+
+    appender.addTuple(expect);
+    appender.flush();
+
+    Tuple expect2 = new VTuple(dataSchema.size());
+    expect2.put(new Datum[]{
+        DatumFactory.createChar("12"),
+    });
+
+    boolean ok = false;
+    try {
+      appender.addTuple(expect2);
+      appender.flush();
+      appender.close();
+    } catch (ValueTooLongForTypeCharactersException e) {
+      ok = true;
+    }
+
+    assertTrue(ok);
   }
 }

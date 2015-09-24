@@ -291,6 +291,7 @@ public class QueryExecutor {
     if (plan.getRootBlock().hasNode(NodeType.LIMIT)) {
       LimitNode limitNode = plan.getRootBlock().getNode(NodeType.LIMIT);
       maxRow = (int) limitNode.getFetchFirstNum();
+      scanNode.setLimit(maxRow);
     }
     if (desc.getStats().getNumRows() == 0) {
       desc.getStats().setNumRows(TajoConstants.UNKNOWN_ROW_NUMBER);
@@ -457,7 +458,7 @@ public class QueryExecutor {
       String queryId = nodeUniqName + "_" + System.currentTimeMillis();
 
       URI finalOutputUri = insertNode.getUri();
-      Tablespace space = TablespaceManager.get(finalOutputUri).get();
+      Tablespace space = TablespaceManager.get(finalOutputUri);
       TableMeta tableMeta = new TableMeta(insertNode.getStorageType(), insertNode.getOptions());
       tableMeta.putOption(StorageConstants.INSERT_DIRECTLY, Boolean.TRUE.toString());
 
@@ -509,7 +510,7 @@ public class QueryExecutor {
       } else { // If INSERT INTO LOCATION
 
         // Empty TableDesc
-        List<CatalogProtos.ColumnProto> columns = new ArrayList<CatalogProtos.ColumnProto>();
+        List<CatalogProtos.ColumnProto> columns = new ArrayList<>();
         CatalogProtos.TableDescProto tableDescProto = CatalogProtos.TableDescProto.newBuilder()
             .setTableName(nodeUniqName)
             .setMeta(CatalogProtos.TableProto.newBuilder().setStoreType(BuiltinStorages.TEXT).build())
@@ -563,7 +564,7 @@ public class QueryExecutor {
     TableDesc tableDesc = PlannerUtil.getTableDesc(catalog, plan.getRootBlock().getRoot());
     if (tableDesc != null) {
 
-      Tablespace space = TablespaceManager.get(tableDesc.getUri()).get();
+      Tablespace space = TablespaceManager.get(tableDesc.getUri());
       FormatProperty formatProperty = space.getFormatProperty(tableDesc.getMeta());
 
       if (!formatProperty.isInsertable()) {
@@ -602,7 +603,7 @@ public class QueryExecutor {
     TableDesc tableDesc = PlannerUtil.getTableDesc(planner.getCatalog(), rootNode.getChild());
 
     if (tableDesc != null) {
-      Tablespace space = TablespaceManager.get(tableDesc.getUri()).get();
+      Tablespace space = TablespaceManager.get(tableDesc.getUri());
       space.rewritePlan(context, plan);
     }
 

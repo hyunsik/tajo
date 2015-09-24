@@ -28,6 +28,7 @@ import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.exception.TajoRuntimeException;
 import org.apache.tajo.exception.UnsupportedException;
 import org.apache.tajo.plan.expr.EvalNode;
+import org.apache.tajo.plan.logical.LogicalNode;
 import org.apache.tajo.storage.fragment.Fragment;
 
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class MergeScanner implements Scanner {
     this.meta = meta;
     this.target = target;
 
-    this.fragments = new ArrayList<Fragment>();
+    this.fragments = new ArrayList<>();
 
     long numBytes = 0;
     for (Fragment eachFileFragment: rawFragmentList) {
@@ -153,6 +154,11 @@ public class MergeScanner implements Scanner {
   }
 
   @Override
+  public void pushOperators(LogicalNode planPart) {
+    throw new TajoRuntimeException(new UnsupportedException());
+  }
+
+  @Override
   public boolean isProjectable() {
     return projectable;
   }
@@ -170,6 +176,10 @@ public class MergeScanner implements Scanner {
   @Override
   public void setFilter(EvalNode filter) {
     throw new TajoRuntimeException(new UnsupportedException());
+  }
+
+  @Override
+  public void setLimit(long num) {
   }
 
   @Override

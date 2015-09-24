@@ -47,7 +47,6 @@ import java.util.*;
 import static org.apache.tajo.TajoConstants.DEFAULT_DATABASE_NAME;
 import static org.apache.tajo.catalog.proto.CatalogProtos.AlterTablespaceProto;
 import static org.apache.tajo.catalog.proto.CatalogProtos.AlterTablespaceProto.AlterTablespaceType;
-import static org.apache.tajo.catalog.proto.CatalogProtos.AlterTablespaceProto.SetLocation;
 import static org.junit.Assert.*;
 
 public class TestCatalog {
@@ -99,7 +98,7 @@ public class TestCatalog {
     AlterTablespaceProto.AlterTablespaceCommand.Builder commandBuilder =
         AlterTablespaceProto.AlterTablespaceCommand.newBuilder();
     commandBuilder.setType(AlterTablespaceType.LOCATION);
-    commandBuilder.setLocation(SetLocation.newBuilder().setUri("hdfs://zzz.com/warehouse"));
+    commandBuilder.setLocation("hdfs://zzz.com/warehouse");
     AlterTablespaceProto.Builder alter = AlterTablespaceProto.newBuilder();
     alter.setSpaceName("space1");
     alter.addCommand(commandBuilder.build());
@@ -122,7 +121,7 @@ public class TestCatalog {
     // ALTER TABLESPACE space1 LOCATION 'hdfs://zzz.com/warehouse';
     commandBuilder = AlterTablespaceProto.AlterTablespaceCommand.newBuilder();
     commandBuilder.setType(AlterTablespaceType.LOCATION);
-    commandBuilder.setLocation(SetLocation.newBuilder().setUri("hdfs://www.com/warehouse"));
+    commandBuilder.setLocation("hdfs://www.com/warehouse");
     alter = AlterTablespaceProto.newBuilder();
     alter.setSpaceName("space2");
     alter.addCommand(commandBuilder.build());
@@ -153,7 +152,7 @@ public class TestCatalog {
 
   @Test
   public void testCreateAndDropManyDatabases() throws Exception {
-    List<String> createdDatabases = new ArrayList<String>();
+    List<String> createdDatabases = new ArrayList<>();
     InfoSchemaMetadataDictionary dictionary = new InfoSchemaMetadataDictionary();
     String namePrefix = "database_";
     final int NUM = 10;
@@ -236,7 +235,7 @@ public class TestCatalog {
 
   private Map<String, List<String>> createBaseDatabaseAndTables() throws IOException, TajoException {
 
-    Map<String, List<String>> createdDatabaseAndTablesMap = new HashMap<String, List<String>>();
+    Map<String, List<String>> createdDatabaseAndTablesMap = new HashMap<>();
 
     // add and divide all tables to multiple databases in a round robin manner
     for (int tableId = 0; tableId < TOTAL_TABLE_NUM; tableId++) {
@@ -275,7 +274,7 @@ public class TestCatalog {
     Map<String, List<String>> createdTablesMap = createBaseDatabaseAndTables();
 
     // Each time we drop one database, check all databases and their tables.
-    Iterator<String> it = new ArrayList<String>(createdTablesMap.keySet()).iterator();
+    Iterator<String> it = new ArrayList<>(createdTablesMap.keySet()).iterator();
     while(it.hasNext()) {
       // drop one database
       String databaseName = it.next();

@@ -143,7 +143,7 @@ public class SeqScanExec extends ScanExec {
     // the target can be an empty list.
     if (plan.hasTargets()) {
       projected = new Schema();
-      Set<Column> columnSet = new HashSet<Column>();
+      Set<Column> columnSet = new HashSet<>();
 
       if (plan.hasQual()) {
         columnSet.addAll(EvalTreeUtil.findUniqueColumns(qual));
@@ -174,9 +174,6 @@ public class SeqScanExec extends ScanExec {
       scanIt = new FilterScanIterator(scanner, qual);
 
     } else {
-      if (scanner.isSelectable()) { // TODO - isSelectable should be moved to FormatProperty
-        scanner.setFilter(qual);
-      }
       scanIt = new FullScanIterator(scanner);
     }
   }
@@ -271,14 +268,21 @@ public class SeqScanExec extends ScanExec {
 
     } else {
 
-      Tablespace tablespace = TablespaceManager.get(table.getUri()).get();
+      Tablespace tablespace = TablespaceManager.get(table.getUri());
       this.scanner = tablespace.getScanner(
           meta,
           plan.getPhysicalSchema(),
-          fragments[0],
+          FragmentConvertor.convert(context.getConf(), fragments[0]),
           projected);
     }
 
+    if (scanner.isSelectable()) { // TODO - isSelectable should be moved to FormatProperty
+      scanner.setFilter(qual);
+    }
+
+    if (plan.hasLimit()) {
+      scanner.setLimit(plan.getLimit());
+    }
     scanner.init();
   }
 

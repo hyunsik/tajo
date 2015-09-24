@@ -102,14 +102,14 @@ public class NonForwardQueryResultFileScanner implements NonForwardQueryResultSc
   }
 
   private void initSeqScanExec() throws IOException, TajoException {
-    Tablespace tablespace = TablespaceManager.get(tableDesc.getUri()).get();
+    Tablespace tablespace = TablespaceManager.get(tableDesc.getUri());
 
     List<Fragment> fragments = Lists.newArrayList();
     if (tableDesc.hasPartition()) {
       FileTablespace fileTablespace = TUtil.checkTypeAndGet(tablespace, FileTablespace.class);
       fragments.addAll(Repartitioner.getFragmentsFromPartitionedTable(fileTablespace, scanNode, tableDesc));
     } else {
-      fragments.addAll(tablespace.getSplits(tableDesc.getName(), tableDesc, scanNode));
+      fragments.addAll(tablespace.getSplits(tableDesc.getName(), tableDesc, scanNode.getQual()));
     }
 
     if (!fragments.isEmpty()) {

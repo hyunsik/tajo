@@ -64,7 +64,7 @@ public class ConstantFolding extends SimpleEvalNodeVisitor<LogicalPlanner.PlanCo
   }
 
   @Override
-  public EvalNode visitUnaryEval(LogicalPlanner.PlanContext context, Stack<EvalNode> stack, UnaryEval unaryEval) {
+  public EvalNode visitUnaryEval(LogicalPlanner.PlanContext context, UnaryEval unaryEval, Stack<EvalNode> stack) {
     stack.push(unaryEval);
     EvalNode child = visit(context, unaryEval.getChild(), stack);
     stack.pop();
@@ -79,7 +79,7 @@ public class ConstantFolding extends SimpleEvalNodeVisitor<LogicalPlanner.PlanCo
   }
 
   // exceptional func names not to use constant folding
-  private static final Set<String> NON_CONSTANT_FUNC_NAMES = new HashSet<String>(Arrays.asList("sleep", "random"));
+  private static final Set<String> NON_CONSTANT_FUNC_NAMES = new HashSet<>(Arrays.asList("sleep", "random"));
 
   @Override
   public EvalNode visitFuncCall(LogicalPlanner.PlanContext context, FunctionEval evalNode, Stack<EvalNode> stack) {

@@ -18,6 +18,7 @@
 
 package org.apache.tajo.catalog;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -81,10 +82,9 @@ public class CatalogServer extends AbstractService {
   private final Lock wlock = lock.writeLock();
 
   private CatalogStore store;
-  private Map<String, List<FunctionDescProto>> functions = new ConcurrentHashMap<String,
-      List<FunctionDescProto>>();
+  private Map<String, List<FunctionDescProto>> functions = new ConcurrentHashMap<>();
 
-  protected final LinkedMetadataManager linkedMetadataManager;
+  protected LinkedMetadataManager linkedMetadataManager;
   protected final InfoSchemaMetadataDictionary metaDictionary = new InfoSchemaMetadataDictionary();
 
   // RPC variables
@@ -99,10 +99,11 @@ public class CatalogServer extends AbstractService {
     super(CatalogServer.class.getName());
     this.handler = new CatalogProtocolHandler();
     this.linkedMetadataManager = new LinkedMetadataManager(Collections.EMPTY_LIST);
-    this.builtingFuncs = new ArrayList<FunctionDesc>();
+    this.builtingFuncs = new ArrayList<>();
   }
 
-  public CatalogServer(Set<MetadataProvider> metadataProviders, Collection<FunctionDesc> sqlFuncs) throws IOException {
+  public CatalogServer(Collection<MetadataProvider> metadataProviders, Collection<FunctionDesc> sqlFuncs)
+      throws IOException {
     super(CatalogServer.class.getName());
     this.handler = new CatalogProtocolHandler();
     this.linkedMetadataManager = new LinkedMetadataManager(metadataProviders);
@@ -190,6 +191,15 @@ public class CatalogServer extends AbstractService {
       store.close();
     }
     super.serviceStop();
+  }
+
+  /**
+   * Refresh the linked metadata manager. This must be used for only testing.
+   * @param metadataProviders
+   */
+  @VisibleForTesting
+  public void refresh(Collection<MetadataProvider> metadataProviders) {
+    this.linkedMetadataManager = new LinkedMetadataManager(metadataProviders);
   }
 
   public CatalogProtocolHandler getHandler() {
@@ -363,11 +373,11 @@ public class CatalogServer extends AbstractService {
           for (AlterTablespaceCommand command : request.getCommandList()) {
             if (command.getType() == AlterTablespaceProto.AlterTablespaceType.LOCATION) {
               try {
-                URI uri = URI.create(command.getLocation().getUri());
+                URI uri = URI.create(command.getLocation());
                 Preconditions.checkArgument(uri.getScheme() != null);
               } catch (Exception e) {
                 throw new ServiceException("ALTER TABLESPACE's LOCATION must be a URI form (scheme:///.../), but "
-                    + command.getLocation().getUri());
+                    + command.getLocation());
               }
             }
           }

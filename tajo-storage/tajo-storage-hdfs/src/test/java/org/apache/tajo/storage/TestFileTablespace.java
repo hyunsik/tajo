@@ -20,6 +20,7 @@ package org.apache.tajo.storage;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import net.minidev.json.JSONObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -128,7 +129,7 @@ public class TestFileTablespace {
       }
 
       assertTrue(fs.exists(tablePath));
-      FileTablespace space = new FileTablespace("testGetSplit", fs.getUri());
+      FileTablespace space = new FileTablespace("testGetSplit", fs.getUri(), null);
       space.init(new TajoConf(conf));
       assertEquals(fs.getUri(), space.getUri());
 
@@ -186,7 +187,7 @@ public class TestFileTablespace {
       }
 
       assertTrue(fs.exists(tablePath));
-      FileTablespace space = new FileTablespace("testZeroLengthSplit", fs.getUri());
+      FileTablespace space = new FileTablespace("testZeroLengthSplit", fs.getUri(), new JSONObject());
       space.init(new TajoConf(conf));
       assertEquals(fs.getUri(), space.getUri());
 
@@ -233,7 +234,7 @@ public class TestFileTablespace {
       }
       assertTrue(fs.exists(tablePath));
 
-      FileTablespace sm = new FileTablespace("testGetSplitWithBlockStorageLocationsBatching", fs.getUri());
+      FileTablespace sm = new FileTablespace("testGetSplitWithBlockStorageLocationsBatching", fs.getUri(), null);
       sm.init(new TajoConf(conf));
 
       assertEquals(fs.getUri(), sm.getUri());
@@ -276,15 +277,15 @@ public class TestFileTablespace {
       FileTablespace space = TablespaceManager.getLocalFs();
       assertEquals(localFs.getUri(), space.getFileSystem().getUri());
 
-      FileTablespace distTablespace = new FileTablespace("testGetFileTablespace", uri);
+      FileTablespace distTablespace = new FileTablespace("testGetFileTablespace", uri, null);
       distTablespace.init(conf);
       existingTs = TablespaceManager.addTableSpaceForTest(distTablespace);
 
       /* Distributed FileSystem */
-      space = (FileTablespace) TablespaceManager.get(uri).get();
+      space = (FileTablespace) TablespaceManager.get(uri);
       assertEquals(cluster.getFileSystem().getUri(), space.getFileSystem().getUri());
 
-      space = (FileTablespace) TablespaceManager.getByName("testGetFileTablespace").get();
+      space = (FileTablespace) TablespaceManager.getByName("testGetFileTablespace");
       assertEquals(cluster.getFileSystem().getUri(), space.getFileSystem().getUri());
 
     } finally {

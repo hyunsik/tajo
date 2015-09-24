@@ -35,10 +35,10 @@ import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.engine.query.QueryContext;
 import org.apache.tajo.ipc.QueryMasterProtocol;
 import org.apache.tajo.plan.serder.PlanProto;
+import org.apache.tajo.pullserver.TajoPullServerService;
 import org.apache.tajo.rpc.*;
 import org.apache.tajo.rpc.protocolrecords.PrimitiveProtos;
 import org.apache.tajo.storage.HashShuffleAppenderManager;
-import org.apache.tajo.storage.StorageUtil;
 import org.apache.tajo.util.Pair;
 import org.apache.tajo.worker.event.ExecutionBlockErrorEvent;
 
@@ -213,21 +213,12 @@ public class ExecutionBlockContext {
   }
 
   public static Path getBaseOutputDir(ExecutionBlockId executionBlockId) {
-    Path workDir =
-        StorageUtil.concatPath(
-            executionBlockId.getQueryId().toString(),
-            "output",
-            String.valueOf(executionBlockId.getId()));
-    return workDir;
+    return TajoPullServerService.getBaseOutputDir(
+        executionBlockId.getQueryId().toString(), String.valueOf(executionBlockId.getId()));
   }
 
   public static Path getBaseInputDir(ExecutionBlockId executionBlockId) {
-    Path workDir =
-        StorageUtil.concatPath(
-            executionBlockId.getQueryId().toString(),
-            "in",
-            executionBlockId.toString());
-    return workDir;
+    return TajoPullServerService.getBaseInputDir(executionBlockId.getQueryId().toString(), executionBlockId.toString());
   }
 
   public ExecutionBlockId getExecutionBlockId() {
@@ -260,9 +251,9 @@ public class ExecutionBlockContext {
 
     try {
       //If QueryMaster does not responding, current execution block should be stop
-      CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<PrimitiveProtos.NullProto>();
+      CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<>();
       getStub().fatalError(callFuture.getController(), builder.build(), callFuture);
-      callFuture.get(RpcConstants.DEFAULT_FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      callFuture.get(RpcConstants.FUTURE_TIMEOUT_SECONDS_DEFAULT, TimeUnit.SECONDS);
     } catch (Exception e) {
       getWorkerContext().getTaskManager().getDispatcher().getEventHandler()
           .handle(new ExecutionBlockErrorEvent(taskAttemptId.getTaskId().getExecutionBlockId(), e));
@@ -307,9 +298,9 @@ public class ExecutionBlockContext {
       if (shuffles == null) {
         reporterBuilder.addAllIntermediateEntries(intermediateEntries);
 
-        CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<PrimitiveProtos.NullProto>();
+        CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<>();
         stub.doneExecutionBlock(callFuture.getController(), reporterBuilder.build(), callFuture);
-        callFuture.get(RpcConstants.DEFAULT_FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        callFuture.get(RpcConstants.FUTURE_TIMEOUT_SECONDS_DEFAULT, TimeUnit.SECONDS);
         return;
       }
 
@@ -362,9 +353,9 @@ public class ExecutionBlockContext {
       }
     }
     try {
-      CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<PrimitiveProtos.NullProto>();
+      CallFuture<PrimitiveProtos.NullProto> callFuture = new CallFuture<>();
       stub.doneExecutionBlock(callFuture.getController(), reporterBuilder.build(), callFuture);
-      callFuture.get(RpcConstants.DEFAULT_FUTURE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      callFuture.get(RpcConstants.FUTURE_TIMEOUT_SECONDS_DEFAULT, TimeUnit.SECONDS);
     } catch (Throwable e) {
       // can't send report to query master
       LOG.fatal(e.getMessage(), e);
@@ -400,7 +391,7 @@ public class ExecutionBlockContext {
               if(tasks.size() == 0){
                 masterStub.ping(null, getExecutionBlockId().getProto(), NullCallback.get());
               } else {
-                for (Task task : new ArrayList<Task>(tasks.values())){
+                for (Task task : new ArrayList<>(tasks.values())){
 
                   if (task.getTaskContext().getState() ==
                       TajoProtos.TaskAttemptState.TA_RUNNING && task.isProgressChanged()) {

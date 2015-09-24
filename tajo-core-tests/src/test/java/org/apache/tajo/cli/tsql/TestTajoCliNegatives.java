@@ -40,7 +40,7 @@ public class TestTajoCliNegatives extends QueryTestCaseBase {
   @BeforeClass
   public static void setUp() throws Exception {
     out = new ByteArrayOutputStream();
-    tajoCli = new TajoCli(testingCluster.getConfiguration(), new String[]{}, System.in, out);
+    tajoCli = new TajoCli(testingCluster.getConfiguration(), new String[]{}, null, System.in, out);
   }
 
   @AfterClass
@@ -79,7 +79,7 @@ public class TestTajoCliNegatives extends QueryTestCaseBase {
 
   @Test
   public void testConnectDatabase() throws Exception {
-    assertMetaCommandFailure("\\c unknown_db", "ERROR: database 'unknown_db' does not exist");
+    assertMetaCommandFailure("\\c unknown_db", "ERROR: database 'unknown_db' does not exist\n");
   }
 
   @Test

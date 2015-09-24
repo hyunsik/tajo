@@ -48,12 +48,12 @@ public class OldStorageManager {
    * Cache of scanner handlers for each storage type.
    */
   protected static final Map<String, Class<? extends Scanner>> SCANNER_HANDLER_CACHE
-      = new ConcurrentHashMap<String, Class<? extends Scanner>>();
+      = new ConcurrentHashMap<>();
   /**
    * Cache of appender handlers for each storage type.
    */
   protected static final Map<String, Class<? extends Appender>> APPENDER_HANDLER_CACHE
-      = new ConcurrentHashMap<String, Class<? extends Appender>>();
+      = new ConcurrentHashMap<>();
   private static final Class<?>[] DEFAULT_SCANNER_PARAMS = {
       Configuration.class,
       Schema.class,
@@ -161,7 +161,7 @@ public class OldStorageManager {
             constructor.setAccessible(true);
             CONSTRUCTOR_CACHE.put(storageManagerClass, constructor);
           }
-          manager = constructor.newInstance(new Object[]{"noname", uri});
+          manager = constructor.newInstance(new Object[]{"noname", uri, null});
         } catch (Exception e) {
           throw new RuntimeException(e);
         }

@@ -397,8 +397,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     });
     addNamedExprs(block, referenceNames, normalizedExprList, windowSpecReferencesList, projection, targetsIds);
 
-    return new Pair<String[], ExprNormalizer.WindowSpecReferences []>(referenceNames,
-        windowSpecReferencesList.toArray(new ExprNormalizer.WindowSpecReferences[windowSpecReferencesList.size()]));
+    return new Pair<>(referenceNames,
+            windowSpecReferencesList.toArray(new ExprNormalizer.WindowSpecReferences[windowSpecReferencesList.size()]));
   }
 
   private interface Matcher {
@@ -407,7 +407,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
   public List<Integer> normalize(PlanContext context, Projection projection, ExprNormalizedResult [] normalizedExprList,
                                  Matcher matcher) throws TajoException {
-    List<Integer> targetIds = new ArrayList<Integer>();
+    List<Integer> targetIds = new ArrayList<>();
     for (int i = 0; i < projection.size(); i++) {
       NamedExpr namedExpr = projection.getNamedExprs()[i];
 
@@ -653,8 +653,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       windowAggNode.setInSchema(child.getOutSchema());
     }
 
-    List<String> winFuncRefs = new ArrayList<String>();
-    List<WindowFunctionEval> winFuncs = new ArrayList<WindowFunctionEval>();
+    List<String> winFuncRefs = new ArrayList<>();
+    List<WindowFunctionEval> winFuncs = new ArrayList<>();
     List<WindowSpec> rawWindowSpecs = Lists.newArrayList();
     for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
       NamedExpr rawTarget = it.next();
@@ -788,8 +788,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
     groupbyNode.setGroupingColumns(new Column[] {});
 
-    Set<String> aggEvalNames = new LinkedHashSet<String>();
-    Set<AggregationFunctionCallEval> aggEvals = new LinkedHashSet<AggregationFunctionCallEval>();
+    Set<String> aggEvalNames = new LinkedHashSet<>();
+    Set<AggregationFunctionCallEval> aggEvals = new LinkedHashSet<>();
     boolean includeDistinctFunction = false;
     for (Iterator<NamedExpr> it = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); it.hasNext();) {
       NamedExpr rawTarget = it.next();
@@ -1339,12 +1339,12 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     QueryBlock block = context.queryBlock;
 
     ScanNode scanNode = block.getNodeFromExpr(expr);
-    updatePhysicalInfo(context, scanNode.getTableDesc());
+    updatePhysicalInfo(scanNode.getTableDesc());
 
     // Find expression which can be evaluated at this relation node.
     // Except for column references, additional expressions used in select list, where clause, order-by clauses
     // can be evaluated here. Their reference names are kept in newlyEvaluatedExprsRef.
-    Set<String> newlyEvaluatedExprsReferences = new LinkedHashSet<String>();
+    Set<String> newlyEvaluatedExprsReferences = new LinkedHashSet<>();
     for (Iterator<NamedExpr> iterator = block.namedExprsMgr.getIteratorForUnevaluatedExprs(); iterator.hasNext();) {
       NamedExpr rawTarget = iterator.next();
       try {
@@ -1376,7 +1376,7 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
   }
 
   private static LinkedHashSet<Target> createFieldTargetsFromRelation(QueryBlock block, RelationNode relationNode,
-                                                      Set<String> newlyEvaluatedRefNames) {
+                                                                      Set<String> newlyEvaluatedRefNames) {
     LinkedHashSet<Target> targets = Sets.newLinkedHashSet();
     for (Column column : relationNode.getLogicalSchema().getAllColumns()) {
 
@@ -1398,24 +1398,18 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
     return targets;
   }
 
-  private void updatePhysicalInfo(PlanContext planContext, TableDesc desc) {
-    if (desc.getUri() != null &&
-        !desc.getMeta().getStoreType().equals("SYSTEM") &&
-        !desc.getMeta().getStoreType().equals("FAKEFILE") && // FAKEFILE is used for test
-        PlannerUtil.isFileStorageType(desc.getMeta().getStoreType())) {
+  private void updatePhysicalInfo(TableDesc desc) {
+
+    // FAKEFILE is used for test
+    if (!desc.getMeta().getStoreType().equals("SYSTEM") && !desc.getMeta().getStoreType().equals("FAKEFILE")) {
       try {
-        Path path = new Path(desc.getUri());
-        FileSystem fs = path.getFileSystem(planContext.queryContext.getConf());
-        FileStatus status = fs.getFileStatus(path);
-        if (desc.getStats() != null && (status.isDirectory() || status.isFile())) {
-          ContentSummary summary = fs.getContentSummary(path);
-          if (summary != null) {
-            long volume = summary.getLength();
-            desc.getStats().setNumBytes(volume);
-          }
+        if (desc.getStats() != null) {
+          desc.getStats().setNumBytes(storage.getTableVolumn(desc.getUri()));
         }
-      } catch (Throwable t) {
-        LOG.warn(t, t);
+      } catch (UnsupportedException t) {
+        LOG.warn(desc.getName() + " does not support Tablespace::getTableVolume()");
+        // -1 means unknown volume size.
+        desc.getStats().setNumBytes(-1);
       }
     }
   }
@@ -2006,8 +2000,12 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
       return createTableNode;
 
     } else { // if CREATE AN EMPTY TABLE
-      Schema tableSchema = convertColumnsToSchema(expr.getTableElements());
-      createTableNode.setTableSchema(tableSchema);
+      if (!expr.hasSelfDescSchema()) {
+        Schema tableSchema = convertColumnsToSchema(expr.getTableElements());
+        createTableNode.setTableSchema(tableSchema);
+      } else {
+        createTableNode.setSelfDescSchema(true);
+      }
 
       if (expr.isExternal()) {
         createTableNode.setExternal(true);

@@ -19,6 +19,7 @@
 package org.apache.tajo;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
@@ -39,6 +40,7 @@ import org.apache.tajo.client.TajoClient;
 import org.apache.tajo.conf.TajoConf;
 import org.apache.tajo.parser.sql.SQLAnalyzer;
 import org.apache.tajo.engine.query.QueryContext;
+import org.apache.tajo.exception.InsufficientPrivilegeException;
 import org.apache.tajo.exception.TajoException;
 import org.apache.tajo.exception.UndefinedTableException;
 import org.apache.tajo.jdbc.FetchResultSet;
@@ -186,7 +188,7 @@ public class QueryTestCaseBase {
 
   /** It transiently contains created tables for the running test class. */
   private static String currentDatabase;
-  private static Set<String> createdTableGlobalSet = new HashSet<String>();
+  private static Set<String> createdTableGlobalSet = new HashSet<>();
   // queries and results directory corresponding to subclass class.
   protected Path currentQueryPath;
   protected Path namedQueryPath;
@@ -206,10 +208,13 @@ public class QueryTestCaseBase {
     client = testBase.getTestingCluster().newTajoClient();
 
     URL datasetBaseURL = ClassLoader.getSystemResource("dataset");
+    Preconditions.checkNotNull(datasetBaseURL, "dataset directory is absent.");
     datasetBasePath = new Path(datasetBaseURL.toString());
     URL queryBaseURL = ClassLoader.getSystemResource("queries");
+    Preconditions.checkNotNull(queryBaseURL, "queries directory is absent.");
     queryBasePath = new Path(queryBaseURL.toString());
     URL resultBaseURL = ClassLoader.getSystemResource("results");
+    Preconditions.checkNotNull(resultBaseURL, "results directory is absent.");
     resultBasePath = new Path(resultBaseURL.toString());
   }
 
@@ -223,11 +228,19 @@ public class QueryTestCaseBase {
     // if the current database is "default", shouldn't drop it.
     if (!currentDatabase.equals(TajoConstants.DEFAULT_DATABASE_NAME)) {
       for (String tableName : catalog.getAllTableNames(currentDatabase)) {
-        client.updateQuery("DROP TABLE IF EXISTS " + tableName);
+        try {
+          client.updateQuery("DROP TABLE IF EXISTS " + tableName);
+        } catch (InsufficientPrivilegeException i) {
+          LOG.warn("relation '" + tableName + "' is read only.");
+        }
       }
 
       client.selectDatabase(TajoConstants.DEFAULT_DATABASE_NAME);
-      client.dropDatabase(currentDatabase);
+      try {
+        client.dropDatabase(currentDatabase);
+      } catch (InsufficientPrivilegeException e) {
+        LOG.warn("database '" + currentDatabase + "' is read only.");
+      }
     }
     client.close();
   }
@@ -813,7 +826,7 @@ public class QueryTestCaseBase {
     }
     sb.append("\n-------------------------------\n");
 
-    List<String> results = new ArrayList<String>();
+    List<String> results = new ArrayList<>();
     while (resultSet.next()) {
       StringBuilder line = new StringBuilder();
       for (int i = 1; i <= numOfColumns; i++) {
@@ -902,7 +915,7 @@ public class QueryTestCaseBase {
     return resultPath;
   }
 
-  private Path getDataSetFile(String fileName) throws IOException {
+  protected Path getDataSetFile(String fileName) throws IOException {
     Path dataFilePath = StorageUtil.concatPath(currentDatasetPath, fileName);
     FileSystem fs = currentDatasetPath.getFileSystem(testBase.getTestingCluster().getConfiguration());
     if (!fs.exists(dataFilePath)) {
@@ -910,10 +923,10 @@ public class QueryTestCaseBase {
         dataFilePath = StorageUtil.concatPath(namedDatasetPath, fileName);
         fs = namedDatasetPath.getFileSystem(testBase.getTestingCluster().getConfiguration());
         if (!fs.exists(dataFilePath)) {
-          throw new IOException("Cannot find " + fileName + " at " + currentQueryPath + " and " + namedQueryPath);
+          throw new IOException("Cannot find " + fileName + " at " + currentDatasetPath);
         }
       } else {
-        throw new IOException("Cannot find " + fileName + " at " + currentQueryPath + " and " + namedQueryPath);
+        throw new IOException("Cannot find " + fileName + " at " + currentDatasetPath);
       }
     }
     return dataFilePath;
@@ -969,7 +982,7 @@ public class QueryTestCaseBase {
     String compiled = compileTemplate(template, dataFilePath, args);
 
     List<ParsedResult> parsedResults = SimpleParser.parseScript(compiled);
-    List<String> createdTableNames = new ArrayList<String>();
+    List<String> createdTableNames = new ArrayList<>();
 
     for (ParsedResult parsedResult : parsedResults) {
       // parse a statement
@@ -1115,7 +1128,7 @@ public class QueryTestCaseBase {
   }
 
   private List<Path> listFiles(FileSystem fs, Path path) throws Exception {
-    List<Path> result = new ArrayList<Path>();
+    List<Path> result = new ArrayList<>();
     FileStatus[] files = fs.listStatus(path);
     if (files == null || files.length == 0) {
       return result;

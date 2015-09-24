@@ -37,7 +37,7 @@ import org.apache.tajo.datum.Int4Datum;
 import org.apache.tajo.datum.TextDatum;
 import org.apache.tajo.exception.TajoException;
 import org.apache.tajo.storage.*;
-import org.apache.tajo.util.FileUtil;
+import org.apache.tajo.util.JavaResourceUtil;
 import org.apache.tajo.util.KeyValueSet;
 import org.junit.runners.Parameterized.Parameters;
 
@@ -248,7 +248,7 @@ public class TestJoinQuery extends QueryTestCaseBase {
     TableMeta tableMeta = table.getMeta();
     Schema schema = table.getLogicalSchema();
 
-    String[] rows = FileUtil.readTextFileFromResource("tpch/" + tableName + ".tbl").split("\n");
+    String[] rows = JavaResourceUtil.readTextFromResource("tpch/" + tableName + ".tbl").split("\n");
 
     assertTrue(rows.length > 0);
 
@@ -296,7 +296,7 @@ public class TestJoinQuery extends QueryTestCaseBase {
 
   protected static List<Path> getPartitionPathList(FileSystem fs, Path path) throws Exception {
     FileStatus[] files = fs.listStatus(path);
-    List<Path> paths = new ArrayList<Path>();
+    List<Path> paths = new ArrayList<>();
     if (files != null) {
       for (FileStatus eachFile: files) {
         if (eachFile.isFile()) {

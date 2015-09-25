@@ -84,7 +84,7 @@ limitations under the License.
 [package]
 name = "proto"
 version = "0.1.0"
-authors = ["Hyunsik Choi <hyunsik.choi at gmail dot com>"]
+authors = ["Maven"]
 
 [lib]
 name = "proto"
@@ -104,10 +104,12 @@ git = "https://github.com/stepancheg/rust-protobuf.git"
             <configuration>
               <target>
                 <echo file="target/generated-rust-sources/proto/src/lib.rs">
-//pub mod Plan;
+
 extern crate protobuf;
 
+//pub mod Plan;
 pub mod tajo_protos;
+pub mod DataTypes;
                 </echo>
               </target>
             </configuration>
@@ -131,13 +133,18 @@ pub mod tajo_protos;
                 <argument>--rust_out=target/generated-rust-sources/proto/src</argument>
 
                 <argument>--proto_path=../tajo-common/src/main/proto/</argument>
+                <argument>../tajo-common/src/main/proto/DataTypes.proto</argument>
+                <argument>../tajo-common/src/main/proto/errors.proto</argument>
+                <argument>../tajo-common/src/main/proto/PrimitiveProtos.proto</argument>
+                <argument>../tajo-common/src/main/proto/stacktrace.proto</argument>
                 <argument>../tajo-common/src/main/proto/tajo_protos.proto</argument>
+                <argument>../tajo-common/src/main/proto/TajoIdProtos.proto</argument>
 
-                <!--<argument>&#45;&#45;proto_path=../tajo-catalog/tajo-catalog-common/src/main/proto</argument>-->
-                <!--<argument>&#45;&#45;proto_path=../tajo-client/src/main/proto</argument>-->
+                <argument>--proto_path=../tajo-catalog/tajo-catalog-common/src/main/proto</argument>
+                <argument>../tajo-catalog/tajo-catalog-common/src/main/proto/CatalogProtos.proto</argument>
 
-                <!--<argument>&#45;&#45;proto_path=../tajo-plan/src/main/proto</argument>-->
-                <!--<argument>../tajo-plan/src/main/proto/Plan.proto</argument>-->
+                <argument>--proto_path=../tajo-plan/src/main/proto</argument>
+                <argument>../tajo-plan/src/main/proto/Plan.proto</argument>
 
               </arguments>
             </configuration>

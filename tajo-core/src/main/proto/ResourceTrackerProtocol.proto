@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+package tajo;
 
 option java_package = "org.apache.tajo.ipc";
 option java_outer_classname = "TajoResourceTrackerProtocol";
@@ -23,8 +24,6 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 
 import "ResourceProtos.proto";
-
-package hadoop.yarn;
 
 service TajoResourceTrackerProtocolService {
   rpc nodeHeartbeat(NodeHeartbeatRequest) returns (NodeHeartbeatResponse);

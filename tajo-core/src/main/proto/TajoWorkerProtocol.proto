@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 // TajoMaster -> TajoWorker, TajoWorker(QueryMaster) <-> TajoWorker Protocol
 option java_package = "org.apache.tajo.ipc";
 option java_outer_classname = "TajoWorkerProtocol";
@@ -26,8 +28,6 @@ option java_generate_equals_and_hash = true;
 import "TajoIdProtos.proto";
 import "PrimitiveProtos.proto";
 import "ResourceProtos.proto";
-
-package hadoop.yarn;
 
 service TajoWorkerProtocolService {
   rpc ping (TaskAttemptIdProto) returns (BoolProto);

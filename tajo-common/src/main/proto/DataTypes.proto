@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 option java_package = "org.apache.tajo.common";
 option java_outer_classname = "TajoDataTypes";
 option optimize_for = SPEED;

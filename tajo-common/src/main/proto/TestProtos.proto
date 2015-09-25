@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 option java_package = "org.apache.tajo.util";
 option java_outer_classname = "TestProtos";
 option java_generic_services = true;

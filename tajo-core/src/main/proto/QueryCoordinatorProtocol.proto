@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package tajo;
+
 //TajoWorker -> TajoMaster protocol
 
 option java_package = "org.apache.tajo.ipc";
@@ -25,8 +27,6 @@ option java_generate_equals_and_hash = true;
 
 import "PrimitiveProtos.proto";
 import "ResourceProtos.proto";
-
-package hadoop.yarn;
 
 service QueryCoordinatorProtocolService {
   rpc heartbeat(TajoHeartbeatRequest) returns (TajoHeartbeatResponse);

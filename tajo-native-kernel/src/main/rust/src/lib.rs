@@ -25,6 +25,8 @@ extern crate libc;
 extern crate jni;
 extern crate proto;
 
+mod plan_converter;
+
 use libc::c_void;
 use std::ptr;
 

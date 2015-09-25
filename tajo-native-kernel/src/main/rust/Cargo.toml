@@ -15,9 +15,11 @@
 # limitations under the License.
 
 [package]
-name = "jni-example"
+name = "tajo-kernel-bridge"
 version = "0.1.0"
 authors = ["Hyunsik Choi <hyunsik@apache.org>"]
+
+include = ["../../../target/generated-rust-sources/proto/"]
 
 [lib]
 name = "native"
@@ -25,3 +27,6 @@ crate-type = ["dylib"]
 
 [dependencies.jni]
 git = "https://github.com/hyunsik/jni-rs.git"
+
+[dependencies.proto]
+path = "../../../target/generated-rust-sources/proto"

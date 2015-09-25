@@ -58,24 +58,96 @@ limitations under the License.
           </execution>
         </executions>
       </plugin>
+
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
+            <id>create-protobuf-generated-sources-directory</id>
+            <phase>initialize</phase>
             <configuration>
-              <sources>
-                <source>target/generated-sources/proto</source>
-              </sources>
+              <target>
+                <mkdir dir="target/generated-rust-sources/proto/src" />
+              </target>
             </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>create-cargo-for-proto</id>
+            <phase>initialize</phase>
+            <configuration>
+              <target>
+                <echo file="target/generated-rust-sources/proto/Cargo.toml">
+[package]
+name = "proto"
+version = "0.1.0"
+authors = ["Hyunsik Choi <hyunsik.choi at gmail dot com>"]
+
+[lib]
+name = "proto"
+
+[dependencies.protobuf]
+git = "https://github.com/stepancheg/rust-protobuf.git"
+                </echo>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>create-lib_rs-for-proto</id>
+            <phase>initialize</phase>
+            <configuration>
+              <target>
+                <echo file="target/generated-rust-sources/proto/src/lib.rs">
+//pub mod Plan;
+extern crate protobuf;
+
+pub mod tajo_protos;
+                </echo>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2</version>
+        <executions>
+          <execution>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <executable>protoc</executable>
+              <arguments>
+                <argument>--rust_out=target/generated-rust-sources/proto/src</argument>
+
+                <argument>--proto_path=../tajo-common/src/main/proto/</argument>
+                <argument>../tajo-common/src/main/proto/tajo_protos.proto</argument>
+
+                <!--<argument>&#45;&#45;proto_path=../tajo-catalog/tajo-catalog-common/src/main/proto</argument>-->
+                <!--<argument>&#45;&#45;proto_path=../tajo-client/src/main/proto</argument>-->
+
+                <!--<argument>&#45;&#45;proto_path=../tajo-plan/src/main/proto</argument>-->
+                <!--<argument>../tajo-plan/src/main/proto/Plan.proto</argument>-->
+
+              </arguments>
+            </configuration>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>

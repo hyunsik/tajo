@@ -22,8 +22,8 @@
 #![allow(unused_variables)]
 
 extern crate libc;
-
 extern crate jni;
+extern crate proto;
 
 use libc::c_void;
 use std::ptr;

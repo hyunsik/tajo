@@ -17,3 +17,6 @@ atlassian-ide-plugin.xml
 
 # Patch files
 *.patch
+
+# For native
+Cargo.lock

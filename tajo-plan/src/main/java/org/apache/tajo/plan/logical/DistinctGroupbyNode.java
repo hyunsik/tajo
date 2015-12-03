@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 public class DistinctGroupbyNode extends UnaryNode implements Projectable, Cloneable {
   @Expose
@@ -75,6 +76,11 @@ public class DistinctGroupbyNode extends UnaryNode implements Projectable, Clone
     }
   }
 
+  @Override
+  public Stream<Target> targets() {
+    return getTargets().stream();
+  }
+
   public void setSubPlans(List<GroupbyNode> groupByNodes) {
     this.subGroupbyPlan =  groupByNodes;
   }
@@ -97,6 +103,10 @@ public class DistinctGroupbyNode extends UnaryNode implements Projectable, Clone
 
   public void setResultColumnIds(int[] resultColumnIds) {
     this.resultColumnIds = resultColumnIds;
+  }
+
+  public Stream<AggregationFunctionCallEval> aggregators() {
+    return this.aggrFunctions.stream();
   }
 
   public List<AggregationFunctionCallEval> getAggFunctions() {

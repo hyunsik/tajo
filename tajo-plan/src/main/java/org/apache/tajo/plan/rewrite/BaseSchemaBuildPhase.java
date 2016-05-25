@@ -38,6 +38,7 @@ import org.apache.tajo.plan.nameresolver.NameResolvingMode;
 import org.apache.tajo.plan.util.PlannerUtil;
 import org.apache.tajo.plan.visitor.SimpleAlgebraVisitor;
 import org.apache.tajo.schema.IdentifierUtil;
+import org.apache.tajo.type.Type;
 
 import java.util.*;
 
@@ -260,17 +261,13 @@ public class BaseSchemaBuildPhase extends LogicalPlanPreprocessPhase {
     private List<Target> buildTargets(LogicalPlanner.PlanContext context, List<NamedExpr> exprs) throws TajoException {
       List<Target> targets = new ArrayList<>();
       for (NamedExpr namedExpr : exprs) {
-        TajoDataTypes.DataType dataType = typeDeterminant.determineDataType(context, namedExpr.getExpr());
-
-        if (dataType.getType() == RECORD) {
-          throw new NotImplementedException("record projection");
-        }
+        Type type = typeDeterminant.determineDataType(context, namedExpr.getExpr());
 
         if (namedExpr.hasAlias()) {
-          targets.add(new Target(new FieldEval(new Column(namedExpr.getAlias(), dataType))));
+          targets.add(new Target(new FieldEval(new Column(namedExpr.getAlias(), type))));
         } else {
           String generatedName = context.getPlan().generateUniqueColumnName(namedExpr.getExpr());
-          targets.add(new Target(new FieldEval(new Column(generatedName, dataType))));
+          targets.add(new Target(new FieldEval(new Column(generatedName, type))));
         }
       }
       return targets;

@@ -477,7 +477,7 @@ public class ProjectionPushDownRule extends
       } else if (context.targetListMgr.isEvaluated(referenceName)) {
         if (context.targetListMgr.isNativeAlias(referenceName)) {
           String realRefName = context.targetListMgr.getRealReferenceName(referenceName);
-          finalTargets.add(new Target(new FieldEval(realRefName, target.getDataType()), referenceName));
+          finalTargets.add(new Target(new FieldEval(realRefName, target.getType()), referenceName));
         } else {
           finalTargets.add(new Target(new FieldEval(target.getNamedColumn())));
         }

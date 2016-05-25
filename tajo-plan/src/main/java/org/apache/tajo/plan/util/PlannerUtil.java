@@ -659,11 +659,6 @@ public class PlannerUtil {
     for (Target t : targets) {
       Type type = t.getEvalTree().getValueType();
 
-      // hack to avoid projecting record type.
-      if (type.isStruct()) {
-        throw new TajoRuntimeException(new NotImplementedException("record projection"));
-      }
-
       String name;
       if (t.hasAlias()) {
         name = t.getAlias();

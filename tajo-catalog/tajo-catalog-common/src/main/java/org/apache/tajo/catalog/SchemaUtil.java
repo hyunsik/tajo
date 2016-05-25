@@ -20,13 +20,13 @@ package org.apache.tajo.catalog;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.tajo.common.TajoDataTypes;
 import org.apache.tajo.exception.TajoRuntimeException;
 import org.apache.tajo.exception.UnsupportedDataTypeException;
 
 import java.util.*;
 
 import static org.apache.tajo.common.TajoDataTypes.DataType;
-import static org.apache.tajo.common.TajoDataTypes.Type;
 
 public class SchemaUtil {
   // See TAJO-914 bug.
@@ -105,27 +105,11 @@ public class SchemaUtil {
     return types;
   }
 
-  public static Type [] toTypes(Schema schema) {
-    Type [] types = new Type[schema.size()];
-    for (int i = 0; i < schema.size(); i++) {
-      types[i] = schema.getColumn(i).getDataType().getType();
-    }
-    return types;
-  }
-
-  public static String [] toSimpleNames(Schema schema) {
-    String [] names = new String[schema.size()];
-    for (int i = 0; i < schema.size(); i++) {
-      names[i] = schema.getColumn(i).getSimpleName();
-    }
-    return names;
-  }
-
   public static String [] convertColumnsToPaths(Iterable<Column> columns, boolean onlyLeaves) {
     List<String> paths = Lists.newArrayList();
 
     for (Column c : columns) {
-      if (onlyLeaves && c.getDataType().getType() == Type.RECORD) {
+      if (onlyLeaves && c.getDataType().getType() == TajoDataTypes.Type.RECORD) {
         continue;
       }
       paths.add(c.getSimpleName());
@@ -134,9 +118,9 @@ public class SchemaUtil {
     return paths.toArray(new String [paths.size()]);
   }
 
-  public static ImmutableMap<String, Type> buildTypeMap(Iterable<Column> schema, String [] targetPaths) {
+  public static ImmutableMap<String, org.apache.tajo.type.Type> buildTypeMap(Iterable<Column> schema, String [] targetPaths) {
 
-    HashMap<String, Type> builder = new HashMap<>();
+    HashMap<String, org.apache.tajo.type.Type> builder = new HashMap<>();
     for (Column column : schema) {
 
       // Keep types which only belong to projected paths
@@ -146,7 +130,7 @@ public class SchemaUtil {
       // * name/first_name TEXT
       for (String p : targetPaths) {
         if (p.startsWith(column.getSimpleName())) {
-          builder.put(column.getSimpleName(), column.getDataType().getType());
+          builder.put(column.getSimpleName(), column.type);
         }
       }
     }
@@ -184,7 +168,7 @@ public class SchemaUtil {
                                              ColumnVisitor function,
                                              Column column) {
 
-    if (column.getDataType().getType() == Type.RECORD) {
+    if (column.getDataType().getType() == TajoDataTypes.Type.RECORD) {
       for (Column nestedColumn : TypeConverter.convert(column.type).nestedRecordSchema.getRootColumns()) {
         List<String> newPath = new ArrayList<>(path);
         newPath.add(column.getQualifiedName());

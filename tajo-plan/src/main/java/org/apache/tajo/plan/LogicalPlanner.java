@@ -563,11 +563,8 @@ public class LogicalPlanner extends BaseAlgebraVisitor<LogicalPlanner.PlanContex
 
     } else if (projectable instanceof RelationNode) {
       RelationNode relationNode = (RelationNode) projectable;
-      prohibitNestedRecordProjection((Projectable) relationNode);
       verifyIfTargetsCanBeEvaluated(relationNode.getLogicalSchema(), (Projectable) relationNode);
-
     } else {
-      prohibitNestedRecordProjection(projectable);
       verifyIfTargetsCanBeEvaluated(projectable.getInSchema(), projectable);
     }
   }

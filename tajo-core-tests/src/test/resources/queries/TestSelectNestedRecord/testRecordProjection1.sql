@@ -1,0 +1,1 @@
+select glossary from sample5;

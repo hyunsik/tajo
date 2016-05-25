@@ -70,6 +70,16 @@ public class TestSelectNestedRecord extends QueryTestCaseBase {
   }
 
   @Test
+  public final void testRecordProjection1() throws Exception {
+    List<String> tables = executeDDL("sample2_ddl.sql", "sample2", "sample5");
+    assertEquals(Arrays.asList("sample5"), tables);
+
+    ResultSet res = executeQuery();
+    assertResultSet(res);
+    cleanupQuery(res);
+  }
+
+  @Test
   public final void testTAJO_1610() throws Exception {
     executeString("CREATE DATABASE tweets").close();
     List<String> tables = executeDDL("tweets_ddl.sql", "tweets", "tweets.tweets");

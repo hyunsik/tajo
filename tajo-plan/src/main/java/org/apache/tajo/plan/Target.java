@@ -28,6 +28,7 @@ import org.apache.tajo.plan.expr.FieldEval;
 import org.apache.tajo.plan.serder.LogicalNodeSerializer;
 import org.apache.tajo.plan.serder.PlanGsonHelper;
 import org.apache.tajo.plan.serder.PlanProto;
+import org.apache.tajo.type.Type;
 import org.apache.tajo.util.TUtil;
 
 /**
@@ -76,6 +77,10 @@ public class Target implements Cloneable, GsonObject, ProtoObject<PlanProto.Targ
 
   public final boolean hasAlias() {
     return alias != null;
+  }
+
+  public Type getType() {
+    return column.getType();
   }
 
   public DataType getDataType() {

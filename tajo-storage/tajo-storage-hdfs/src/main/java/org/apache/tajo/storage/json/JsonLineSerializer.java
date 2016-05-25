@@ -25,7 +25,6 @@ import org.apache.tajo.catalog.NestedPathUtil;
 import org.apache.tajo.catalog.Schema;
 import org.apache.tajo.catalog.SchemaUtil;
 import org.apache.tajo.catalog.TableMeta;
-import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.datum.TextDatum;
 import org.apache.tajo.datum.TimestampDatum;
 import org.apache.tajo.exception.NotImplementedException;
@@ -42,7 +41,7 @@ import java.util.TimeZone;
 
 public class JsonLineSerializer extends TextLineSerializer {
   // Full Path -> Type
-  private final Map<String, Type> types;
+  private final Map<String, org.apache.tajo.type.Type> types;
   private final String [] projectedPaths;
 
   private final TimeZone timezone;
@@ -73,7 +72,8 @@ public class JsonLineSerializer extends TextLineSerializer {
       return;
     }
 
-    switch (types.get(fullPath)) {
+    org.apache.tajo.type.Type type = types.get(fullPath);
+    switch (type.kind()) {
 
     case BOOLEAN:
       json.put(fieldName, input.getBool(fieldIndex));
@@ -136,8 +136,7 @@ public class JsonLineSerializer extends TextLineSerializer {
       break;
 
     default:
-      throw new TajoRuntimeException(
-          new NotImplementedException("" + types.get(fullPath).name() + " for json"));
+      throw new TajoRuntimeException(new NotImplementedException("" + type + " for json"));
     }
   }
 

@@ -19,35 +19,43 @@
 package org.apache.tajo.storage.json;
 
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
 import org.apache.commons.net.util.Base64;
 import org.apache.tajo.catalog.*;
-import org.apache.tajo.common.TajoDataTypes.Type;
-import org.apache.tajo.datum.DatumFactory;
-import org.apache.tajo.datum.NullDatum;
+import org.apache.tajo.common.TajoDataTypes;
+import org.apache.tajo.datum.*;
 import org.apache.tajo.exception.NotImplementedException;
 import org.apache.tajo.exception.TajoRuntimeException;
+import org.apache.tajo.schema.Field;
 import org.apache.tajo.storage.StorageConstants;
 import org.apache.tajo.storage.StorageUtil;
 import org.apache.tajo.storage.Tuple;
 import org.apache.tajo.storage.text.TextLineDeserializer;
 import org.apache.tajo.storage.text.TextLineParsingError;
+import org.apache.tajo.type.Array;
+import org.apache.tajo.type.Record;
+import org.apache.tajo.type.Type;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.CharsetDecoder;
 import java.util.Map;
 import java.util.TimeZone;
 
+import static org.apache.tajo.common.TajoDataTypes.Type.*;
+
 public class JsonLineDeserializer extends TextLineDeserializer {
   private JSONParser parser;
 
   // Full Path -> Type
-  private final Map<String, Type> types;
+  private final Map<String, org.apache.tajo.type.Type> types;
   private final String [] projectedPaths;
   private final CharsetDecoder decoder = CharsetUtil.getDecoder(CharsetUtil.UTF_8);
 
@@ -56,7 +64,7 @@ public class JsonLineDeserializer extends TextLineDeserializer {
   public JsonLineDeserializer(Schema schema, TableMeta meta, Column [] projected) {
     super(schema, meta);
 
-    projectedPaths = SchemaUtil.convertColumnsToPaths(Lists.newArrayList(projected), true);
+    projectedPaths = SchemaUtil.convertColumnsToPaths(Lists.newArrayList(projected), false);
     types = SchemaUtil.buildTypeMap(schema.getAllColumns(), projectedPaths);
 
     timezone = TimeZone.getTimeZone(meta.getProperty(StorageConstants.TIMEZONE,
@@ -68,149 +76,121 @@ public class JsonLineDeserializer extends TextLineDeserializer {
     parser = new JSONParser(JSONParser.MODE_JSON_SIMPLE | JSONParser.IGNORE_CONTROL_CHAR);
   }
 
-  /**
-   *
-   *
-   * @param object
-   * @param pathElements
-   * @param depth
-   * @param fieldIndex
-   * @param output
-   * @throws IOException
-   */
-  private void getValue(JSONObject object,
-                        String fullPath,
-                        String [] pathElements,
-                        int depth,
-                        int fieldIndex,
-                        Tuple output) throws IOException {
-    String fieldName = pathElements[depth];
-
-    if (!object.containsKey(fieldName)) {
-      output.put(fieldIndex, NullDatum.get());
+  private Datum extractField(Type type, Object object,
+                             @Nullable String fullPath, @Nullable String [] pathElements, @Nullable int depth) {
+    if (object == null) {
+      return NullDatum.get();
     }
 
-    switch (types.get(fullPath)) {
+    switch (type.kind()) {
     case BOOLEAN:
-      String boolStr = object.getAsString(fieldName);
-      if (boolStr != null) {
-        output.put(fieldIndex, DatumFactory.createBool(boolStr.equals("true")));
+      if (object != null) {
+        return DatumFactory.createBool(object.equals("true"));
       } else {
-        output.put(fieldIndex, NullDatum.get());
+        return NullDatum.get();
       }
-      break;
+
     case CHAR:
-      String charStr = object.getAsString(fieldName);
-      if (charStr != null) {
-        output.put(fieldIndex, DatumFactory.createChar(charStr));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+        return DatumFactory.createChar((String) object);
+
     case INT1:
     case INT2:
-      Number int2Num = object.getAsNumber(fieldName);
-      if (int2Num != null) {
-        output.put(fieldIndex, DatumFactory.createInt2(int2Num.shortValue()));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      Number int2Num = ((Number)object);
+      return DatumFactory.createInt2(int2Num.shortValue());
+
     case INT4:
-      Number int4Num = object.getAsNumber(fieldName);
-      if (int4Num != null) {
-        output.put(fieldIndex, DatumFactory.createInt4(int4Num.intValue()));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      Number int4Num = ((Number)object);
+      return DatumFactory.createInt4(int4Num.intValue());
+
     case INT8:
-      Number int8Num = object.getAsNumber(fieldName);
-      if (int8Num != null) {
-        output.put(fieldIndex, DatumFactory.createInt8(int8Num.longValue()));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      Number int8Num = ((Number)object);
+      return DatumFactory.createInt8(int8Num.longValue());
+
     case FLOAT4:
-      Number float4Num = object.getAsNumber(fieldName);
-      if (float4Num != null) {
-        output.put(fieldIndex, DatumFactory.createFloat4(float4Num.floatValue()));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      Number float4Num = ((Number)object);
+      return DatumFactory.createFloat4(float4Num.floatValue());
+
     case FLOAT8:
-      Number float8Num = object.getAsNumber(fieldName);
-      if (float8Num != null) {
-        output.put(fieldIndex, DatumFactory.createFloat8(float8Num.doubleValue()));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      Number float8Num = ((Number)object);
+      return DatumFactory.createFloat8(float8Num.doubleValue());
+
     case TEXT:
-      String textStr = object.getAsString(fieldName);
-      if (textStr != null) {
-        output.put(fieldIndex, DatumFactory.createText(textStr));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      String textStr = (String)object;
+      return DatumFactory.createText(textStr);
+
     case TIMESTAMP:
-      String timestampStr = object.getAsString(fieldName);
-      if (timestampStr != null) {
-        output.put(fieldIndex, DatumFactory.createTimestamp(timestampStr, timezone));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      String timestampStr = (String)object;
+      return DatumFactory.createTimestamp(timestampStr, timezone);
+
     case TIME:
-      String timeStr = object.getAsString(fieldName);
-      if (timeStr != null) {
-        output.put(fieldIndex, DatumFactory.createTime(timeStr));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      String timeStr = (String)object;
+      return DatumFactory.createTime(timeStr);
+
     case DATE:
-      String dateStr = object.getAsString(fieldName);
-      if (dateStr != null) {
-        output.put(fieldIndex, DatumFactory.createDate(dateStr));
-      } else {
-        output.put(fieldIndex, NullDatum.get());
-      }
-      break;
+      String dateStr = (String)object;
+      return DatumFactory.createDate(dateStr);
+
     case BIT:
     case BINARY:
     case VARBINARY:
     case BLOB: {
-      Object jsonObject = object.getAsString(fieldName);
-
-      if (jsonObject == null) {
-        output.put(fieldIndex, NullDatum.get());
-        break;
-      }
-
-      output.put(fieldIndex, DatumFactory.createBlob(Base64.decodeBase64((String) jsonObject)));
-      break;    
+      return DatumFactory.createBlob(Base64.decodeBase64((String) object));
     }
 
-    case RECORD:
-      JSONObject nestedObject = (JSONObject) object.get(fieldName);
-      if (nestedObject != null) {
-        getValue(nestedObject, fullPath + "/" + pathElements[depth+1], pathElements, depth + 1, fieldIndex, output);
+    case ARRAY:
+      JSONArray arrayObject = (JSONArray) object;
+      Array arrayType = (Array) type;
+
+      // TODO - Array Index operation can be pushed down to here. We need to support it later.
+      if (false) {
+
+        return extractField(arrayType.elementType(), arrayObject.get(0), fullPath, null, depth + 1);
       } else {
-        output.put(fieldIndex, NullDatum.get());
+        ImmutableList.Builder<Datum> builder = ImmutableList.builder();
+        for (int i = 0; i < arrayObject.size(); i++) {
+          builder.add(extractField(arrayType.elementType(), arrayObject.get(i), fullPath, null, depth + 1));
+        }
+        return new ArrayDatum(type, builder.build());
       }
-      break;
+
+    case RECORD:
+      JSONObject nestedObject = (JSONObject)object;
+      Record recordType = (Record) type;
+
+      if (!isLeaf(pathElements, depth)) {
+        final String fieldName = pathElements[depth + 1];
+        final String newPath = fullPath + "/" + fieldName;
+        final Type fieldType = types.get(newPath);
+        return extractField(fieldType, getTypeObject(fieldType, nestedObject, fieldName), newPath, pathElements, depth + 1);
+      } else {
+        ImmutableList.Builder<Datum> b = ImmutableList.builder();
+        for (Field field : recordType.fields()) {
+          final String newPath = fullPath + "/" + field.name().interned();
+          b.add(extractField(field.type(), nestedObject.get(field.name().interned()), newPath, pathElements, depth + 1));
+        }
+        return new RecordDatum(type, b.build());
+      }
 
     case NULL_TYPE:
-      output.put(fieldIndex, NullDatum.get());
-      break;
+      return NullDatum.get();
 
     default:
-      throw new TajoRuntimeException(
-          new NotImplementedException("" + types.get(fullPath).name() + " for json"));
+      throw new TajoRuntimeException(new NotImplementedException("" + type + " for json"));
+    }
+  }
+
+  private static final boolean isLeaf(String [] pathElement, int depth) {
+    return pathElement.length - 1 == depth;
+  }
+
+  public Object getTypeObject(Type type, JSONObject json, String key) {
+    TajoDataTypes.Type kind = type.kind();
+    if (INT1.getNumber() <= kind.getNumber() && kind.getNumber() <= NUMERIC.getNumber()) {
+      return json.getAsNumber(key);
+    } else if (kind == RECORD || kind == ARRAY) {
+      return json.get(key);
+    } else {
+      return json.getAsString(key);
     }
   }
 
@@ -229,8 +209,10 @@ public class JsonLineDeserializer extends TextLineDeserializer {
     }
 
     for (int i = 0; i < projectedPaths.length; i++) {
-      String [] paths = projectedPaths[i].split(NestedPathUtil.PATH_DELIMITER);
-      getValue(object, paths[0], paths, 0, i, output);
+      final String [] paths = projectedPaths[i].split(NestedPathUtil.PATH_DELIMITER);
+      final Type type = types.get(paths[0]);
+      final Object field = getTypeObject(type, object, paths[0]);
+      output.put(i, extractField(type, field, paths[0], paths, 0));
     }
   }
 

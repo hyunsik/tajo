@@ -35,11 +35,6 @@ import static org.apache.tajo.schema.QualifiedIdentifier.$;
 public class FieldEval extends EvalNode implements Cloneable {
 	private Field field;
 	private int fieldId = -1;
-	
-	public FieldEval(String columnName, DataType type) {
-		super(EvalType.FIELD);
-		this.field = Field($(columnName), TypeConverter.convert(type));
-	}
 
   public FieldEval(String columnName, Type type) {
     super(EvalType.FIELD);

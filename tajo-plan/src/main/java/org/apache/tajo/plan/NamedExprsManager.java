@@ -315,7 +315,7 @@ public class NamedExprsManager {
       // But, if this reference name is not primary name, it cannot use the reference name.
       // It changes the given reference name to the primary name.
       if (evalNode.getType() != EvalType.CONST && isEvaluated(normalized) && !isPrimaryName(refId, referenceName)) {
-        return new Target(new FieldEval(getPrimaryName(refId), convert(evalNode.getValueType()).getDataType()),
+        return new Target(new FieldEval(getPrimaryName(refId), evalNode.getValueType()),
             referenceName);
       }
 
@@ -323,7 +323,7 @@ public class NamedExprsManager {
       if (evalNode.getType() == EvalType.CONST) {
         referredEval = evalNode;
       } else {
-        referredEval = new FieldEval(idToNamesMap.get(refId).get(0), convert(evalNode.getValueType()).getDataType());
+        referredEval = new FieldEval(idToNamesMap.get(refId).get(0), evalNode.getValueType());
       }
       return new Target(referredEval, referenceName);
 

@@ -61,6 +61,7 @@ import java.util.*;
 
 import static org.apache.tajo.TajoConstants.DEFAULT_DATABASE_NAME;
 import static org.apache.tajo.TajoConstants.DEFAULT_TABLESPACE_NAME;
+import static org.apache.tajo.type.Type.Text;
 import static org.junit.Assert.*;
 
 public class TestLogicalPlanner {
@@ -1421,7 +1422,9 @@ public class TestLogicalPlanner {
 
     assertEquals(NodeType.SELECTION, projectionNode.getChild().getType());
     SelectionNode selectionNode = projectionNode.getChild();
-    assertEquals(new BinaryEval(EvalType.GTH, new FieldEval("default.self_desc_table1.id", CatalogUtil.newSimpleDataType(Type.TEXT)), new ConstEval(new Int4Datum(10))),
+    assertEquals(
+        new BinaryEval(
+            EvalType.GTH, new FieldEval("default.self_desc_table1.id", Text), new ConstEval(new Int4Datum(10))),
         selectionNode.getQual());
 
     // scan column test

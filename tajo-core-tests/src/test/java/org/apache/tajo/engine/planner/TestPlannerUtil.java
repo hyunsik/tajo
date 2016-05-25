@@ -33,9 +33,9 @@ import org.apache.tajo.catalog.proto.CatalogProtos.FunctionType;
 import org.apache.tajo.common.TajoDataTypes.Type;
 import org.apache.tajo.datum.DatumFactory;
 import org.apache.tajo.engine.function.builtin.SumInt;
-import org.apache.tajo.parser.sql.SQLAnalyzer;
 import org.apache.tajo.engine.planner.physical.PhysicalPlanUtil;
 import org.apache.tajo.exception.TajoException;
+import org.apache.tajo.parser.sql.SQLAnalyzer;
 import org.apache.tajo.plan.LogicalPlanner;
 import org.apache.tajo.plan.expr.*;
 import org.apache.tajo.plan.logical.*;
@@ -58,6 +58,7 @@ import java.util.List;
 
 import static org.apache.tajo.TajoConstants.DEFAULT_DATABASE_NAME;
 import static org.apache.tajo.TajoConstants.DEFAULT_TABLESPACE_NAME;
+import static org.apache.tajo.type.Type.Int4;
 import static org.junit.Assert.*;
 
 public class TestPlannerUtil {
@@ -158,9 +159,8 @@ public class TestPlannerUtil {
 
   @Test
   public final void testIsJoinQual() {
-    FieldEval f1 = new FieldEval("part.p_partkey", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f2 = new FieldEval("partsupp.ps_partkey",
-        CatalogUtil.newSimpleDataType(Type.INT4));
+    FieldEval f1 = new FieldEval("part.p_partkey", Int4);
+    FieldEval f2 = new FieldEval("partsupp.ps_partkey", Int4);
 
 
     BinaryEval [] joinQuals = new BinaryEval[5];
@@ -197,10 +197,10 @@ public class TestPlannerUtil {
         .add("people.fid1", CatalogUtil.newSimpleDataType(Type.INT4))
         .add("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4)).build();
 
-    FieldEval f1 = new FieldEval("employee.id1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f2 = new FieldEval("people.fid1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f3 = new FieldEval("employee.id2", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f4 = new FieldEval("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4));
+    FieldEval f1 = new FieldEval("employee.id1", Int4);
+    FieldEval f2 = new FieldEval("people.fid1", Int4);
+    FieldEval f3 = new FieldEval("employee.id2", Int4);
+    FieldEval f4 = new FieldEval("people.fid2", Int4);
 
     EvalNode equiJoinQual = new BinaryEval(EvalType.EQUAL, f1, f2);
 
@@ -261,10 +261,10 @@ public class TestPlannerUtil {
         .add("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4))
         .build();
 
-    FieldEval f1 = new FieldEval("employee.id1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f2 = new FieldEval("people.fid1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f3 = new FieldEval("employee.id2", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f4 = new FieldEval("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4));
+    FieldEval f1 = new FieldEval("employee.id1", Int4);
+    FieldEval f2 = new FieldEval("people.fid1", Int4);
+    FieldEval f3 = new FieldEval("employee.id2", Int4);
+    FieldEval f4 = new FieldEval("people.fid2", Int4);
 
     EvalNode joinQual = new BinaryEval(EvalType.EQUAL, f1, f2);
     SortSpec[][] sortSpecs = PlannerUtil.getSortKeysFromJoinQual(joinQual, outerSchema, innerSchema);
@@ -299,10 +299,10 @@ public class TestPlannerUtil {
         .add("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4))
         .build();
 
-    FieldEval f1 = new FieldEval("employee.id1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f2 = new FieldEval("people.fid1", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f3 = new FieldEval("employee.id2", CatalogUtil.newSimpleDataType(Type.INT4));
-    FieldEval f4 = new FieldEval("people.fid2", CatalogUtil.newSimpleDataType(Type.INT4));
+    FieldEval f1 = new FieldEval("employee.id1", Int4);
+    FieldEval f2 = new FieldEval("people.fid1", Int4);
+    FieldEval f3 = new FieldEval("employee.id2", Int4);
+    FieldEval f4 = new FieldEval("people.fid2", Int4);
 
     EvalNode joinQual = new BinaryEval(EvalType.EQUAL, f1, f2);
     TupleComparator[] comparators = PhysicalPlanUtil.getComparatorsFromJoinQual(joinQual, outerSchema, innerSchema);

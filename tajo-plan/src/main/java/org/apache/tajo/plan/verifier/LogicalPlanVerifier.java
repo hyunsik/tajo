@@ -73,10 +73,6 @@ public class LogicalPlanVerifier extends BasicLogicalPlanVisitor<LogicalPlanVeri
     for (int i = 0; i < outputSchema.size(); i++) {
       Column outputColumn = outputSchema.getColumn(i);
 
-      if (outputColumn.getDataType().getType() == Type.RECORD) {
-        context.state.addVerification(new UnsupportedException("record field in select list"));
-      }
-
       if (!outputColumn.getDataType().equals(targetSchema.getColumn(i).getDataType())) {
         Column targetColumn = targetSchema.getColumn(i);
         Column insertColumn = outputColumn;

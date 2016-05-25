@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import static org.apache.tajo.common.TajoDataTypes.Type.INT4;
 import static org.apache.tajo.common.TajoDataTypes.Type.TEXT;
+import static org.apache.tajo.type.Type.Int4;
 import static org.junit.Assert.*;
 
 public class TestEvalTree extends ExprTestBase {
@@ -38,7 +39,7 @@ public class TestEvalTree extends ExprTestBase {
   public void testTupleEval() throws CloneNotSupportedException {
     ConstEval e1 = new ConstEval(DatumFactory.createInt4(1));
     assertCloneEqual(e1);
-    FieldEval e2 = new FieldEval("table1.score", CatalogUtil.newSimpleDataType(INT4)); // it indicates
+    FieldEval e2 = new FieldEval("table1.score", Int4); // it indicates
     assertCloneEqual(e2);
 
     Schema schema1 = SchemaBuilder.builder()
@@ -289,7 +290,7 @@ public class TestEvalTree extends ExprTestBase {
     e1 = new ConstEval(DatumFactory.createInt4(9));
     e2 = new ConstEval(DatumFactory.createInt4(34));
     BinaryEval expr = new BinaryEval(EvalType.PLUS, e1, e2);
-    assertEquals(Type.Int4, expr.getValueType());
+    assertEquals(Int4, expr.getValueType());
 
     expr = new BinaryEval(EvalType.LTH, e1, e2);
     assertTrue(expr.bind(null, null).eval(null).asBool());
@@ -361,8 +362,8 @@ public class TestEvalTree extends ExprTestBase {
 
     Schema schema = SchemaBuilder.builder().addAll(new Column[]{new Column("test", TajoDataTypes.Type.INT4)}).build();
     Tuple tuple = new VTuple(new Datum[]{DatumFactory.createText("aaa")});
-    RegexPredicateEval regexEval = new RegexPredicateEval(false, new FieldEval("test",
-        CatalogUtil.newSimpleDataType(TajoDataTypes.Type.INT4)), new ConstEval(DatumFactory.createText("a*")), false);
+    RegexPredicateEval regexEval = new RegexPredicateEval(false, new FieldEval("test", Int4),
+        new ConstEval(DatumFactory.createText("a*")), false);
     try {
       regexEval.eval(null);
       fail("EvalNode is not binded");

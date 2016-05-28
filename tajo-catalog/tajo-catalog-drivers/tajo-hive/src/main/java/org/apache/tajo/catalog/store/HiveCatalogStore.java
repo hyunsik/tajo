@@ -222,11 +222,9 @@ public class HiveCatalogStore extends CatalogConstants implements CatalogStore {
         }
 
         // set data size
-        long totalSize = 0;
-        if (properties.getProperty("totalSize") != null) {
-          totalSize = Long.parseLong(properties.getProperty("totalSize"));
-        } else {
-          try {
+        String totalSizeStr = properties.getProperty("totalSize");
+        long totalSize = totalSizeStr == null ? -1 : Long.parseLong(totalSizeStr);
+        if (totalSize <= 0) {
             FileSystem fs = path.getFileSystem(conf);
             if (fs.exists(path)) {
               totalSize = fs.getContentSummary(path).getLength();

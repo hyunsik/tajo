@@ -104,7 +104,12 @@ public class SequenceFileScanner extends FileScanner {
       nullChars = nullCharacters.getBytes();
     }
 
-    String delim  = meta.getOption(StorageConstants.SEQUENCEFILE_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
+    String delim = meta.getOption(StorageConstants.SEQUENCEFILE_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
+    if (delim == null || delim.isEmpty()) {
+      delim = meta.getProperty(StorageConstants.TEXT_DELIMITER, StorageConstants.DEFAULT_FIELD_DELIMITER);
+    }
+    meta.getPropertySet().set(StorageConstants.TEXT_DELIMITER, delim);
+
     this.delimiter = StringEscapeUtils.unescapeJava(delim).charAt(0);
 
     this.start = fragment.getStartKey();

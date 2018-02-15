@@ -20,3 +20,12 @@ atlassian-ide-plugin.xml
 
 # Antlr files
 *.tokens
+
+# Gradle
+.gradle
+gradle
+tajo-lightning/build
+tajo-lightning/out
+
+# Mac
+.DS_Store

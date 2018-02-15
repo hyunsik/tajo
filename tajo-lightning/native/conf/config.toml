@@ -1,0 +1,11 @@
+[coordinator]
+enabled = true
+uri="http://localhost:8080"
+
+[node]
+
+[node.http]
+listen="127.0.0.1:8000"
+
+[node.executor]
+data_dir="/tmp/flang/data"

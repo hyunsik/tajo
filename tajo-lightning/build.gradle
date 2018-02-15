@@ -1,0 +1,84 @@
+group 'org.apache.tajo'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.1.4-3'
+    ext.tajo_version= '0.12.0-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "com.sparkjava:spark-kotlin:1.0.0-alpha"
+    compile "com.moandjiezana.toml:toml4j:0.7.2"
+
+    compile "org.apache.tajo:tajo-common:$tajo_version"
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+task cleanNative(type:Exec) {
+    workingDir './native'
+    commandLine 'rustup', 'run', 'nightly', 'cargo', 'clean'
+}
+
+task buildNative(type:Exec) {
+    workingDir './native'
+    commandLine 'rustup', 'run', 'nightly', 'cargo', 'build'
+}
+
+configurations {
+    itestCompile.extendsFrom testCompile
+    itestRuntime.extendsFrom testRuntime
+}
+sourceSets {
+    itest {
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+
+        test.java.srcDirs += 'src/itest/java'
+        test.kotlin.srcDirs += 'src/itest/kotlin'
+    }
+
+    itest {
+        resources.srcDir file('src/itest/resources')
+    }
+}
+
+task itest(type: Test) {
+    testClassesDir = sourceSets.itest.output.classesDir
+    classpath = sourceSets.itest.runtimeClasspath
+    // This is not needed, but I like to see which tests have run
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+buildDependents.dependsOn buildNative
+
+clean.dependsOn cleanNative
+itest.dependsOn buildNative
